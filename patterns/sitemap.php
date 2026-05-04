@@ -15,12 +15,20 @@
 $home    = home_url( '/' );
 $xml_url = home_url( '/wp-sitemap.xml' );
 
-// Pull every published Page except the sitemap itself.
-$pages = get_pages( [
+/* Pull every published Page except the sitemap itself, then bucket into a
+   parent => children[] tree so the renderer can show top-level pages with
+   their child pages nested underneath. No parent filter on the query — we
+   build the hierarchy here so anything new shows up automatically. */
+$all_pages = get_pages( [
     'sort_column' => 'menu_order,post_title',
-    'parent'      => 0,
     'exclude'     => [ get_queried_object_id() ],
 ] );
+
+$children_by_parent = [];
+foreach ( $all_pages as $p ) {
+    $children_by_parent[ (int) $p->post_parent ][] = $p;
+}
+$top_level_pages = $children_by_parent[0] ?? [];
 
 $sections = [
     [ 'about',       'About',       'Ten years on the web, a short bio, and the quick facts.' ],
@@ -60,16 +68,26 @@ $sections = [
     </ul>
     <!-- /wp:html -->
 
-    <?php if ( ! empty( $pages ) ) : ?>
+    <?php if ( ! empty( $top_level_pages ) ) : ?>
     <!-- wp:heading {"level":2,"style":{"spacing":{"margin":{"top":"var:preset|spacing|60","bottom":"var:preset|spacing|30"}}}} -->
     <h2 class="wp-block-heading" style="margin-top:var(--wp--preset--spacing--60);margin-bottom:var(--wp--preset--spacing--30)">Pages</h2>
     <!-- /wp:heading -->
 
     <!-- wp:html -->
     <ul class="sitemap-list">
-        <?php foreach ( $pages as $p ) : ?>
+        <?php foreach ( $top_level_pages as $parent_page ) : ?>
         <li>
-            <a href="<?php echo esc_url( get_permalink( $p ) ); ?>"><?php echo esc_html( get_the_title( $p ) ); ?></a>
+            <a href="<?php echo esc_url( get_permalink( $parent_page ) ); ?>"><?php echo esc_html( get_the_title( $parent_page ) ); ?></a>
+            <?php $kids = $children_by_parent[ $parent_page->ID ] ?? []; ?>
+            <?php if ( ! empty( $kids ) ) : ?>
+            <ul class="sitemap-sublist">
+                <?php foreach ( $kids as $kid ) : ?>
+                <li>
+                    <a href="<?php echo esc_url( get_permalink( $kid ) ); ?>"><?php echo esc_html( get_the_title( $kid ) ); ?></a>
+                </li>
+                <?php endforeach; ?>
+            </ul>
+            <?php endif; ?>
         </li>
         <?php endforeach; ?>
     </ul>
