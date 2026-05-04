@@ -43,24 +43,6 @@
             <!-- wp:group {"className":"dario-card","style":{"spacing":{"padding":{"top":"var:preset|spacing|40","right":"var:preset|spacing|40","bottom":"var:preset|spacing|40","left":"var:preset|spacing|40"},"blockGap":"var:preset|spacing|20"}},"layout":{"type":"constrained"}} -->
             <div class="wp-block-group dario-card" style="padding:var(--wp--preset--spacing--40)">
                 <!-- wp:paragraph {"fontSize":"small","textColor":"hot","style":{"typography":{"fontFamily":"var:preset|font-family|mono","letterSpacing":"0.06em","textTransform":"uppercase"}}} -->
-                <p class="has-hot-color has-text-color has-small-font-size" style="font-family:var(--wp--preset--font-family--mono);letter-spacing:0.06em;text-transform:uppercase">Game · Unity</p>
-                <!-- /wp:paragraph -->
-                <!-- wp:heading {"level":3} -->
-                <h3 class="wp-block-heading"><a href="<?php echo esc_url( home_url( '/projects/one-robot-army/' ) ); ?>">One Robot Army</a></h3>
-                <!-- /wp:heading -->
-                <!-- wp:paragraph {"textColor":"muted"} -->
-                <p class="has-muted-color has-text-color">A small Unity action game I worked on with a team of four at DePaul (GAM 245). The story is set in a post-nuclear future where robots have taken over, and the player is a cyborg fighting through three levels to rescue his wife after the government captures her. I shared the level design and gameplay scripting with the rest of the team.</p>
-                <!-- /wp:paragraph -->
-            </div>
-            <!-- /wp:group -->
-        </div>
-        <!-- /wp:column -->
-
-        <!-- wp:column -->
-        <div class="wp-block-column">
-            <!-- wp:group {"className":"dario-card","style":{"spacing":{"padding":{"top":"var:preset|spacing|40","right":"var:preset|spacing|40","bottom":"var:preset|spacing|40","left":"var:preset|spacing|40"},"blockGap":"var:preset|spacing|20"}},"layout":{"type":"constrained"}} -->
-            <div class="wp-block-group dario-card" style="padding:var(--wp--preset--spacing--40)">
-                <!-- wp:paragraph {"fontSize":"small","textColor":"hot","style":{"typography":{"fontFamily":"var:preset|font-family|mono","letterSpacing":"0.06em","textTransform":"uppercase"}}} -->
                 <p class="has-hot-color has-text-color has-small-font-size" style="font-family:var(--wp--preset--font-family--mono);letter-spacing:0.06em;text-transform:uppercase">Game · Unity · Studio</p>
                 <!-- /wp:paragraph -->
                 <!-- wp:heading {"level":3} -->
@@ -92,24 +74,6 @@
                 <!-- /wp:heading -->
                 <!-- wp:paragraph {"textColor":"muted"} -->
                 <p class="has-muted-color has-text-color">The website for a performance auto shop in Loves Park, Illinois. I built and maintained it across both WordPress and Joomla, and wrote the custom HTML pipeline they used to list vehicles for sale on eBay. Live at <a href="https://nickeyperformance.com/" target="_blank" rel="noopener">nickeyperformance.com</a>.</p>
-                <!-- /wp:paragraph -->
-            </div>
-            <!-- /wp:group -->
-        </div>
-        <!-- /wp:column -->
-
-        <!-- wp:column -->
-        <div class="wp-block-column">
-            <!-- wp:group {"className":"dario-card","style":{"spacing":{"padding":{"top":"var:preset|spacing|40","right":"var:preset|spacing|40","bottom":"var:preset|spacing|40","left":"var:preset|spacing|40"},"blockGap":"var:preset|spacing|20"}},"layout":{"type":"constrained"}} -->
-            <div class="wp-block-group dario-card" style="padding:var(--wp--preset--spacing--40)">
-                <!-- wp:paragraph {"fontSize":"small","textColor":"primary-soft","style":{"typography":{"fontFamily":"var:preset|font-family|mono","letterSpacing":"0.06em","textTransform":"uppercase"}}} -->
-                <p class="has-primary-soft-color has-text-color has-small-font-size" style="font-family:var(--wp--preset--font-family--mono);letter-spacing:0.06em;text-transform:uppercase">Web · WordPress</p>
-                <!-- /wp:paragraph -->
-                <!-- wp:heading {"level":3} -->
-                <h3 class="wp-block-heading"><a href="<?php echo esc_url( home_url( '/projects/dariobimbi-com/' ) ); ?>">dariobimbi.com</a></h3>
-                <!-- /wp:heading -->
-                <!-- wp:paragraph {"textColor":"muted"} -->
-                <p class="has-muted-color has-text-color">This site. A custom WordPress block theme I wrote from scratch, with no page builder, no external fonts, and full editing inside the WordPress editor. The source lives in <code>wp-content/themes/dariobimbi</code>, and I tried to keep it clean enough that someone could read through it without much trouble.</p>
                 <!-- /wp:paragraph -->
             </div>
             <!-- /wp:group -->
