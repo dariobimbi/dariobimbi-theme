@@ -1,0 +1,139 @@
+{
+    "$schema": "https://schemas.wp.org/trunk/theme.json",
+    "version": 3,
+    "settings": {
+        "appearanceTools": true,
+        "useRootPaddingAwareAlignments": true,
+        "layout": {
+            "contentSize": "1100px",
+            "wideSize": "1320px"
+        },
+        "color": {
+            "defaultPalette": false,
+            "defaultGradients": false,
+            "palette": [
+                { "slug": "background",     "color": "#0a0e1a", "name": "Background — Deep Navy" },
+                { "slug": "surface",        "color": "#11172a", "name": "Surface — Card" },
+                { "slug": "subtle",         "color": "#1a2138", "name": "Subtle Border" },
+                { "slug": "foreground",     "color": "#e8ecf6", "name": "Foreground" },
+                { "slug": "muted",          "color": "#94a3b8", "name": "Muted" },
+                { "slug": "primary",        "color": "#3b82f6", "name": "Electric Blue" },
+                { "slug": "primary-soft",   "color": "#60a5fa", "name": "Electric Blue — Soft" },
+                { "slug": "accent",         "color": "#a855f7", "name": "Violet" },
+                { "slug": "accent-soft",    "color": "#c084fc", "name": "Violet — Soft" },
+                { "slug": "hot",            "color": "#f43f5e", "name": "Dragon Pink" },
+                { "slug": "highlight",      "color": "#facc15", "name": "Sticky Yellow" }
+            ],
+            "gradients": [
+                { "slug": "brand",       "name": "Brand (Blue → Violet)", "gradient": "linear-gradient(135deg, #3b82f6 0%, #a855f7 100%)" },
+                { "slug": "brand-soft",  "name": "Brand Soft",            "gradient": "linear-gradient(135deg, #60a5fa 0%, #c084fc 100%)" },
+                { "slug": "hot",         "name": "Hot (Violet → Pink)",   "gradient": "linear-gradient(135deg, #a855f7 0%, #f43f5e 100%)" },
+                { "slug": "surface-card","name": "Surface Card",          "gradient": "linear-gradient(180deg, #11172a 0%, #0d1326 100%)" }
+            ]
+        },
+        "typography": {
+            "defaultFontSizes": false,
+            "fluid": true,
+            "fontFamilies": [
+                {
+                    "slug": "system",
+                    "name": "System Sans",
+                    "fontFamily": "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif"
+                },
+                {
+                    "slug": "mono",
+                    "name": "Monospace",
+                    "fontFamily": "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace"
+                }
+            ],
+            "fontSizes": [
+                { "slug": "small",    "size": "0.875rem", "name": "Small" },
+                { "slug": "medium",   "size": "1.05rem",  "name": "Medium" },
+                { "slug": "large",    "size": "1.5rem",   "name": "Large" },
+                { "slug": "x-large",  "size": "clamp(2rem, 1.4rem + 2vw, 3rem)",        "name": "Extra Large", "fluid": false },
+                { "slug": "xx-large", "size": "clamp(2.75rem, 1.5rem + 4vw, 4.5rem)",  "name": "XXL",         "fluid": false },
+                { "slug": "display",  "size": "clamp(3rem, 1.5rem + 6vw, 6.5rem)",     "name": "Display",     "fluid": false }
+            ]
+        },
+        "spacing": {
+            "units": ["px", "em", "rem", "%", "vh", "vw"],
+            "spacingScale": { "steps": 0 },
+            "spacingSizes": [
+                { "slug": "10", "size": "0.5rem", "name": "1 — XS" },
+                { "slug": "20", "size": "1rem",   "name": "2 — S" },
+                { "slug": "30", "size": "1.5rem", "name": "3 — M" },
+                { "slug": "40", "size": "2rem",   "name": "4 — L" },
+                { "slug": "50", "size": "3rem",   "name": "5 — XL" },
+                { "slug": "60", "size": "5rem",   "name": "6 — 2XL" },
+                { "slug": "70", "size": "8rem",   "name": "7 — 3XL" }
+            ]
+        }
+    },
+    "styles": {
+        "color": {
+            "background": "var(--wp--preset--color--background)",
+            "text": "var(--wp--preset--color--foreground)"
+        },
+        "spacing": {
+            "padding": {
+                "left": "var(--wp--preset--spacing--30)",
+                "right": "var(--wp--preset--spacing--30)"
+            },
+            "blockGap": "var(--wp--preset--spacing--30)"
+        },
+        "typography": {
+            "fontFamily": "var(--wp--preset--font-family--system)",
+            "fontSize": "var(--wp--preset--font-size--medium)",
+            "lineHeight": "1.65"
+        },
+        "elements": {
+            "h1": { "typography": { "fontSize": "var(--wp--preset--font-size--display)", "fontWeight": "800", "lineHeight": "1.02", "letterSpacing": "-0.025em" } },
+            "h2": { "typography": { "fontSize": "var(--wp--preset--font-size--xx-large)", "fontWeight": "800", "lineHeight": "1.1",  "letterSpacing": "-0.02em" } },
+            "h3": { "typography": { "fontSize": "var(--wp--preset--font-size--large)",   "fontWeight": "700", "lineHeight": "1.3" } },
+            "h4": { "typography": { "fontSize": "1.15rem", "fontWeight": "600", "lineHeight": "1.4" } },
+            "link": {
+                "color":      { "text": "var(--wp--preset--color--primary-soft)" },
+                ":hover":     { "color": { "text": "var(--wp--preset--color--accent-soft)" }, "typography": { "textDecoration": "underline" } },
+                "typography": { "textDecoration": "none" }
+            },
+            "button": {
+                "color":   { "background": "#2563eb", "text": "#ffffff" },
+                "border":  { "radius": "999px" },
+                "spacing": { "padding": { "top": "0.85rem", "bottom": "0.85rem", "left": "1.6rem", "right": "1.6rem" } },
+                "typography": { "fontWeight": "700", "fontSize": "var(--wp--preset--font-size--medium)" },
+                ":hover":  { "color": { "background": "#7c3aed" } },
+                ":focus":  { "color": { "background": "#7c3aed" } }
+            }
+        },
+        "blocks": {
+            "core/code": {
+                "typography": { "fontFamily": "var(--wp--preset--font-family--mono)" },
+                "color": { "background": "var(--wp--preset--color--surface)" }
+            }
+        }
+    },
+    "templateParts": [
+        { "name": "header", "title": "Header", "area": "header" },
+        { "name": "footer", "title": "Footer", "area": "footer" }
+    ],
+    "customTemplates": [
+        { "name": "page-privacy-policy", "title": "Privacy Policy",          "postTypes": [ "page" ] },
+        { "name": "page-sitemap",        "title": "Sitemap",                 "postTypes": [ "page" ] },
+        { "name": "page-demos",          "title": "Demos Hub",               "postTypes": [ "page" ] },
+        { "name": "page-demo-contrast",  "title": "Demo — Contrast Checker", "postTypes": [ "page" ] },
+        { "name": "page-demo-weather",   "title": "Demo — Weather API",      "postTypes": [ "page" ] },
+        { "name": "page-demo-audio",     "title": "Demo — Audio Visualizer", "postTypes": [ "page" ] },
+        { "name": "page-demo-sort",        "title": "Demo — Sort Race",        "postTypes": [ "page" ] },
+        { "name": "page-demo-life",        "title": "Demo — Game of Life",     "postTypes": [ "page" ] },
+        { "name": "page-demo-live-editor", "title": "Demo — Live Editor",      "postTypes": [ "page" ] },
+        { "name": "page-demo-pug-attack",  "title": "Demo — Pug Attack",       "postTypes": [ "page" ] },
+        { "name": "page-demo-microgame",   "title": "Demo — Microgame",        "postTypes": [ "page" ] },
+        { "name": "page-demo-pokedex",     "title": "Demo — Pokédex",          "postTypes": [ "page" ] },
+        { "name": "page-projects",                  "title": "Projects Hub",                "postTypes": [ "page" ] },
+        { "name": "page-project-space-dwarves",     "title": "Project — Space Dwarves",     "postTypes": [ "page" ] },
+        { "name": "page-project-lost-probe",        "title": "Project — The Lost Probe",    "postTypes": [ "page" ] },
+        { "name": "page-project-one-robot-army",    "title": "Project — One Robot Army",    "postTypes": [ "page" ] },
+        { "name": "page-project-nickey-performance","title": "Project — NicKey Performance","postTypes": [ "page" ] },
+        { "name": "page-project-dariobimbi-com",    "title": "Project — dariobimbi.com",    "postTypes": [ "page" ] }
+    ]
+}

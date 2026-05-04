@@ -1,0 +1,1835 @@
+/*
+Theme Name: Dario Bimbi
+Theme URI: https://dariobimbi.com
+Author: Dario Bimbi
+Author URI: https://www.linkedin.com/in/dario-bimbi-7512a36b
+Description: Personal portfolio block theme for Dario Bimbi, Web Developer at Clicks Web Design Inc. Dark, gradient-forward, system-font typography, no external dependencies.
+Version: 0.6.6
+Requires at least: 6.4
+Tested up to: 6.7
+Requires PHP: 7.4
+License: GNU General Public License v2 or later
+License URI: http://www.gnu.org/licenses/gpl-2.0.html
+Text Domain: dariobimbi
+Tags: block-theme, full-site-editing, portfolio, dark-mode, custom-colors, custom-menu, block-patterns
+*/
+
+/* ============================================================
+   Most styling lives in theme.json. This file holds utilities
+   and refinements that are awkward to express there.
+   ============================================================ */
+
+html { background: var(--wp--preset--color--background); }
+
+a { text-underline-offset: 0.2em; }
+
+::selection { background: var(--wp--preset--color--accent); color: #fff; }
+
+/* --- Gradient text utility ------------------------------------ */
+.has-gradient-text {
+    background: var(--wp--preset--gradient--brand-soft);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+}
+
+/* --- Code-bracket eyebrow -------------------------------------- */
+.eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    font-family: var(--wp--preset--font-family--mono);
+    font-size: 0.85rem;
+    letter-spacing: 0.06em;
+    color: var(--wp--preset--color--muted);
+    text-transform: uppercase;
+    margin: 0;
+}
+.eyebrow::before {
+    content: "</>";
+    color: var(--wp--preset--color--primary-soft);
+    font-weight: 700;
+}
+
+/* --- Status pill (e.g. "Currently at Clicks") ------------------ */
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55em;
+    padding: 0.45rem 0.95rem;
+    border-radius: 999px;
+    background: var(--wp--preset--color--surface);
+    border: 1px solid var(--wp--preset--color--subtle);
+    font-size: 0.85rem;
+    color: var(--wp--preset--color--muted);
+    margin: 0;
+}
+.status-pill::before {
+    content: "";
+    width: 0.55em;
+    height: 0.55em;
+    border-radius: 50%;
+    background: #22c55e;
+    box-shadow: 0 0 0 4px rgba(34,197,94,0.18);
+}
+
+/* --- Skill pill (used inside the skills pattern) --------------- */
+.skill-pill {
+    display: inline-block;
+    padding: 0.45rem 0.9rem;
+    margin: 0.2rem !important;
+    border-radius: 999px;
+    background: var(--wp--preset--color--surface);
+    border: 1px solid var(--wp--preset--color--subtle);
+    font-size: 0.875rem;
+    color: var(--wp--preset--color--foreground);
+    line-height: 1;
+}
+.skill-pill.is-primary { border-color: rgba(59,130,246,0.45); color: var(--wp--preset--color--primary-soft); }
+.skill-pill.is-accent  { border-color: rgba(168,85,247,0.45); color: var(--wp--preset--color--accent-soft); }
+.skill-pill.is-hot     { border-color: rgba(244,63,94,0.45);  color: #fda4af; }
+.skill-pill.is-yellow  { border-color: rgba(250,204,21,0.45); color: #fde68a; }
+
+/* --- Card (used on experience / projects / testimonials) ------- */
+.dario-card {
+    background: var(--wp--preset--color--surface);
+    border: 1px solid var(--wp--preset--color--subtle);
+    border-radius: 14px;
+    transition: border-color 220ms ease, transform 220ms ease, box-shadow 220ms ease;
+}
+.dario-card:hover {
+    border-color: var(--wp--preset--color--primary);
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px -12px rgba(59,130,246,0.35);
+}
+
+/* Equalize card heights when laid out across columns:
+   the parent .wp-block-columns is already display:flex with stretch,
+   so columns share row height — we just need the card itself to fill
+   its column and lay its children out vertically. */
+.wp-block-columns .wp-block-column {
+    display: flex;
+    flex-direction: column;
+}
+.wp-block-columns .wp-block-column > .dario-card,
+.wp-block-columns .wp-block-column > .wp-block-group.dario-card {
+    height: 100%;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Timeline-style left border for experience entries */
+.dario-card.is-timeline {
+    border-left: 3px solid transparent;
+    border-image: var(--wp--preset--gradient--brand) 1;
+    border-radius: 0;
+    padding: 1.75rem 1.75rem 1.75rem 1.5rem;
+    background: transparent;
+}
+.dario-card.is-timeline:hover {
+    transform: translateX(3px);
+    box-shadow: none;
+    border-color: transparent;
+}
+
+/* --- Neon glow callout ----------------------------------------- */
+.has-neon-glow {
+    position: relative;
+    box-shadow:
+        0 0 0 1px rgba(168,85,247,0.45),
+        0 0 32px -4px rgba(168,85,247,0.55),
+        0 0 80px -20px rgba(59,130,246,0.5);
+}
+
+/* --- Outline button styling for dark theme --------------------- */
+.wp-block-button.is-style-outline > .wp-block-button__link {
+    background: transparent;
+    border-width: 1px;
+    border-style: solid;
+    border-color: var(--wp--preset--color--foreground);
+    color: var(--wp--preset--color--foreground);
+}
+.wp-block-button.is-style-outline > .wp-block-button__link:hover {
+    background: var(--wp--preset--color--foreground);
+    color: var(--wp--preset--color--background);
+}
+
+/* --- Header refinements ---------------------------------------- */
+.wp-block-site-logo img {
+    border-radius: 8px;
+}
+
+/* --- Site nav (Projects + Demos dropdowns) --------------------- */
+.site-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.site-nav-dropdown { position: relative; }
+
+/* The trigger pill — used for both <summary> and the link fallback. */
+.site-nav-trigger,
+.site-nav-trigger--link {
+    list-style: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.45rem 0.95rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--wp--preset--color--foreground);
+    background: var(--wp--preset--color--surface);
+    border: 1px solid var(--wp--preset--color--subtle);
+    border-radius: 999px;
+    text-decoration: none;
+    transition: border-color .15s ease, background-color .15s ease, color .15s ease;
+}
+.site-nav-trigger::-webkit-details-marker { display: none; }
+.site-nav-trigger::marker { content: ''; }
+
+.site-nav-trigger:hover,
+.site-nav-trigger:focus-visible,
+.site-nav-trigger--link:hover,
+.site-nav-trigger--link:focus-visible {
+    border-color: var(--wp--preset--color--accent);
+    color: var(--wp--preset--color--accent-soft);
+    text-decoration: none;
+    outline: none;
+}
+
+.site-nav-dropdown[open] > .site-nav-trigger {
+    border-color: var(--wp--preset--color--accent);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.18), rgba(168, 85, 247, 0.18));
+    color: var(--wp--preset--color--foreground);
+}
+
+.site-nav-chevron {
+    font-size: 0.7em;
+    line-height: 1;
+    transition: transform .2s ease;
+}
+.site-nav-dropdown[open] .site-nav-chevron { transform: rotate(180deg); }
+
+/* The dropdown panel. */
+.site-nav-menu {
+    list-style: none;
+    margin: 0;
+    padding: 0.4rem;
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    min-width: 240px;
+    background: var(--wp--preset--color--surface);
+    border: 1px solid var(--wp--preset--color--subtle);
+    border-radius: 0.85rem;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+    z-index: 50;
+    animation: site-nav-open .15s ease-out;
+}
+@keyframes site-nav-open {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .site-nav-menu { animation: none; }
+    .site-nav-chevron { transition: none; }
+}
+
+.site-nav-menu li { margin: 0; padding: 0; }
+.site-nav-menu a {
+    display: block;
+    padding: 0.55rem 0.8rem;
+    border-radius: 0.5rem;
+    font-size: 0.95rem;
+    color: var(--wp--preset--color--foreground);
+    text-decoration: none;
+    transition: background-color .12s ease, color .12s ease;
+}
+.site-nav-menu a:hover,
+.site-nav-menu a:focus-visible {
+    background: rgba(168, 85, 247, 0.12);
+    color: var(--wp--preset--color--accent-soft);
+    text-decoration: none;
+    outline: none;
+}
+
+/* The "All demos →" overview link sits visually apart from the children. */
+.site-nav-menu-overview {
+    font-size: 0.82rem !important;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--wp--preset--color--muted) !important;
+    border-bottom: 1px solid var(--wp--preset--color--subtle);
+    border-radius: 0.5rem 0.5rem 0 0 !important;
+    margin-bottom: 0.25rem;
+}
+
+/* Section sub-headings inside the dropdown ("Web demos", "Old games").
+   Non-clickable label rows that group the items underneath. */
+.site-nav-menu-heading {
+    margin-top: 0.45rem;
+    padding: 0.35rem 0.8rem 0.15rem;
+    font-family: var(--wp--preset--font-family--mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--wp--preset--color--muted);
+    list-style: none;
+}
+.site-nav-menu-heading:first-of-type { margin-top: 0; }
+
+/* On narrow screens, anchor the dropdown to the viewport edge instead of
+   running off the right. */
+@media (max-width: 480px) {
+    .site-nav-menu {
+        right: -0.5rem;
+        min-width: min(280px, calc(100vw - 2rem));
+    }
+}
+
+/* --- Image sit-on-bg blending ---------------------------------- */
+.wp-block-image.alignfull {
+    margin-block-start: 0;
+}
+
+/* ============================================================
+   Section rhythm — alternating elevations within the dark palette
+   ============================================================ */
+.section { position: relative; }
+.section--surface {
+    background: var(--wp--preset--color--surface);
+}
+.section--ambient {
+    background:
+        radial-gradient(ellipse 60% 50% at 20% 10%, rgba(59,130,246,0.10), transparent 60%),
+        radial-gradient(ellipse 50% 40% at 80% 90%, rgba(168,85,247,0.10), transparent 60%);
+}
+
+/* ============================================================
+   Hero ambient mesh — two large, blurred, slowly drifting blobs
+   sit behind the headline content. Pure CSS, no JS.
+   ============================================================ */
+.hero-stage {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate; /* keeps blobs visually contained */
+}
+.hero-mesh {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+}
+.hero-mesh::before,
+.hero-mesh::after {
+    content: "";
+    position: absolute;
+    width: 55vw;
+    height: 55vw;
+    max-width: 700px;
+    max-height: 700px;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: 0.55;
+    will-change: transform;
+}
+.hero-mesh::before {
+    background: var(--wp--preset--color--primary);
+    top: -10%;
+    left: -15%;
+    animation: drift-a 18s ease-in-out infinite alternate;
+}
+.hero-mesh::after {
+    background: var(--wp--preset--color--accent);
+    bottom: -15%;
+    right: -10%;
+    animation: drift-b 22s ease-in-out infinite alternate;
+}
+@keyframes drift-a {
+    from { transform: translate(0, 0)        scale(1); }
+    to   { transform: translate(20vw, 12vh)  scale(1.1); }
+}
+@keyframes drift-b {
+    from { transform: translate(0, 0)         scale(1); }
+    to   { transform: translate(-15vw, -10vh) scale(1.15); }
+}
+.hero-stage > *:not(.hero-mesh) { position: relative; z-index: 1; }
+
+/* WP's constrained-layout CSS adds max-width + auto margins to every child
+   of a constrained group. That clamps absolute-positioned decorations
+   (.hero-mesh, .code-rain) to contentSize and centers them, breaking the
+   "fill the parent" behavior `inset:0` would otherwise give. Override. */
+.hero-mesh,
+.code-rain {
+    max-width: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    width: auto !important;
+}
+
+/* ============================================================
+   Floating code-symbol particles (purely decorative)
+   ============================================================ */
+.code-rain {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+}
+.code-rain span {
+    position: absolute;
+    bottom: -3em;
+    font-family: var(--wp--preset--font-family--mono);
+    color: var(--wp--preset--color--primary-soft);
+    opacity: 0;
+    font-weight: 600;
+    font-size: 1rem;
+    animation: float-up 22s linear infinite;
+}
+.code-rain span:nth-child(1)  { left:  6%; font-size: 1.1rem; animation-delay:  0s;  color: var(--wp--preset--color--primary-soft); }
+.code-rain span:nth-child(2)  { left: 14%; font-size: 0.9rem; animation-delay:  3s;  color: var(--wp--preset--color--accent-soft); }
+.code-rain span:nth-child(3)  { left: 24%; font-size: 1.4rem; animation-delay:  7s;  color: var(--wp--preset--color--primary-soft); }
+.code-rain span:nth-child(4)  { left: 36%; font-size: 1rem;   animation-delay: 12s;  color: var(--wp--preset--color--accent-soft); }
+.code-rain span:nth-child(5)  { left: 47%; font-size: 1.2rem; animation-delay:  1s;  color: var(--wp--preset--color--primary-soft); }
+.code-rain span:nth-child(6)  { left: 58%; font-size: 0.9rem; animation-delay:  9s;  color: var(--wp--preset--color--accent-soft); }
+.code-rain span:nth-child(7)  { left: 69%; font-size: 1.3rem; animation-delay: 15s;  color: var(--wp--preset--color--primary-soft); }
+.code-rain span:nth-child(8)  { left: 78%; font-size: 1rem;   animation-delay:  5s;  color: var(--wp--preset--color--accent-soft); }
+.code-rain span:nth-child(9)  { left: 88%; font-size: 1.1rem; animation-delay: 11s;  color: var(--wp--preset--color--primary-soft); }
+.code-rain span:nth-child(10) { left: 95%; font-size: 0.9rem; animation-delay: 17s;  color: var(--wp--preset--color--accent-soft); }
+.code-rain[aria-hidden="true"] { opacity: 0.18; }
+.code-rain[aria-hidden="true"] span { opacity: inherit; }
+
+@keyframes float-up {
+    0%   { transform: translateY(0) rotate(-6deg); opacity: 0; }
+    10%  { opacity: 1; }
+    90%  { opacity: 1; }
+    100% { transform: translateY(-115vh) rotate(8deg); opacity: 0; }
+}
+
+/* ============================================================
+   Scroll reveal — cards that are below the fold fade + slide in
+   The .reveal class is added by JS only to off-screen cards,
+   so no-JS users see everything immediately.
+   ============================================================ */
+.reveal {
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity 600ms cubic-bezier(.2,.7,.2,1), transform 600ms cubic-bezier(.2,.7,.2,1);
+    will-change: opacity, transform;
+}
+.reveal.is-in {
+    opacity: 1;
+    transform: none;
+}
+
+/* Respect users who don't want motion */
+@media (prefers-reduced-motion: reduce) {
+    .hero-mesh::before,
+    .hero-mesh::after,
+    .code-rain span { animation: none !important; }
+    .reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+}
+
+/* ============================================================
+   3D tilt cards — needs preserve-3d on the card so child blocks
+   stay visually "inside" while the parent rotates.
+   ============================================================ */
+.dario-card:not(.is-timeline) {
+    transform-style: preserve-3d;
+}
+
+/* ============================================================
+   Live editor (CSS playground)
+   ============================================================ */
+.codepen {
+    margin-top: var(--wp--preset--spacing--20);
+}
+
+.codepen-shell {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    border-radius: 14px;
+}
+
+@media (max-width: 880px) {
+    .codepen-shell { grid-template-columns: 1fr; }
+}
+
+.codepen-pane {
+    background: #0d1326;
+    border: 1px solid #1e2742;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-width: 0; /* let pre/textarea actually overflow horizontally */
+}
+
+.codepen-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: #0a0e1a;
+    border-bottom: 1px solid #1e2742;
+}
+
+.codepen-dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+}
+.codepen-dot--r { background: #ff5f57; }
+.codepen-dot--y { background: #febc2e; }
+.codepen-dot--g { background: #28c840; }
+
+.codepen-filename {
+    margin-left: 8px;
+    font-family: var(--wp--preset--font-family--mono);
+    font-size: 0.78rem;
+    color: #94a3b8;
+    letter-spacing: 0.02em;
+}
+
+.codepen-editorWrap {
+    position: relative;
+    height: 460px;
+    background: #0a0e1a;
+    overflow: hidden;
+}
+
+.codepen-highlight,
+.codepen-input {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    padding: 16px 18px;
+    font-family: var(--wp--preset--font-family--mono);
+    font-size: 0.85rem;
+    line-height: 1.55;
+    white-space: pre;
+    word-wrap: normal;
+    overflow-wrap: normal;
+    word-break: normal;
+    tab-size: 2;
+    -moz-tab-size: 2;
+    box-sizing: border-box;
+}
+
+.codepen-highlight {
+    color: #e8ecf6;
+    pointer-events: none;
+    overflow: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #1e2742 transparent;
+}
+.codepen-highlight code { display: block; }
+
+.codepen-input {
+    background: transparent;
+    color: transparent;
+    caret-color: #c084fc;
+    border: 0;
+    outline: 0;
+    resize: none;
+    overflow: auto;
+    z-index: 2;
+    /* Prevent iOS zoom on focus */
+    font-size: max(0.85rem, 16px);
+}
+@media (min-width: 480px) {
+    .codepen-input { font-size: 0.85rem; }
+}
+
+/* Token colors — one-dark-ish, all values verified ≥ 4.5:1 on #0a0e1a */
+.t-comment   { color: #8a93a6; font-style: italic; }
+.t-string    { color: #98c379; }
+.t-variable  { color: #c678dd; }
+.t-color     { color: #e5c07b; }
+.t-swatch {
+    display: inline-block;
+    width: 0.7em; height: 0.7em;
+    margin-right: 4px;
+    border-radius: 2px;
+    border: 1px solid rgba(255,255,255,0.18);
+    vertical-align: -1px;
+}
+.t-number    { color: #d19a66; }
+.t-property  { color: #61afef; }
+.t-func      { color: #56b6c2; }
+.t-brace     { color: #abb2bf; }
+
+.codepen-frame {
+    flex: 1;
+    padding: 24px;
+    background: #0a0e1a;
+    overflow: auto;
+    min-height: 460px;
+}
+.codepen-frame > div {
+    /* Shadow host — let the demo fill */
+    height: 100%;
+    min-height: 100%;
+}
+
+.codepen-hint {
+    margin-top: 18px;
+    color: var(--wp--preset--color--muted);
+    font-size: 0.85rem;
+    text-align: center;
+}
+.codepen-hint code {
+    background: var(--wp--preset--color--surface);
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-family: var(--wp--preset--font-family--mono);
+    font-size: 0.8rem;
+    color: var(--wp--preset--color--accent-soft);
+    border: 1px solid var(--wp--preset--color--subtle);
+}
+
+/* ============================================================
+   Accessibility (WCAG 2.1 AA) — focus indicators, skip link,
+   and screen-reader utility class.
+   ============================================================ */
+
+/* Visible keyboard-only focus ring — accent-soft is high-contrast
+   against both #0a0e1a (~7.4:1) and #11172a (~7:1). */
+:where(a, button, input, textarea, select, summary, [role="button"], [tabindex]):focus-visible {
+    outline: 2px solid var(--wp--preset--color--accent-soft);
+    outline-offset: 3px;
+    border-radius: 4px;
+}
+
+.wp-block-button__link:focus-visible {
+    outline: 2px solid var(--wp--preset--color--accent-soft);
+    outline-offset: 4px;
+}
+
+/* The live editor textarea has its outline disabled by default;
+   ring the surrounding pane instead so the focus state is obvious
+   without a clipped outline overlapping the highlight layer. */
+.codepen-input:focus-visible {
+    outline: none;
+}
+.codepen-pane:focus-within {
+    box-shadow: 0 0 0 2px var(--wp--preset--color--accent-soft);
+}
+
+/* WordPress auto-injects a skip link in block themes; restyle it so
+   it matches the theme when revealed via keyboard focus. */
+.skip-link,
+.skip-link.screen-reader-text {
+    background: var(--wp--preset--color--accent) !important;
+    color: #ffffff !important;
+    padding: 0.7rem 1.25rem !important;
+    border-radius: 6px !important;
+    font-weight: 700 !important;
+    text-decoration: none !important;
+    z-index: 100000 !important;
+}
+.skip-link:focus {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+}
+
+/* Standard screen-reader-only utility, in case patterns need it */
+.screen-reader-text:not(:focus):not(:active) {
+    position: absolute !important;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* ============================================================
+   Side-rail section nav — fixed dots on the right edge with
+   labels that slide in on hover/focus/active.
+   ============================================================ */
+.side-rail {
+    position: fixed;
+    right: 1.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 50;
+    display: none;
+    pointer-events: none;
+}
+
+@media (min-width: 1180px) {
+    .side-rail { display: block; }
+}
+
+.side-rail ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.4rem;
+}
+
+.side-rail li { margin: 0; padding: 0; }
+
+/* Each rail link is its own frosted-glass pill. The pill is what gives
+   the dot + label contrast against bright backgrounds (e.g. the hero
+   banner image), where bare dots and uppercase mono text would vanish. */
+.side-rail a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.55rem;
+    padding: 0.45rem 0.6rem;
+    color: var(--wp--preset--color--foreground);
+    text-decoration: none;
+    pointer-events: auto;
+    font-family: var(--wp--preset--font-family--mono);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    border-radius: 999px;
+    /* Solid-ish fallback for browsers without backdrop-filter — this
+       alone is opaque enough to keep the dot legible. */
+    background: rgba(10, 14, 26, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+    transition: color 200ms ease,
+                background 200ms ease,
+                border-color 200ms ease,
+                box-shadow 200ms ease;
+}
+
+@supports ((backdrop-filter: blur(8px)) or (-webkit-backdrop-filter: blur(8px))) {
+    .side-rail a {
+        background: rgba(10, 14, 26, 0.55);
+        -webkit-backdrop-filter: blur(10px) saturate(1.4);
+                backdrop-filter: blur(10px) saturate(1.4);
+    }
+}
+
+/* Label: collapsed by default, expands on hover/focus/active. Animating
+   max-width (not display) keeps the transition smooth. */
+.side-rail a span {
+    display: inline-block;
+    max-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    opacity: 0;
+    transition: max-width 260ms cubic-bezier(.2,.7,.2,1),
+                opacity   200ms ease;
+}
+
+.side-rail a:hover,
+.side-rail a:focus-visible,
+.side-rail a.is-active {
+    color: var(--wp--preset--color--accent-soft);
+    border-color: rgba(168, 85, 247, 0.45);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+
+.side-rail a:hover span,
+.side-rail a:focus-visible span,
+.side-rail a.is-active span {
+    max-width: 7rem;
+    opacity: 1;
+}
+
+/* Dot: solid filled circle (not a hollow ring) so it stays visible
+   even when the pill backdrop is doing most of the work. */
+.side-rail a::after {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+    transition: background 200ms ease, transform 220ms ease;
+    flex: 0 0 auto;
+}
+
+.side-rail a.is-active::after {
+    background: var(--wp--preset--gradient--brand);
+    transform: scale(1.35);
+}
+
+/* Smooth scroll for anchor jumps — but respect reduced-motion */
+@media (prefers-reduced-motion: no-preference) {
+    html { scroll-behavior: smooth; }
+}
+
+/* ============================================================
+   Demos hub — /demos/ landing grid of cards
+   ============================================================
+   Each card is one <li>: a thin wrapping <a> (the whole card is
+   clickable), a CSS-only animated preview area, then body content.
+   Accent colors rotate per card via .demo-card--blue / --purple /
+   --pink / --yellow modifiers, set by index in the PHP loop. */
+
+.demos-hub-empty {
+    color: var(--wp--preset--color--muted);
+    text-align: center;
+    padding: 3rem 1rem;
+}
+.demos-hub-empty code {
+    background: var(--wp--preset--color--subtle);
+    padding: 0.1em 0.4em;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+/* Each category bucket on the demos hub gets its own section with a small
+   eyebrow + heading + intro line above its grid. The .alignwide class lets
+   the section break out of the parent's contentSize so the grid can fit
+   three or four cards across at larger viewports. */
+.demos-section {
+    margin-bottom: var(--wp--preset--spacing--60);
+}
+.demos-section.alignwide,
+.demos-grid.alignwide {
+    max-width: var(--wp--style--global--wide-size);
+    margin-left: auto;
+    margin-right: auto;
+}
+.demos-section:last-of-type {
+    margin-bottom: 0;
+}
+.demos-section .eyebrow {
+    margin: 0 0 0.5rem;
+}
+.demos-section-title {
+    font-size: clamp(1.6rem, 1.2rem + 1.2vw, 2.2rem);
+    font-weight: 800;
+    letter-spacing: -0.015em;
+    margin: 0 0 0.5rem;
+    color: var(--wp--preset--color--foreground);
+}
+.demos-section-lead {
+    color: var(--wp--preset--color--muted);
+    line-height: 1.55;
+    margin: 0 0 var(--wp--preset--spacing--40);
+    max-width: 60ch;
+}
+
+.demos-grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    gap: 1.5rem;
+}
+/* The "in the lab" placeholder grid sits alone after the category sections. */
+.demos-grid--lab {
+    margin-top: var(--wp--preset--spacing--50);
+    grid-template-columns: repeat(auto-fill, minmax(290px, 360px));
+    justify-content: center;
+}
+
+/* ---- Projects hub --------------------------------------------------- */
+
+.projects-grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    gap: 1.5rem;
+}
+.project-card {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    background: var(--wp--preset--color--surface);
+    border: 1px solid var(--wp--preset--color--subtle);
+    border-radius: 14px;
+    transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.project-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--wp--preset--color--accent-soft);
+    box-shadow: 0 12px 32px -16px rgba(168, 85, 247, 0.45);
+}
+.project-card-link {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    padding: 1.5rem 1.5rem 1.65rem;
+    text-decoration: none;
+    color: inherit;
+    height: 100%;
+}
+.project-card-link:hover { text-decoration: none; }
+.project-card-tag {
+    margin: 0;
+    font-family: var(--wp--preset--font-family--mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+.project-card-title {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--wp--preset--color--foreground);
+}
+.project-card-blurb {
+    margin: 0;
+    color: var(--wp--preset--color--muted);
+    line-height: 1.55;
+    font-size: 0.95rem;
+}
+.project-card-status {
+    margin: 0;
+    font-family: var(--wp--preset--font-family--mono);
+    font-size: 0.78rem;
+    color: var(--wp--preset--color--muted);
+    opacity: 0.85;
+}
+.project-card-cta {
+    margin-top: auto;
+    padding-top: 0.4rem;
+    font-size: 0.9rem;
+    color: var(--wp--preset--color--primary-soft);
+    font-weight: 600;
+}
+.project-card-arrow {
+    display: inline-block;
+    transition: transform .18s ease;
+}
+.project-card:hover .project-card-arrow { transform: translateX(4px); }
+
+/* ---- Project detail pages ------------------------------------------- */
+
+.project-page .project-hero,
+.project-page .project-figure,
+.project-page .project-gallery {
+    margin: var(--wp--preset--spacing--40) 0;
+}
+.project-page .project-hero img,
+.project-page .project-figure img,
+.project-page .project-figure video {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 12px;
+    border: 1px solid var(--wp--preset--color--subtle);
+}
+.project-page figcaption {
+    margin-top: 0.6rem;
+    font-size: 0.85rem;
+    color: var(--wp--preset--color--muted);
+    text-align: center;
+    line-height: 1.5;
+}
+.project-page .project-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+}
+.project-page .project-gallery > * { min-width: 0; }
+.project-page .project-gallery img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 10px;
+    border: 1px solid var(--wp--preset--color--subtle);
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+}
+.project-page h2 {
+    margin-top: var(--wp--preset--spacing--50);
+}
+
+.demo-card {
+    margin: 0;
+    padding: 0;
+    position: relative;
+    /* Per-card accent — defaulted to blue, overridden by modifier classes. */
+    --demo-accent: var(--wp--preset--color--primary);
+    --demo-accent-soft: var(--wp--preset--color--primary-soft);
+    --demo-accent-rgb: 59, 130, 246;
+    --demo-gradient: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+}
+.demo-card--blue   { --demo-accent: #3b82f6; --demo-accent-soft: #60a5fa; --demo-accent-rgb: 59, 130, 246;
+                     --demo-gradient: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); }
+.demo-card--purple { --demo-accent: #a855f7; --demo-accent-soft: #c084fc; --demo-accent-rgb: 168, 85, 247;
+                     --demo-gradient: linear-gradient(135deg, #a855f7 0%, #c084fc 100%); }
+.demo-card--pink   { --demo-accent: #f43f5e; --demo-accent-soft: #fb7185; --demo-accent-rgb: 244, 63, 94;
+                     --demo-gradient: linear-gradient(135deg, #f43f5e 0%, #fb7185 100%); }
+.demo-card--yellow { --demo-accent: #facc15; --demo-accent-soft: #fde68a; --demo-accent-rgb: 250, 204, 21;
+                     --demo-gradient: linear-gradient(135deg, #facc15 0%, #fde68a 100%); }
+
+.demo-card-link {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--wp--preset--color--surface);
+    border: 1px solid var(--wp--preset--color--subtle);
+    border-radius: 16px;
+    overflow: hidden;
+    color: var(--wp--preset--color--foreground);
+    text-decoration: none;
+    transition: border-color 220ms ease,
+                transform 220ms ease,
+                box-shadow 220ms ease;
+}
+
+.demo-card-link:hover,
+.demo-card-link:focus-visible {
+    border-color: var(--demo-accent);
+    transform: translateY(-4px);
+    box-shadow: 0 16px 44px -14px rgba(var(--demo-accent-rgb), 0.45);
+    text-decoration: none;
+    outline: none;
+}
+
+/* The "in the lab" placeholder card has the same shell but no link. */
+.demo-card-link--static {
+    cursor: default;
+    border-style: dashed;
+    opacity: 0.85;
+}
+.demo-card-link--static:hover { transform: none; box-shadow: none; }
+
+/* --- Preview strip (top of card) --- */
+.demo-card-preview {
+    position: relative;
+    height: 120px;
+    background: var(--demo-gradient);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Subtle inner sheen so the gradient feels less flat. */
+    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.25),
+                inset 0 0 60px rgba(255, 255, 255, 0.08);
+}
+
+/* Soft "noise" via a repeating radial-gradient — gives the previews
+   a tiny bit of texture without an image asset. */
+.demo-card-preview::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(circle at 20% 30%, rgba(255,255,255,0.10) 0%, transparent 35%),
+        radial-gradient(circle at 80% 70%, rgba(0,0,0,0.18) 0%, transparent 40%);
+    pointer-events: none;
+}
+
+/* --- Preview: contrast (two stripes that swap fg/bg) --- */
+.demo-card-preview--contrast {
+    background: #0a0e1a;
+    box-shadow: inset 0 -1px 0 rgba(255,255,255,0.04);
+}
+.demo-card-preview--contrast::after { display: none; }
+.demo-card-preview--contrast .cp-contrast-fg,
+.demo-card-preview--contrast .cp-contrast-bg {
+    flex: 1;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--wp--preset--font-family--mono);
+    font-size: 2.1rem;
+    font-weight: 700;
+    transition: background-color 1.6s ease, color 1.6s ease;
+    animation: cp-contrast-swap 4.8s ease-in-out infinite;
+}
+.demo-card-preview--contrast .cp-contrast-fg {
+    background: #0a0e1a;
+    color: #60a5fa;
+}
+.demo-card-preview--contrast .cp-contrast-bg {
+    background: #60a5fa;
+    color: #0a0e1a;
+    animation-delay: -2.4s;
+}
+@keyframes cp-contrast-swap {
+    0%, 45%   { filter: hue-rotate(0deg); }
+    50%, 95%  { filter: hue-rotate(140deg); }
+    100%      { filter: hue-rotate(0deg); }
+}
+
+/* --- Preview: default (three pulsing bars) --- */
+.demo-card-preview--default .cp-default {
+    width: 12px;
+    height: 40%;
+    margin: 0 6px;
+    background: rgba(255, 255, 255, 0.85);
+    border-radius: 4px;
+    animation: cp-bars 1.4s ease-in-out infinite;
+}
+.demo-card-preview--default .cp-default:nth-child(2) { animation-delay: 0.18s; }
+.demo-card-preview--default .cp-default:nth-child(3) { animation-delay: 0.36s; }
+@keyframes cp-bars {
+    0%, 100% { transform: scaleY(0.5); }
+    50%      { transform: scaleY(1.4); }
+}
+
+/* --- Preview: weather (sun + drifting cloud + falling raindrops) --- */
+.demo-card-preview--weather {
+    background: linear-gradient(180deg, #1e3a8a 0%, #3b82f6 100%);
+}
+.demo-card-preview--weather::after { display: none; }
+.demo-card-preview--weather .cp-wx-sun {
+    position: absolute;
+    top: 18px; left: 18px;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #fde68a, #facc15);
+    box-shadow: 0 0 24px rgba(250, 204, 21, 0.55);
+}
+.demo-card-preview--weather .cp-wx-cloud {
+    position: absolute;
+    bottom: 32px; right: 16px;
+    width: 70px; height: 22px;
+    background: #e8ecf6;
+    border-radius: 14px;
+    box-shadow:
+        -16px -10px 0 -2px #e8ecf6,
+        16px -8px 0 -3px #e8ecf6;
+    animation: cp-wx-drift 4s ease-in-out infinite alternate;
+}
+.demo-card-preview--weather .cp-wx-drop {
+    position: absolute;
+    bottom: 0;
+    width: 3px;
+    height: 10px;
+    background: rgba(232, 236, 246, 0.9);
+    border-radius: 2px;
+    animation: cp-wx-fall 1.4s linear infinite;
+}
+.demo-card-preview--weather .cp-wx-drop:nth-of-type(3) { right: 50px;  animation-delay: 0s;   }
+.demo-card-preview--weather .cp-wx-drop:nth-of-type(4) { right: 70px;  animation-delay: 0.45s; }
+.demo-card-preview--weather .cp-wx-drop:nth-of-type(5) { right: 95px;  animation-delay: 0.9s;  }
+@keyframes cp-wx-drift {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-22px); }
+}
+@keyframes cp-wx-fall {
+    0%   { transform: translateY(-50px); opacity: 0; }
+    20%  { opacity: 1; }
+    100% { transform: translateY(40px); opacity: 0; }
+}
+
+/* --- Preview: audio (equalizer bars at varied heights) --- */
+.demo-card-preview--audio {
+    background: linear-gradient(135deg, #1f0a3e 0%, #050813 100%);
+    align-items: flex-end;
+    padding: 0 14px 14px;
+    box-sizing: border-box;
+    gap: 4px;
+}
+.demo-card-preview--audio::after { display: none; }
+.demo-card-preview--audio .cp-eq {
+    flex: 1;
+    height: 30%;
+    background: linear-gradient(to top, #3b82f6, #a855f7, #f43f5e);
+    border-radius: 2px 2px 0 0;
+    animation: cp-eq-jiggle 1.1s ease-in-out infinite;
+    transform-origin: bottom;
+}
+.demo-card-preview--audio .cp-eq:nth-child(1)  { animation-delay: 0.00s; }
+.demo-card-preview--audio .cp-eq:nth-child(2)  { animation-delay: 0.10s; }
+.demo-card-preview--audio .cp-eq:nth-child(3)  { animation-delay: 0.20s; }
+.demo-card-preview--audio .cp-eq:nth-child(4)  { animation-delay: 0.30s; }
+.demo-card-preview--audio .cp-eq:nth-child(5)  { animation-delay: 0.40s; }
+.demo-card-preview--audio .cp-eq:nth-child(6)  { animation-delay: 0.50s; }
+.demo-card-preview--audio .cp-eq:nth-child(7)  { animation-delay: 0.60s; }
+.demo-card-preview--audio .cp-eq:nth-child(8)  { animation-delay: 0.70s; }
+.demo-card-preview--audio .cp-eq:nth-child(9)  { animation-delay: 0.55s; }
+.demo-card-preview--audio .cp-eq:nth-child(10) { animation-delay: 0.25s; }
+@keyframes cp-eq-jiggle {
+    0%, 100% { transform: scaleY(0.4); }
+    50%      { transform: scaleY(2.4); }
+}
+
+/* --- Preview: sort (bars sliding into order, then resetting) --- */
+.demo-card-preview--sort {
+    background: linear-gradient(135deg, #0a1f3a 0%, #050813 100%);
+    align-items: flex-end;
+    padding: 0 14px 14px;
+    box-sizing: border-box;
+    gap: 5px;
+}
+.demo-card-preview--sort::after { display: none; }
+.demo-card-preview--sort .cp-sort {
+    flex: 1;
+    background: linear-gradient(to top, #60a5fa, #c084fc);
+    border-radius: 2px 2px 0 0;
+    animation: cp-sort-march 3.2s ease-in-out infinite;
+}
+/* Each bar starts at a "scrambled" height and animates to a sorted height.
+   Hand-tuned per-bar height pairs so the result actually looks sorted. */
+.demo-card-preview--sort .cp-sort:nth-child(1) { animation-name: cp-sort-1; }
+.demo-card-preview--sort .cp-sort:nth-child(2) { animation-name: cp-sort-2; }
+.demo-card-preview--sort .cp-sort:nth-child(3) { animation-name: cp-sort-3; }
+.demo-card-preview--sort .cp-sort:nth-child(4) { animation-name: cp-sort-4; }
+.demo-card-preview--sort .cp-sort:nth-child(5) { animation-name: cp-sort-5; }
+.demo-card-preview--sort .cp-sort:nth-child(6) { animation-name: cp-sort-6; }
+.demo-card-preview--sort .cp-sort:nth-child(7) { animation-name: cp-sort-7; }
+.demo-card-preview--sort .cp-sort:nth-child(8) { animation-name: cp-sort-8; }
+@keyframes cp-sort-1 { 0%,15% { height: 60%; } 60%,100% { height: 15%; } }
+@keyframes cp-sort-2 { 0%,15% { height: 25%; } 60%,100% { height: 25%; } }
+@keyframes cp-sort-3 { 0%,15% { height: 80%; } 60%,100% { height: 35%; } }
+@keyframes cp-sort-4 { 0%,15% { height: 15%; } 60%,100% { height: 45%; } }
+@keyframes cp-sort-5 { 0%,15% { height: 70%; } 60%,100% { height: 55%; } }
+@keyframes cp-sort-6 { 0%,15% { height: 35%; } 60%,100% { height: 65%; } }
+@keyframes cp-sort-7 { 0%,15% { height: 50%; } 60%,100% { height: 75%; } }
+@keyframes cp-sort-8 { 0%,15% { height: 90%; } 60%,100% { height: 90%; } }
+
+/* --- Preview: life (real glider walking diagonally across a 6x6 grid) ---
+   Four stacked phase frames hold the glider's 4 rotation states. Each frame
+   fades in for one quarter of the animation, so cells visibly flip on/off the
+   way Life cells do. The whole glider container steps (1,1) per period across
+   a 6x6 cell grid, so by the end of the loop it has crossed the preview. */
+.demo-card-preview--life {
+    background:
+        linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px) 0 0 / 100% 16.6667%,
+        linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px) 0 0 / 16.6667% 100%,
+        linear-gradient(135deg, #0a0e1a 0%, #050813 100%);
+    position: relative;
+    overflow: hidden;
+}
+.demo-card-preview--life::after { display: none; }
+.demo-card-preview--life .cp-life-glider {
+    position: absolute;
+    /* 3 of 6 cells = 50% on each axis. */
+    width: 50%;
+    height: 50%;
+    top: 0;
+    left: 0;
+    /* Walk 3 cells (50% of preview = 100% of self) diagonally in 3 steps.
+       Duration is 3 × frame-period (2s) so the glider rotates through all four
+       phases at each cell position before shifting. */
+    animation: cp-life-walk 6s steps(3, end) infinite;
+}
+.demo-card-preview--life .cp-life-frame {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows:    repeat(3, 1fr);
+    padding: 2px;
+    box-sizing: border-box;
+    gap: 2px;
+}
+.demo-card-preview--life .cp-life-cell { background: transparent; border-radius: 2px; }
+.demo-card-preview--life .cp-life-cell.is-on {
+    background: var(--demo-accent-soft, #c084fc);
+    box-shadow: 0 0 6px rgba(168, 85, 247, 0.55);
+}
+.demo-card-preview--life .cp-life-frame-0 { animation: cp-life-frame-0 2s steps(1, end) infinite; }
+.demo-card-preview--life .cp-life-frame-1 { animation: cp-life-frame-1 2s steps(1, end) infinite; }
+.demo-card-preview--life .cp-life-frame-2 { animation: cp-life-frame-2 2s steps(1, end) infinite; }
+.demo-card-preview--life .cp-life-frame-3 { animation: cp-life-frame-3 2s steps(1, end) infinite; }
+@keyframes cp-life-walk {
+    from { transform: translate(0, 0); }
+    to   { transform: translate(100%, 100%); }
+}
+@keyframes cp-life-frame-0 { 0%   { opacity: 1; } 25%  { opacity: 0; } 100% { opacity: 0; } }
+@keyframes cp-life-frame-1 { 0%   { opacity: 0; } 25%  { opacity: 1; } 50%  { opacity: 0; } 100% { opacity: 0; } }
+@keyframes cp-life-frame-2 { 0%   { opacity: 0; } 50%  { opacity: 1; } 75%  { opacity: 0; } 100% { opacity: 0; } }
+@keyframes cp-life-frame-3 { 0%   { opacity: 0; } 75%  { opacity: 1; } 100% { opacity: 0; } }
+
+/* --- Preview: live-editor (mock CSS lines + a card that morphs in sync) ---
+   Left pane shows 4 lines of syntax-highlighted CSS with a blinking caret on
+   the closing brace. Right pane holds a small card whose border-radius and
+   background cycle in sync with the highlighted property values. */
+.demo-card-preview--live-editor {
+    background: linear-gradient(135deg, #0f1530 0%, #050813 100%);
+    padding: 0;
+    display: flex;
+    align-items: stretch;
+    justify-content: stretch;
+    font-family: var(--wp--preset--font-family--mono, ui-monospace, "SFMono-Regular", monospace);
+}
+.demo-card-preview--live-editor::after { display: none; }
+.demo-card-preview--live-editor .cp-le-pane {
+    flex: 0 0 62%;
+    padding: 12px 10px 12px 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    font-size: 10px;
+    line-height: 1.3;
+    color: #8b9bbd;
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+    white-space: pre;
+    overflow: hidden;
+}
+.demo-card-preview--live-editor .cp-le-line { display: block; }
+.demo-card-preview--live-editor .cp-le-sel   { color: #f43f5e; }
+.demo-card-preview--live-editor .cp-le-prop  { color: #60a5fa; }
+.demo-card-preview--live-editor .cp-le-num   { color: #facc15; animation: cp-le-flash 3s ease-in-out infinite; }
+.demo-card-preview--live-editor .cp-le-hex   { color: #a855f7; animation: cp-le-flash 3s ease-in-out infinite; animation-delay: 1.5s; }
+.demo-card-preview--live-editor .cp-le-brace { color: #cdd5e6; }
+.demo-card-preview--live-editor .cp-le-punct { color: #5e6a85; }
+.demo-card-preview--live-editor .cp-le-caret {
+    display: inline-block;
+    width: 1px;
+    height: 11px;
+    margin-left: 2px;
+    vertical-align: -2px;
+    background: #cdd5e6;
+    animation: cp-le-blink 1s steps(1, end) infinite;
+}
+@keyframes cp-le-blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
+@keyframes cp-le-flash {
+    0%, 100% { filter: brightness(1); }
+    50%      { filter: brightness(1.6); }
+}
+.demo-card-preview--live-editor .cp-le-render {
+    flex: 1 1 38%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0a0e1a;
+    position: relative;
+}
+.demo-card-preview--live-editor .cp-le-card {
+    width: 60%;
+    height: 60%;
+    background: linear-gradient(135deg, #3b82f6, #a855f7);
+    box-shadow: 0 4px 14px rgba(168, 85, 247, 0.3);
+    animation: cp-le-card 3s ease-in-out infinite;
+}
+@keyframes cp-le-card {
+    0%, 100% { border-radius: 4px;  filter: hue-rotate(0deg); }
+    50%      { border-radius: 18px; filter: hue-rotate(60deg); }
+}
+
+/* --- Preview: microgame / Maze Craze (green walls, red player tracing a path
+   to an orange goal) --- */
+.demo-card-preview--microgame {
+    background: #050a07;
+    position: relative;
+    overflow: hidden;
+}
+.demo-card-preview--microgame::after { display: none; }
+.demo-card-preview--microgame .cp-mg-wall {
+    position: absolute;
+    background: #2dff5a;
+    box-shadow: 0 0 6px rgba(45, 255, 90, 0.55), 0 0 2px rgba(45, 255, 90, 0.9);
+    border-radius: 1px;
+}
+/* Two main horizontal blockers force a zigzag: top blocker leaves a gap on
+   the right, bottom blocker leaves a gap on the left. Short verticals cap the
+   gap edges so the openings read as deliberate. */
+.demo-card-preview--microgame .cp-mg-wall-1 { left:  4%; top:  32%; width: 68%; height: 2px; }
+.demo-card-preview--microgame .cp-mg-wall-2 { left: 28%; top:  68%; width: 68%; height: 2px; }
+.demo-card-preview--microgame .cp-mg-wall-3 { left: 72%; top:  22%; width: 2px;  height: 10%; }
+.demo-card-preview--microgame .cp-mg-wall-4 { left: 28%; top:  68%; width: 2px;  height: 10%; }
+.demo-card-preview--microgame .cp-mg-wall-5 { left:  8%; top:  10%; width: 14%; height: 2px; }
+.demo-card-preview--microgame .cp-mg-wall-6 { left: 88%; top:  42%; width: 2px;  height: 16%; }
+.demo-card-preview--microgame .cp-mg-goal {
+    position: absolute;
+    right:  8%;
+    bottom: 14%;
+    width:  9px;
+    height: 9px;
+    background: #ff8c1a;
+    box-shadow: 0 0 8px rgba(255, 140, 26, 0.75);
+    border-radius: 1px;
+}
+.demo-card-preview--microgame .cp-mg-player {
+    position: absolute;
+    left: 8%;
+    top: 18%;
+    width:  9px;
+    height: 9px;
+    background: #ff4848;
+    box-shadow: 0 0 6px rgba(255, 72, 72, 0.7);
+    border-radius: 1px;
+    animation: cp-mg-walk 6.5s linear infinite;
+}
+/* Path: right along top channel, down through right gap, left across the
+   middle, down through left gap, right across the bottom to the goal. Each
+   segment is straight so the dot only ever moves along open corridors. */
+@keyframes cp-mg-walk {
+    0%             { left:  8%; top: 18%; opacity: 1; }
+    16%            { left: 82%; top: 18%; opacity: 1; }
+    32%            { left: 82%; top: 50%; opacity: 1; }
+    48%            { left: 12%; top: 50%; opacity: 1; }
+    64%            { left: 12%; top: 82%; opacity: 1; }
+    82%            { left: 84%; top: 82%; opacity: 1; }
+    92%            { left: 84%; top: 82%; opacity: 1; }
+    100%           { left: 84%; top: 82%; opacity: 0; }
+}
+
+/* --- Preview: pug-attack (sky scene, pug paces, bullet drops, cat scrolls) --- */
+.demo-card-preview--pug-attack {
+    background: linear-gradient(180deg, #6fb6e8 0%, #b9d8ee 65%, #9ec96f 80%, #6e9d3f 100%);
+    position: relative;
+    overflow: hidden;
+}
+.demo-card-preview--pug-attack::after { display: none; }
+.demo-card-preview--pug-attack .cp-pa-ground {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 18%;
+    background:
+        repeating-linear-gradient(90deg, rgba(0,0,0,0.06) 0 6px, transparent 6px 14px),
+        linear-gradient(180deg, #8fbb55 0%, #5d8838 100%);
+}
+.demo-card-preview--pug-attack .cp-pa-pug {
+    position: absolute;
+    top: 14%;
+    width: 22px;
+    height: 16px;
+    background: #d2b48c;
+    border-radius: 50% 50% 45% 45%;
+    box-shadow:
+        inset -3px -2px 0 rgba(0,0,0,0.12),
+        -7px -3px 0 -2px #8b6f4e,
+         7px -3px 0 -2px #8b6f4e;
+    animation: cp-pa-pug-pace 3.4s ease-in-out infinite alternate;
+}
+.demo-card-preview--pug-attack .cp-pa-pug::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 3px;
+    width: 4px;
+    height: 3px;
+    background: #1a1a1a;
+    border-radius: 50%;
+    transform: translateX(-50%);
+}
+@keyframes cp-pa-pug-pace {
+    from { left: 16%; }
+    to   { left: 62%; }
+}
+.demo-card-preview--pug-attack .cp-pa-bullet {
+    position: absolute;
+    top: 30%;
+    left: 50%;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #f8f8f8;
+    box-shadow: 0 0 4px rgba(255, 255, 255, 0.8);
+    animation: cp-pa-bullet 1.8s ease-in infinite;
+}
+@keyframes cp-pa-bullet {
+    0%       { transform: translateY(0);   opacity: 0; }
+    8%       { transform: translateY(0);   opacity: 1; }
+    85%      { transform: translateY(58px); opacity: 1; }
+    100%     { transform: translateY(58px); opacity: 0; }
+}
+.demo-card-preview--pug-attack .cp-pa-cat {
+    position: absolute;
+    bottom: 4%;
+    left: -22px;
+    width: 18px;
+    height: 9px;
+    background: #1f1f1f;
+    border-radius: 6px 6px 4px 4px;
+    animation: cp-pa-cat 4.2s linear infinite;
+}
+.demo-card-preview--pug-attack .cp-pa-cat::before {
+    content: "";
+    position: absolute;
+    left: -5px;
+    top: -3px;
+    width: 7px;
+    height: 7px;
+    background: #1f1f1f;
+    border-radius: 50% 50% 40% 40%;
+    box-shadow:
+        -1px -2px 0 -1px #1f1f1f,
+         1px -2px 0 -1px #1f1f1f;
+}
+.demo-card-preview--pug-attack .cp-pa-cat::after {
+    content: "";
+    position: absolute;
+    right: -7px;
+    bottom: 4px;
+    width: 8px;
+    height: 2px;
+    background: #1f1f1f;
+    border-radius: 2px;
+    transform: rotate(-25deg);
+    transform-origin: left center;
+}
+@keyframes cp-pa-cat {
+    from { left: -22px; }
+    to   { left: 100%; }
+}
+
+/* --- Preview: lab (dotted slow pulse) --- */
+.demo-card-preview--lab {
+    background:
+        repeating-linear-gradient(
+            45deg,
+            rgba(168, 85, 247, 0.10) 0,
+            rgba(168, 85, 247, 0.10) 10px,
+            transparent 10px,
+            transparent 20px
+        ),
+        linear-gradient(135deg, #1a2138 0%, #11172a 100%);
+}
+.demo-card-preview--lab::after { display: none; }
+.demo-card-preview--lab .cp-lab {
+    width: 10px;
+    height: 10px;
+    margin: 0 6px;
+    border-radius: 50%;
+    background: var(--wp--preset--color--accent-soft);
+    box-shadow: 0 0 12px rgba(168, 85, 247, 0.7);
+    animation: cp-lab-pulse 1.6s ease-in-out infinite;
+}
+.demo-card-preview--lab .cp-lab:nth-child(2) { animation-delay: 0.2s; }
+.demo-card-preview--lab .cp-lab:nth-child(3) { animation-delay: 0.4s; }
+@keyframes cp-lab-pulse {
+    0%, 100% { opacity: 0.25; transform: scale(0.85); }
+    50%      { opacity: 1;    transform: scale(1.2); }
+}
+
+/* --- Preview: pokedex (Game Boy LCD with cycling Gen 1 sprites) --- */
+.demo-card-preview--pokedex {
+    background: linear-gradient(180deg, #b91c2b 0%, #7f1018 100%);
+}
+.demo-card-preview--pokedex::after { display: none; }
+.demo-card-preview--pokedex .cp-poke-shell {
+    position: relative;
+    width: 132px;
+    height: 92px;
+    background: #d6d6c2;
+    border-radius: 6px;
+    border: 1px solid rgba(0, 0, 0, 0.35);
+    box-shadow:
+        0 2px 0 rgba(0, 0, 0, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.45),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.18);
+    padding: 8px 10px 8px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.demo-card-preview--pokedex .cp-poke-led {
+    position: absolute;
+    top: 50%;
+    left: 8px;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #fef3f3, #ef4444 60%, #7f1018);
+    box-shadow:
+        0 0 6px rgba(239, 68, 68, 0.85),
+        inset 0 1px 0 rgba(255, 255, 255, 0.55);
+    animation: cp-poke-led 2.4s ease-in-out infinite;
+}
+.demo-card-preview--pokedex .cp-poke-screen {
+    position: relative;
+    flex: 1;
+    height: 100%;
+    background: #9bbc0f; /* classic Game Boy LCD green */
+    border-radius: 3px;
+    box-shadow:
+        inset 0 0 0 2px #0f380f,
+        inset 0 0 0 4px #8bac0f,
+        inset 0 6px 12px rgba(15, 56, 15, 0.25);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.demo-card-preview--pokedex .cp-poke-screen::after {
+    /* faint LCD scanlines */
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        0deg,
+        rgba(15, 56, 15, 0.10) 0,
+        rgba(15, 56, 15, 0.10) 1px,
+        transparent 1px,
+        transparent 3px
+    );
+    pointer-events: none;
+}
+.demo-card-preview--pokedex .cp-poke-sprite {
+    position: absolute;
+    width: 56px;
+    height: 56px;
+    object-fit: contain;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    /* Gray sprite pixels darken the green LCD into authentic GB tones; transparent stays bright. */
+    mix-blend-mode: multiply;
+    opacity: 0;
+    animation: cp-poke-cycle 7.5s steps(1, end) infinite;
+}
+.demo-card-preview--pokedex .cp-poke-sprite-0 { animation-delay: 0s; }
+.demo-card-preview--pokedex .cp-poke-sprite-1 { animation-delay: 1.5s; }
+.demo-card-preview--pokedex .cp-poke-sprite-2 { animation-delay: 3s; }
+.demo-card-preview--pokedex .cp-poke-sprite-3 { animation-delay: 4.5s; }
+.demo-card-preview--pokedex .cp-poke-sprite-4 { animation-delay: 6s; }
+@keyframes cp-poke-cycle {
+    0%, 18%   { opacity: 1; transform: translateY(0); }
+    19%       { opacity: 1; transform: translateY(-2px); }
+    20%, 100% { opacity: 0; transform: translateY(0); }
+}
+@keyframes cp-poke-led {
+    0%, 100% { opacity: 1;   box-shadow: 0 0 6px rgba(239, 68, 68, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.55); }
+    50%      { opacity: 0.6; box-shadow: 0 0 2px rgba(239, 68, 68, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.55); }
+}
+
+/* --- Card body --- */
+.demo-card-body {
+    padding: 1.4rem 1.5rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    flex: 1;
+}
+
+.demo-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.demo-card-tag {
+    font-family: var(--wp--preset--font-family--mono);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--demo-accent-soft);
+    padding: 0.25rem 0.55rem;
+    border: 1px solid rgba(var(--demo-accent-rgb), 0.45);
+    border-radius: 999px;
+    line-height: 1;
+}
+
+.demo-card-badge {
+    font-family: var(--wp--preset--font-family--mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #0a0e1a;
+    background: var(--demo-gradient);
+    padding: 0.25rem 0.55rem;
+    border-radius: 999px;
+    line-height: 1;
+    font-weight: 700;
+}
+
+.demo-card-title {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.25;
+    color: var(--wp--preset--color--foreground);
+}
+
+.demo-card-blurb {
+    margin: 0;
+    color: var(--wp--preset--color--muted);
+    font-size: 0.95rem;
+    line-height: 1.55;
+}
+.demo-card-blurb a {
+    color: var(--demo-accent-soft);
+    text-decoration: underline;
+    text-decoration-color: rgba(var(--demo-accent-rgb), 0.4);
+}
+
+.demo-card-tech {
+    list-style: none;
+    margin: 0.2rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+.demo-card-tech li {
+    margin: 0;
+    padding: 0.25rem 0.55rem;
+    font-family: var(--wp--preset--font-family--mono);
+    font-size: 0.72rem;
+    color: var(--wp--preset--color--muted);
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid var(--wp--preset--color--subtle);
+    border-radius: 6px;
+    line-height: 1;
+}
+
+.demo-card-cta {
+    margin-top: auto;
+    padding-top: 0.8rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--demo-accent-soft);
+}
+.demo-card-cta--quiet { color: var(--wp--preset--color--muted); }
+
+.demo-card-arrow {
+    display: inline-block;
+    transition: transform 220ms ease;
+}
+.demo-card-link:hover .demo-card-arrow,
+.demo-card-link:focus-visible .demo-card-arrow {
+    transform: translateX(5px);
+}
+.demo-card-arrow--bounce {
+    animation: cp-arrow-bounce 1.6s ease-in-out infinite;
+}
+@keyframes cp-arrow-bounce {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-3px); }
+}
+
+/* Reduced motion: kill every preview animation but keep the hover lift,
+   which is short enough to feel like a regular UI affordance. */
+@media (prefers-reduced-motion: reduce) {
+    .demo-card-preview--contrast .cp-contrast-fg,
+    .demo-card-preview--contrast .cp-contrast-bg,
+    .demo-card-preview--default .cp-default,
+    .demo-card-preview--lab .cp-lab,
+    .demo-card-preview--weather .cp-wx-cloud,
+    .demo-card-preview--weather .cp-wx-drop,
+    .demo-card-preview--audio .cp-eq,
+    .demo-card-preview--sort .cp-sort,
+    .demo-card-preview--life .cp-life,
+    .demo-card-preview--pokedex .cp-poke-sprite,
+    .demo-card-preview--pokedex .cp-poke-led,
+    .demo-card-arrow--bounce {
+        animation: none !important;
+    }
+    /* Without animation the sprites would all sit invisible; show the first one. */
+    .demo-card-preview--pokedex .cp-poke-sprite-0 {
+        opacity: 1 !important;
+    }
+}
+
+/* ============================================================
+   Easter egg: party mode  (toggled by the Konami code in JS)
+   ============================================================
+   Hue-shifts every gradient on the page and gives the skill
+   pills a small wobble. Auto-disabled for prefers-reduced-motion
+   visitors — even the silly stuff is opt-in. */
+@media (prefers-reduced-motion: no-preference) {
+    body.party-mode .has-gradient-text,
+    body.party-mode .hero-mesh,
+    body.party-mode .skill-pill,
+    body.party-mode .has-neon-glow {
+        animation: party-hue 3s linear infinite;
+    }
+    body.party-mode .skill-pill {
+        animation: party-hue 3s linear infinite, party-bounce 900ms ease-in-out infinite;
+    }
+    body.party-mode .dario-card {
+        animation: party-hue 4s linear infinite;
+    }
+}
+@keyframes party-hue {
+    from { filter: hue-rotate(0deg); }
+    to   { filter: hue-rotate(360deg); }
+}
+@keyframes party-bounce {
+    0%, 100% { transform: translateY(0)    rotate(-2deg); }
+    50%      { transform: translateY(-3px) rotate( 2deg); }
+}
+
+/* ============================================================
+   404 — fake terminal session under the headline
+   ============================================================
+   Reuses the live-editor token classes (.t-string, .t-comment,
+   .t-func) so highlighting stays visually consistent with the
+   real CSS playground further up the site. */
+.not-found-art {
+    background: var(--wp--preset--color--surface);
+    border: 1px solid var(--wp--preset--color--subtle);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    margin: 0 auto;
+    max-width: 640px;
+    overflow-x: auto;
+    font-family: var(--wp--preset--font-family--mono);
+    font-size: 0.92rem;
+    line-height: 1.6;
+    color: var(--wp--preset--color--foreground);
+    text-align: left;
+    white-space: pre;
+}
+
+/* ============================================================
+   Content pages (Privacy, Sitemap, etc.)
+   ============================================================
+   Headings on the homepage are tuned for hero impact (h1 ≈ display,
+   h2 ≈ xx-large). On a regular content page that's overwhelming —
+   "Privacy Policy" should not be 6rem tall. Scope a saner scale
+   to anything wrapped in .content-page. */
+.content-page h1 {
+    font-size: clamp(2rem, 4.5vw, 2.75rem);
+    line-height: 1.15;
+}
+.content-page h2 {
+    font-size: clamp(1.35rem, 2.6vw, 1.7rem);
+    line-height: 1.25;
+}
+.content-page h3 {
+    font-size: 1.15rem;
+    line-height: 1.35;
+}
+
+/* ============================================================
+   Sitemap & privacy page list styling
+   ============================================================ */
+.sitemap-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.85rem;
+}
+.sitemap-list li {
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--wp--preset--color--subtle);
+    border-radius: 10px;
+    background: var(--wp--preset--color--surface);
+    transition: border-color 200ms ease, transform 200ms ease;
+}
+.sitemap-list li:hover {
+    border-color: var(--wp--preset--color--primary);
+    transform: translateX(4px);
+}
+.sitemap-list a {
+    font-weight: 600;
+    text-decoration: none;
+}
+.sitemap-list a:hover { text-decoration: underline; }
+.sitemap-list .sitemap-desc {
+    display: block;
+    margin-top: 0.25rem;
+    color: var(--wp--preset--color--muted);
+    font-size: 0.92rem;
+}
+.sitemap-list code {
+    background: var(--wp--preset--color--subtle);
+    padding: 0.1em 0.4em;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
