@@ -32,6 +32,22 @@ const DARIOBIMBI_LINKEDIN = 'https://www.linkedin.com/in/dario-bimbi-7512a36b';
 const DARIOBIMBI_OG_IMG   = '/assets/banner.png';
 const DARIOBIMBI_LOGO     = '/assets/logo.png';
 
+/* Employer + alma mater + locality used by the JSON-LD Person/Organization
+   blocks. These are public-facing facts already on the site copy; the
+   address is the metro the bio mentions, not a street. */
+const DARIOBIMBI_EMPLOYER_NAME = 'Clicks Web Design Inc.';
+const DARIOBIMBI_EMPLOYER_URL  = 'https://clickswebdesign.com';
+const DARIOBIMBI_ALMA_NAME     = 'DePaul University';
+const DARIOBIMBI_ALMA_URL      = 'https://www.depaul.edu/';
+const DARIOBIMBI_LOCALITY      = 'Chicago';
+const DARIOBIMBI_REGION        = 'IL';
+const DARIOBIMBI_COUNTRY       = 'US';
+
+/* Identify a "game" project page so the JSON-LD can emit VideoGame instead
+   of generic CreativeWork. Templates that aren't in this list fall through
+   to CreativeWork. Add slugs here as new game projects ship. */
+const DARIOBIMBI_GAME_PROJECTS = [ 'space-dwarves', 'lost-probe', 'one-robot-army' ];
+
 /* ------------------------------------------------------------------
  * Helpers
  * ------------------------------------------------------------------ */
@@ -71,8 +87,26 @@ function dariobimbi_seo_canonical(): string {
     return home_url( strtok( $_SERVER['REQUEST_URI'] ?? '/', '?' ) );
 }
 
-/** Absolute URL to the OG image plus its real pixel dimensions. */
+/**
+ * Absolute URL to the OG image plus its real pixel dimensions.
+ *
+ * Singular pages with a featured image use that image, so a project or demo
+ * shared on LinkedIn shows its own screenshot instead of the generic site
+ * banner. Everything else falls back to assets/banner.png.
+ */
 function dariobimbi_seo_og_image(): array {
+    if ( is_singular() && has_post_thumbnail() ) {
+        $thumb_id = get_post_thumbnail_id();
+        $src      = $thumb_id ? wp_get_attachment_image_src( $thumb_id, 'full' ) : false;
+        if ( $src && ! empty( $src[0] ) ) {
+            return [
+                'url'    => (string) $src[0],
+                'width'  => (int) ( $src[1] ?? 0 ),
+                'height' => (int) ( $src[2] ?? 0 ),
+            ];
+        }
+    }
+
     $rel  = DARIOBIMBI_OG_IMG;
     $url  = get_stylesheet_directory_uri() . $rel;
     $path = get_stylesheet_directory()      . $rel;
@@ -86,6 +120,27 @@ function dariobimbi_seo_og_image(): array {
         }
     }
     return [ 'url' => $url, 'width' => $width, 'height' => $height ];
+}
+
+/**
+ * If the current request is a project page, return its slug + Schema.org
+ * type. Returns null on non-project pages so callers can short-circuit.
+ *
+ * Detection is by custom-template name: pages assigned a `page-project-*`
+ * template are projects, the slug is whatever follows the prefix, and
+ * known game slugs map to VideoGame instead of generic CreativeWork.
+ */
+function dariobimbi_seo_project_meta(): ?array {
+    if ( ! is_singular() ) {
+        return null;
+    }
+    $template = get_page_template_slug();
+    if ( ! $template || strpos( $template, 'page-project-' ) !== 0 ) {
+        return null;
+    }
+    $slug = substr( $template, strlen( 'page-project-' ) );
+    $type = in_array( $slug, DARIOBIMBI_GAME_PROJECTS, true ) ? 'VideoGame' : 'CreativeWork';
+    return [ 'slug' => $slug, 'type' => $type ];
 }
 
 /* ------------------------------------------------------------------
@@ -139,6 +194,12 @@ add_action( 'wp_head', function () {
         printf( '<meta property="og:image:width" content="%d">' . "\n",  $og['width'] );
         printf( '<meta property="og:image:height" content="%d">' . "\n", $og['height'] );
     }
+    /* og:image:type lets crawlers skip a HEAD probe for the MIME type. */
+    $og_ext  = strtolower( (string) pathinfo( wp_parse_url( $og['url'], PHP_URL_PATH ) ?: '', PATHINFO_EXTENSION ) );
+    $og_mime = [ 'png' => 'image/png', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'webp' => 'image/webp', 'gif' => 'image/gif' ][ $og_ext ] ?? '';
+    if ( $og_mime ) {
+        printf( '<meta property="og:image:type" content="%s">' . "\n", esc_attr( $og_mime ) );
+    }
     printf( '<meta property="og:image:alt" content="%s">' . "\n",     esc_attr( 'Dario Bimbi, Web Developer' ) );
 
     // Twitter Card (no handle — Dario isn't on Twitter as a creator)
@@ -157,6 +218,11 @@ add_action( 'wp_head', function () {
         esc_url( home_url( '/sitemap.xml' ) )
     );
 
+    /* IndieWeb / Mastodon identity verification: rel="me" links the site to
+       the off-site profile, and any rel=me on that profile pointing back
+       confirms ownership. Free and standards-based. */
+    printf( '<link rel="me" href="%s">' . "\n", esc_url( DARIOBIMBI_LINKEDIN ) );
+
     echo "<!-- /SEO -->\n";
 }, 5 );
 
@@ -165,80 +231,180 @@ add_action( 'wp_head', function () {
  * ------------------------------------------------------------------ */
 
 add_action( 'wp_head', function () {
-    $home    = home_url( '/' );
-    $logoUrl = get_stylesheet_directory_uri() . DARIOBIMBI_LOGO;
-    $flags   = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT;
+    $home     = home_url( '/' );
+    $logoUrl  = get_stylesheet_directory_uri() . DARIOBIMBI_LOGO;
+    $flags    = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT;
+    $org_id   = DARIOBIMBI_EMPLOYER_URL . '#org';
+    $person_id = $home . '#dario';
+    $site_id   = $home . '#website';
+
+    /* Person + employer Organization are emitted on every page so the
+       knowledge graph stays consistent across the site, not just the home
+       page. Inner pages reference them by @id. */
+    $organization = [
+        '@context' => 'https://schema.org',
+        '@type'    => 'Organization',
+        '@id'      => $org_id,
+        'name'     => DARIOBIMBI_EMPLOYER_NAME,
+        'url'      => DARIOBIMBI_EMPLOYER_URL,
+    ];
+
+    $person = [
+        '@context'   => 'https://schema.org',
+        '@type'      => 'Person',
+        '@id'        => $person_id,
+        'name'       => 'Dario Bimbi',
+        'url'        => $home,
+        'image'      => $logoUrl,
+        'jobTitle'   => 'Web Developer II',
+        'description'=> DARIOBIMBI_BIO,
+        'worksFor'   => [ '@id' => $org_id ],
+        'alumniOf'   => [
+            '@type' => 'CollegeOrUniversity',
+            'name'  => DARIOBIMBI_ALMA_NAME,
+            'url'   => DARIOBIMBI_ALMA_URL,
+        ],
+        'address'    => [
+            '@type'           => 'PostalAddress',
+            'addressLocality' => DARIOBIMBI_LOCALITY,
+            'addressRegion'   => DARIOBIMBI_REGION,
+            'addressCountry'  => DARIOBIMBI_COUNTRY,
+        ],
+        'contactPoint' => [
+            '@type'       => 'ContactPoint',
+            'contactType' => 'Inquiries',
+            'url'         => $home . '#contact',
+        ],
+        'sameAs'     => [ DARIOBIMBI_LINKEDIN ],
+        'knowsAbout' => [
+            'WordPress', 'PHP', 'JavaScript', 'CSS', 'HTML',
+            'Web accessibility', 'Block themes', 'Front-end development',
+            'WooCommerce', 'MySQL',
+        ],
+    ];
+
+    $website = [
+        '@context'        => 'https://schema.org',
+        '@type'           => 'WebSite',
+        '@id'             => $site_id,
+        'name'            => get_bloginfo( 'name' ),
+        'alternateName'   => 'Dario Bimbi Portfolio',
+        'url'             => $home,
+        'description'     => DARIOBIMBI_BIO,
+        'inLanguage'      => str_replace( '_', '-', get_locale() ),
+        'publisher'       => [ '@id' => $person_id ],
+        'potentialAction' => [
+            '@type'       => 'SearchAction',
+            'target'      => [
+                '@type'       => 'EntryPoint',
+                'urlTemplate' => $home . '?s={search_term_string}',
+            ],
+            'query-input' => 'required name=search_term_string',
+        ],
+    ];
 
     if ( is_front_page() ) {
-        $person = [
+        /* ProfilePage is the canonical "this page is about a person" type;
+           Google has dedicated rich-result handling for it. mainEntity links
+           it to the Person node defined above. */
+        $profile = [
             '@context'   => 'https://schema.org',
-            '@type'      => 'Person',
-            '@id'        => $home . '#dario',
-            'name'       => 'Dario Bimbi',
+            '@type'      => 'ProfilePage',
+            '@id'        => $home . '#profile',
             'url'        => $home,
-            'image'      => $logoUrl,
-            'jobTitle'   => 'Web Developer II',
-            'worksFor'   => [
-                '@type' => 'Organization',
-                'name'  => 'Clicks Web Design Inc.',
-                'url'   => 'https://clickswebdesign.com',
-            ],
-            'sameAs'     => [ DARIOBIMBI_LINKEDIN ],
-            'knowsAbout' => [
-                'WordPress', 'PHP', 'JavaScript', 'CSS', 'HTML',
-                'Web accessibility', 'Block themes', 'Front-end development',
-                'WooCommerce', 'MySQL',
-            ],
+            'name'       => wp_get_document_title(),
+            'description'=> DARIOBIMBI_BIO,
+            'inLanguage' => str_replace( '_', '-', get_locale() ),
+            'isPartOf'   => [ '@id' => $site_id ],
+            'mainEntity' => [ '@id' => $person_id ],
         ];
 
-        $website = [
-            '@context'        => 'https://schema.org',
-            '@type'           => 'WebSite',
-            '@id'             => $home . '#website',
-            'name'            => get_bloginfo( 'name' ),
-            'alternateName'   => 'Dario Bimbi Portfolio',
-            'url'             => $home,
-            'description'     => DARIOBIMBI_BIO,
-            'inLanguage'      => str_replace( '_', '-', get_locale() ),
-            'publisher'       => [ '@id' => $home . '#dario' ],
-            'potentialAction' => [
-                '@type'       => 'SearchAction',
-                'target'      => [
-                    '@type'       => 'EntryPoint',
-                    'urlTemplate' => $home . '?s={search_term_string}',
-                ],
-                'query-input' => 'required name=search_term_string',
-            ],
-        ];
-
-        echo "<script type=\"application/ld+json\">" . wp_json_encode( $person,  $flags ) . "</script>\n";
-        echo "<script type=\"application/ld+json\">" . wp_json_encode( $website, $flags ) . "</script>\n";
+        echo "<script type=\"application/ld+json\">" . wp_json_encode( $profile,      $flags ) . "</script>\n";
+        echo "<script type=\"application/ld+json\">" . wp_json_encode( $person,       $flags ) . "</script>\n";
+        echo "<script type=\"application/ld+json\">" . wp_json_encode( $organization, $flags ) . "</script>\n";
+        echo "<script type=\"application/ld+json\">" . wp_json_encode( $website,      $flags ) . "</script>\n";
         return;
     }
 
     if ( is_singular() ) {
+        $page_url   = dariobimbi_seo_canonical();
+        $page_title = wp_get_document_title();
+        $page_desc  = dariobimbi_seo_description();
+
         $page = [
             '@context'    => 'https://schema.org',
             '@type'       => 'WebPage',
-            'name'        => wp_get_document_title(),
-            'description' => dariobimbi_seo_description(),
-            'url'         => dariobimbi_seo_canonical(),
+            'name'        => $page_title,
+            'description' => $page_desc,
+            'url'         => $page_url,
             'inLanguage'  => str_replace( '_', '-', get_locale() ),
-            'isPartOf'    => [ '@id' => $home . '#website' ],
-            'about'       => [ '@id' => $home . '#dario' ],
+            'isPartOf'    => [ '@id' => $site_id ],
+            'about'       => [ '@id' => $person_id ],
+        ];
+
+        $crumbs_items = [
+            [ '@type' => 'ListItem', 'position' => 1, 'name' => 'Home', 'item' => $home ],
+        ];
+
+        /* If the page sits under a parent (Demos / Projects), insert that
+           parent as the second crumb so the breadcrumb trail matches the
+           actual URL nesting. */
+        $parent_id = (int) wp_get_post_parent_id( get_the_ID() );
+        if ( $parent_id ) {
+            $crumbs_items[] = [
+                '@type'    => 'ListItem',
+                'position' => count( $crumbs_items ) + 1,
+                'name'     => get_the_title( $parent_id ),
+                'item'     => get_permalink( $parent_id ),
+            ];
+        }
+        $crumbs_items[] = [
+            '@type'    => 'ListItem',
+            'position' => count( $crumbs_items ) + 1,
+            'name'     => get_the_title(),
+            'item'     => get_permalink(),
         ];
 
         $crumbs = [
             '@context'        => 'https://schema.org',
             '@type'           => 'BreadcrumbList',
-            'itemListElement' => [
-                [ '@type' => 'ListItem', 'position' => 1, 'name' => 'Home',           'item' => $home ],
-                [ '@type' => 'ListItem', 'position' => 2, 'name' => get_the_title(),  'item' => get_permalink() ],
-            ],
+            'itemListElement' => $crumbs_items,
         ];
 
         echo "<script type=\"application/ld+json\">" . wp_json_encode( $page,   $flags ) . "</script>\n";
         echo "<script type=\"application/ld+json\">" . wp_json_encode( $crumbs, $flags ) . "</script>\n";
+
+        /* Project pages get a CreativeWork (or VideoGame) node so each piece
+           of work is its own indexable entity authored by Dario, rather
+           than a generic WebPage. The featured image, when present, doubles
+           as the work's representative image. */
+        $project = dariobimbi_seo_project_meta();
+        if ( $project ) {
+            $og = dariobimbi_seo_og_image();
+            $work = [
+                '@context'    => 'https://schema.org',
+                '@type'       => $project['type'],
+                '@id'         => $page_url . '#work',
+                'name'        => get_the_title(),
+                'headline'    => get_the_title(),
+                'description' => $page_desc,
+                'url'         => $page_url,
+                'inLanguage'  => str_replace( '_', '-', get_locale() ),
+                'author'      => [ '@id' => $person_id ],
+                'creator'     => [ '@id' => $person_id ],
+                'mainEntityOfPage' => $page_url,
+            ];
+            if ( ! empty( $og['url'] ) ) {
+                $work['image'] = $og['url'];
+            }
+            echo "<script type=\"application/ld+json\">" . wp_json_encode( $work, $flags ) . "</script>\n";
+        }
+
+        /* Person + Organization on inner pages too: gives every page a full
+           identity graph, not just the homepage. Cheap to emit, and it's
+           what Google's structured-data tooling expects. */
+        echo "<script type=\"application/ld+json\">" . wp_json_encode( $person,       $flags ) . "</script>\n";
+        echo "<script type=\"application/ld+json\">" . wp_json_encode( $organization, $flags ) . "</script>\n";
     }
 }, 6 );
 

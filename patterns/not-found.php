@@ -7,7 +7,19 @@
  */
 $home    = esc_url( home_url( '/' ) );
 $contact = esc_url( home_url( '/#contact' ) );
-$current = esc_html( ( is_ssl() ? 'https://' : 'http://' ) . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'] );
+
+/* Reconstruct the URL the visitor actually requested for the curl line.
+   Host comes from home_url() (trusted site config) rather than $_SERVER
+   ['HTTP_HOST'], which is attacker-controlled. The path comes from
+   REQUEST_URI but is escaped before output. */
+$site    = wp_parse_url( home_url() );
+$req     = isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : '/';
+$current = esc_html(
+    ( $site['scheme'] ?? 'https' ) . '://'
+    . ( $site['host']   ?? '' )
+    . ( ! empty( $site['port'] ) ? ':' . $site['port'] : '' )
+    . $req
+);
 ?>
 <!-- wp:group {"align":"full","style":{"spacing":{"padding":{"top":"var:preset|spacing|80","bottom":"var:preset|spacing|80","left":"var:preset|spacing|30","right":"var:preset|spacing|30"}}},"layout":{"type":"constrained"}} -->
 <div class="wp-block-group alignfull" style="padding-top:var(--wp--preset--spacing--80);padding-right:var(--wp--preset--spacing--30);padding-bottom:var(--wp--preset--spacing--80);padding-left:var(--wp--preset--spacing--30)">

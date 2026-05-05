@@ -53,28 +53,51 @@ function dariobimbi_render_sitemap_xml(): void {
         }
     }
 
+    /* Each entry: loc, lastmod, and an optional images list. The homepage
+       reuses the OG banner so image search has a representative thumbnail
+       for the front door. Inner pages get their featured image when set. */
+    $banner = get_stylesheet_directory_uri() . '/assets/banner.png';
+
     $urls = [
         [
             'loc'     => home_url( '/' ),
             'lastmod' => $latest_gmt ? mysql2date( 'c', $latest_gmt, false ) : '',
+            'images'  => [ $banner ],
         ],
     ];
     foreach ( $pages as $p ) {
+        $images = [];
+        $thumb_id = (int) get_post_thumbnail_id( $p->ID );
+        if ( $thumb_id ) {
+            $src = wp_get_attachment_image_src( $thumb_id, 'full' );
+            if ( $src && ! empty( $src[0] ) ) {
+                $images[] = (string) $src[0];
+            }
+        }
         $urls[] = [
             'loc'     => get_permalink( $p ),
             'lastmod' => mysql2date( 'c', $p->post_modified_gmt, false ),
+            'images'  => $images,
         ];
     }
 
     header( 'Content-Type: application/xml; charset=UTF-8' );
     header( 'X-Robots-Tag: noindex, follow', true );
     echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
-    echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
+    echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"' . "\n"
+       . '        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">' . "\n";
     foreach ( $urls as $u ) {
         echo "  <url>\n";
         echo '    <loc>' . esc_url( $u['loc'] ) . "</loc>\n";
         if ( ! empty( $u['lastmod'] ) ) {
             echo '    <lastmod>' . esc_html( $u['lastmod'] ) . "</lastmod>\n";
+        }
+        if ( ! empty( $u['images'] ) ) {
+            foreach ( $u['images'] as $img_url ) {
+                echo "    <image:image>\n";
+                echo '      <image:loc>' . esc_url( $img_url ) . "</image:loc>\n";
+                echo "    </image:image>\n";
+            }
         }
         echo "  </url>\n";
     }

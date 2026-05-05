@@ -10,6 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 require_once __DIR__ . '/inc/seo.php';
 require_once __DIR__ . '/inc/auto-pages.php';
 require_once __DIR__ . '/inc/sitemap.php';
+require_once __DIR__ . '/inc/robots.php';
 require_once __DIR__ . '/inc/contact.php';
 
 add_action( 'after_setup_theme', function () {
