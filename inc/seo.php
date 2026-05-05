@@ -29,7 +29,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 const DARIOBIMBI_TAGLINE  = 'Web Developer · WordPress, PHP, JavaScript';
 const DARIOBIMBI_BIO      = 'Portfolio of Dario Bimbi, web developer at Clicks Web Design Inc. Custom WordPress block themes, PHP back-ends, vanilla-JS front-end, and a real eye for accessibility. Based near Chicago.';
 const DARIOBIMBI_LINKEDIN = 'https://www.linkedin.com/in/dario-bimbi-7512a36b';
-const DARIOBIMBI_EMAIL    = 'dariobimbi@gmail.com';
 const DARIOBIMBI_OG_IMG   = '/assets/banner.png';
 const DARIOBIMBI_LOGO     = '/assets/logo.png';
 
@@ -178,7 +177,6 @@ add_action( 'wp_head', function () {
             'name'       => 'Dario Bimbi',
             'url'        => $home,
             'image'      => $logoUrl,
-            'email'      => 'mailto:' . DARIOBIMBI_EMAIL,
             'jobTitle'   => 'Web Developer II',
             'worksFor'   => [
                 '@type' => 'Organization',

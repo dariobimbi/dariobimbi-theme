@@ -21,15 +21,15 @@
         <!-- /wp:heading -->
 
         <!-- wp:paragraph {"align":"center","fontSize":"large","textColor":"muted","style":{"typography":{"lineHeight":"1.5"}}} -->
-        <p class="has-text-align-center has-muted-color has-text-color has-large-font-size" style="line-height:1.5">Working on a WordPress site or a custom build and could use a second pair of hands? Email is the fastest way to reach me, and I usually reply within a day.</p>
+        <p class="has-text-align-center has-muted-color has-text-color has-large-font-size" style="line-height:1.5">Working on a WordPress site or a custom build and could use a second pair of hands? Send me a note below and I usually reply within a day.</p>
         <!-- /wp:paragraph -->
 
-        <!-- wp:buttons {"layout":{"type":"flex","justifyContent":"center"},"style":{"spacing":{"margin":{"top":"var:preset|spacing|40"}}}} -->
-        <div class="wp-block-buttons" style="margin-top:var(--wp--preset--spacing--40)">
-            <!-- wp:button -->
-            <div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="mailto:dariobimbi@gmail.com">Email Dario →</a></div>
-            <!-- /wp:button -->
+        <!-- wp:html -->
+        <?php echo dariobimbi_contact_form(); ?>
+        <!-- /wp:html -->
 
+        <!-- wp:buttons {"layout":{"type":"flex","justifyContent":"center"},"style":{"spacing":{"margin":{"top":"var:preset|spacing|30"}}}} -->
+        <div class="wp-block-buttons" style="margin-top:var(--wp--preset--spacing--30)">
             <!-- wp:button {"className":"is-style-outline"} -->
             <div class="wp-block-button is-style-outline"><a class="wp-block-button__link wp-element-button" href="https://www.linkedin.com/in/dario-bimbi-7512a36b">LinkedIn</a></div>
             <!-- /wp:button -->

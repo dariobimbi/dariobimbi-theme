@@ -10,6 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 require_once __DIR__ . '/inc/seo.php';
 require_once __DIR__ . '/inc/auto-pages.php';
 require_once __DIR__ . '/inc/sitemap.php';
+require_once __DIR__ . '/inc/contact.php';
 
 add_action( 'after_setup_theme', function () {
     add_theme_support( 'title-tag' );
@@ -31,6 +32,7 @@ add_action( 'init', function () {
  * Printed early in <head> so it's the first thing they see.
  */
 add_action( 'wp_head', function () {
+    $contact = home_url( '/#contact' );
     echo "\n<!--\n"
        . "    Hey, source-viewer. Welcome to the basement.\n"
        . "\n"
@@ -40,7 +42,8 @@ add_action( 'wp_head', function () {
        . "    + Shadow-DOM preview, all in ~250 lines of vanilla JS.\n"
        . "\n"
        . "    Open the console for a hello. Try the Konami code while you're\n"
-       . "    there. If you're hiring → dariobimbi@gmail.com\n"
+       . "    there. If you're hiring, drop a note in the contact form:\n"
+       . "    " . $contact . "\n"
        . "\n"
        . "                                              </> Dario\n"
        . "-->\n";

@@ -4,7 +4,7 @@ Theme URI: https://dariobimbi.com
 Author: Dario Bimbi
 Author URI: https://www.linkedin.com/in/dario-bimbi-7512a36b
 Description: Personal portfolio block theme for Dario Bimbi, Web Developer at Clicks Web Design Inc. Dark, gradient-forward, system-font typography, no external dependencies.
-Version: 0.6.9
+Version: 0.7.2
 Requires at least: 6.4
 Tested up to: 6.7
 Requires PHP: 7.4
@@ -26,12 +26,17 @@ a { text-underline-offset: 0.2em; }
 ::selection { background: var(--wp--preset--color--accent); color: #fff; }
 
 /* --- Gradient text utility ------------------------------------ */
+/* `background-clip: text` clips glyphs at the line-box edge, which is tight
+   given our heading line-heights (h1: 1.02, h2: 1.1). Without breathing room
+   the dot of a trailing period or the tail of a descender gets cut off. The
+   small padding-block keeps glyphs whole without changing visible spacing. */
 .has-gradient-text {
     background: var(--wp--preset--gradient--brand-soft);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
     -webkit-text-fill-color: transparent;
+    padding-block: 0.05em 0.15em;
 }
 
 /* --- Code-bracket eyebrow -------------------------------------- */
@@ -85,11 +90,51 @@ a { text-underline-offset: 0.2em; }
     font-size: 0.875rem;
     color: var(--wp--preset--color--foreground);
     line-height: 1;
+    /* Pills aren't links, but they get a hover treatment for personality.
+       cursor:default keeps the I-beam from suggesting clickable text. */
+    cursor: default;
+    transition:
+        transform 220ms cubic-bezier(.2,.7,.2,1),
+        background-color 220ms ease,
+        border-color 220ms ease,
+        color 220ms ease,
+        box-shadow 220ms ease;
 }
 .skill-pill.is-primary { border-color: rgba(59,130,246,0.45); color: var(--wp--preset--color--primary-soft); }
 .skill-pill.is-accent  { border-color: rgba(168,85,247,0.45); color: var(--wp--preset--color--accent-soft); }
 .skill-pill.is-hot     { border-color: rgba(244,63,94,0.45);  color: #fda4af; }
 .skill-pill.is-yellow  { border-color: rgba(250,204,21,0.45); color: #fde68a; }
+
+/* Hover: lift, brighten text, tint background, neon halo in the pill's own tone. */
+.skill-pill:hover {
+    transform: translateY(-2px);
+    color: var(--wp--preset--color--foreground);
+}
+.skill-pill.is-primary:hover {
+    background-color: rgba(59, 130, 246, 0.14);
+    border-color: rgba(59, 130, 246, 0.85);
+    box-shadow: 0 0 18px -2px rgba(59, 130, 246, 0.55);
+}
+.skill-pill.is-accent:hover {
+    background-color: rgba(168, 85, 247, 0.14);
+    border-color: rgba(168, 85, 247, 0.85);
+    box-shadow: 0 0 18px -2px rgba(168, 85, 247, 0.55);
+}
+.skill-pill.is-hot:hover {
+    background-color: rgba(244, 63, 94, 0.14);
+    border-color: rgba(244, 63, 94, 0.85);
+    box-shadow: 0 0 18px -2px rgba(244, 63, 94, 0.55);
+}
+.skill-pill.is-yellow:hover {
+    background-color: rgba(250, 204, 21, 0.14);
+    border-color: rgba(250, 204, 21, 0.85);
+    box-shadow: 0 0 16px -2px rgba(250, 204, 21, 0.5);
+}
+@media (prefers-reduced-motion: reduce) {
+    .skill-pill { transition: none; }
+    .skill-pill:hover { transform: none; }
+}
+
 .skill-pill-row {
     display: flex;
     flex-wrap: wrap;
@@ -146,6 +191,92 @@ a { text-underline-offset: 0.2em; }
         0 0 0 1px rgba(168,85,247,0.45),
         0 0 32px -4px rgba(168,85,247,0.55),
         0 0 80px -20px rgba(59,130,246,0.5);
+}
+
+/* --- Contact form (lives inside the neon-glow card) ------------ */
+.contact-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    margin-top: var(--wp--preset--spacing--40);
+    text-align: left;
+}
+.contact-form__field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin: 0;
+}
+.contact-form__field label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--wp--preset--color--foreground);
+}
+.contact-form__field input,
+.contact-form__field textarea {
+    width: 100%;
+    padding: 0.7rem 0.9rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 8px;
+    color: var(--wp--preset--color--foreground);
+    font: inherit;
+    transition: border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+}
+.contact-form__field textarea {
+    resize: vertical;
+    min-height: 7.5rem;
+}
+.contact-form__field input::placeholder,
+.contact-form__field textarea::placeholder {
+    color: var(--wp--preset--color--muted);
+}
+.contact-form__field input:focus,
+.contact-form__field textarea:focus {
+    outline: none;
+    border-color: var(--wp--preset--color--accent);
+    background: rgba(255, 255, 255, 0.06);
+    box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.25);
+}
+/* Honeypot: keep accessible to assistive tech but visually hidden. */
+.contact-form__hp {
+    position: absolute;
+    left: -10000px;
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    margin: 0;
+}
+.contact-form__submit {
+    margin: 0.4rem 0 0;
+    text-align: center;
+}
+.contact-form__submit button {
+    cursor: pointer;
+    border: 0;
+}
+.contact-form__notice {
+    margin: 0 0 0.25rem;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    text-align: left;
+}
+.contact-form__notice--ok {
+    background: rgba(34, 197, 94, 0.12);
+    border: 1px solid rgba(34, 197, 94, 0.45);
+    color: #bbf7d0;
+}
+.contact-form__notice--err {
+    background: rgba(244, 63, 94, 0.12);
+    border: 1px solid rgba(244, 63, 94, 0.45);
+    color: #fecaca;
+}
+.contact-form__notice a {
+    color: inherit;
+    text-decoration: underline;
 }
 
 /* --- Outline button styling for dark theme --------------------- */

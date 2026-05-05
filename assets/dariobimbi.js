@@ -39,7 +39,7 @@
         console.log(
             '%cEverything on this page is hand-built — block patterns, ' +
             'CSS playground, scroll-spy, the lot. Poke around. If something ' +
-            'looks broken, ping dariobimbi@gmail.com.',
+            'looks broken, drop a note in the contact form on the homepage.',
             'color:#94a3b8;font:13px system-ui;line-height:1.55;'
         );
         console.log(

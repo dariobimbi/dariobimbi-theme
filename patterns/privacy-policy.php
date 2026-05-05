@@ -10,7 +10,7 @@
  * itself can be empty.
  */
 $updated = 'April 30, 2026';
-$email   = 'dariobimbi@gmail.com';
+$contact = esc_url( home_url( '/#contact' ) );
 ?>
 <!-- wp:group {"align":"full","className":"content-page","style":{"spacing":{"padding":{"top":"var:preset|spacing|70","bottom":"var:preset|spacing|70","left":"var:preset|spacing|30","right":"var:preset|spacing|30"}}},"layout":{"type":"constrained"}} -->
 <div class="wp-block-group alignfull content-page" style="padding-top:var(--wp--preset--spacing--70);padding-right:var(--wp--preset--spacing--30);padding-bottom:var(--wp--preset--spacing--70);padding-left:var(--wp--preset--spacing--30)">
@@ -86,7 +86,7 @@ $email   = 'dariobimbi@gmail.com';
     <!-- /wp:heading -->
 
     <!-- wp:paragraph {"style":{"typography":{"lineHeight":"1.65"}}} -->
-    <p style="line-height:1.65">Privacy questions, deletion requests, or anything else: <a href="mailto:<?php echo esc_attr( $email ); ?>"><?php echo esc_html( $email ); ?></a>.</p>
+    <p style="line-height:1.65">Privacy questions, deletion requests, or anything else: send a note through the <a href="<?php echo $contact; ?>">contact form</a> on the homepage.</p>
     <!-- /wp:paragraph -->
 
 </div>
