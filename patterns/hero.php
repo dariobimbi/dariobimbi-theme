@@ -15,7 +15,7 @@ $banner_url = esc_url( get_stylesheet_directory_uri() . '/assets/banner.png' );
     <!-- /wp:html -->
 
     <!-- wp:image {"align":"full","sizeSlug":"full","style":{"spacing":{"margin":{"top":"0","bottom":"var:preset|spacing|40"}}}} -->
-    <figure class="wp-block-image alignfull size-full" style="margin-top:0;margin-bottom:var(--wp--preset--spacing--40)"><img src="<?php echo $banner_url; ?>" alt="Dario Bimbi, Web Developer. Build. Design. Solve. Improve." style="width:100%;height:auto;display:block" /></figure>
+    <figure class="wp-block-image alignfull size-full" style="margin-top:0;margin-bottom:var(--wp--preset--spacing--40)"><img src="<?php echo $banner_url; ?>" alt="Dario Bimbi, Web Developer. Build. Design. Solve. Improve." /></figure>
     <!-- /wp:image -->
 
     <!-- wp:paragraph {"align":"center","className":"status-pill"} -->
@@ -31,7 +31,7 @@ $banner_url = esc_url( get_stylesheet_directory_uri() . '/assets/banner.png' );
     <!-- /wp:heading -->
 
     <!-- wp:paragraph {"align":"center","fontSize":"large","textColor":"muted","style":{"typography":{"lineHeight":"1.5"}}} -->
-    <p class="has-text-align-center has-muted-color has-text-color has-large-font-size" style="line-height:1.5">I'm <strong style="color:var(--wp--preset--color--foreground)">Dario Bimbi</strong>, a web developer at Clicks Web Design. I build custom WordPress themes, plugins, and web apps, and after about ten years of doing this work I have a pretty clear idea of what makes a site good and what makes a site just look good.</p>
+    <p class="has-text-align-center has-muted-color has-text-color has-large-font-size" style="line-height:1.5">I'm <strong>Dario Bimbi</strong>, a web developer at Clicks Web Design. I build custom WordPress themes, plugins, and web apps, and after about ten years of doing this work I have a pretty clear idea of what makes a site good and what makes a site just look good.</p>
     <!-- /wp:paragraph -->
 
     <!-- wp:buttons {"layout":{"type":"flex","justifyContent":"center"},"style":{"spacing":{"margin":{"top":"var:preset|spacing|40"}}}} -->

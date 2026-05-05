@@ -155,7 +155,7 @@ add_action( 'wp_head', function () {
 
     // Sitemap discovery (XML one for crawlers; the human one is /sitemap/)
     printf( '<link rel="sitemap" type="application/xml" title="Sitemap" href="%s">' . "\n",
-        esc_url( home_url( '/wp-sitemap.xml' ) )
+        esc_url( home_url( '/sitemap.xml' ) )
     );
 
     echo "<!-- /SEO -->\n";

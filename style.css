@@ -4,7 +4,7 @@ Theme URI: https://dariobimbi.com
 Author: Dario Bimbi
 Author URI: https://www.linkedin.com/in/dario-bimbi-7512a36b
 Description: Personal portfolio block theme for Dario Bimbi, Web Developer at Clicks Web Design Inc. Dark, gradient-forward, system-font typography, no external dependencies.
-Version: 0.6.7
+Version: 0.6.9
 Requires at least: 6.4
 Tested up to: 6.7
 Requires PHP: 7.4
@@ -90,6 +90,11 @@ a { text-underline-offset: 0.2em; }
 .skill-pill.is-accent  { border-color: rgba(168,85,247,0.45); color: var(--wp--preset--color--accent-soft); }
 .skill-pill.is-hot     { border-color: rgba(244,63,94,0.45);  color: #fda4af; }
 .skill-pill.is-yellow  { border-color: rgba(250,204,21,0.45); color: #fde68a; }
+.skill-pill-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
 
 /* --- Card (used on experience / projects / testimonials) ------- */
 .dario-card {
@@ -359,6 +364,18 @@ a { text-underline-offset: 0.2em; }
     to   { transform: translate(-15vw, -10vh) scale(1.15); }
 }
 .hero-stage > *:not(.hero-mesh) { position: relative; z-index: 1; }
+
+/* Hero banner image fills its figure edge-to-edge. */
+.hero-stage .wp-block-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* Inline name in the hero blurb pops back to foreground from the muted paragraph color. */
+.hero-stage p strong {
+    color: var(--wp--preset--color--foreground);
+}
 
 /* WP's constrained-layout CSS adds max-width + auto margins to every child
    of a constrained group. That clamps absolute-positioned decorations

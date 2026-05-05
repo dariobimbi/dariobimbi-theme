@@ -37,7 +37,7 @@ $groups = [
                 <!-- /wp:heading -->
 
                 <!-- wp:html -->
-                <div style="display:flex;flex-wrap:wrap;gap:0.4rem">
+                <div class="skill-pill-row">
                     <?php foreach ( $g['items'] as $item ) : ?>
                         <span class="skill-pill <?php echo esc_attr( $g['tone'] ); ?>"><?php echo esc_html( $item ); ?></span>
                     <?php endforeach; ?>

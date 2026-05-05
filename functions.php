@@ -8,6 +8,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 require_once __DIR__ . '/inc/seo.php';
+require_once __DIR__ . '/inc/auto-pages.php';
+require_once __DIR__ . '/inc/sitemap.php';
 
 add_action( 'after_setup_theme', function () {
     add_theme_support( 'title-tag' );
