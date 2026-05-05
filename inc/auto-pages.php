@@ -64,10 +64,12 @@ add_action( 'admin_init', function () {
             $parent_id = $demos_id;
             $slug      = $m[1];
             $prefix_re = '/^Demo\s*[\x{2014}\x{2013}\-]\s*/u';
+            $is_project = false;
         } elseif ( preg_match( '/^page-project-(.+)$/', $name, $m ) ) {
             $parent_id = $projects_id;
             $slug      = $m[1];
             $prefix_re = '/^Project\s*[\x{2014}\x{2013}\-]\s*/u';
+            $is_project = true;
         } else {
             continue;
         }
@@ -77,11 +79,104 @@ add_action( 'admin_init', function () {
             $title = ucwords( str_replace( '-', ' ', $slug ) );
         }
 
-        dariobimbi_ensure_page( $slug, $title, $parent_id, $name );
+        $page_id = dariobimbi_ensure_page( $slug, $title, $parent_id, $name );
+
+        /* For project pages, side-load the per-project banner.png into the
+           Media Library and set it as the Featured Image. The image goes
+           into the SEO/sitemap pipeline automatically (see inc/seo.php
+           dariobimbi_seo_og_image and inc/sitemap.php). Skipped if the
+           page already has a Featured Image, so a manual override always
+           wins. */
+        if ( $is_project && $page_id && current_user_can( 'upload_files' ) ) {
+            $banner = get_stylesheet_directory() . '/assets/projects/' . $slug . '/banner.png';
+            dariobimbi_set_banner_as_featured( $page_id, $banner );
+        }
     }
 
     update_option( 'dariobimbi_auto_pages_version', $theme_version, false );
 } );
+
+/**
+ * Side-load a banner PNG from the theme's assets directory into the Media
+ * Library and set it as the Featured Image on the given page. No-op if the
+ * page already has a Featured Image, the file is missing, or the user
+ * cannot upload files. Returns the attachment ID, or 0 on no-op / failure.
+ *
+ * The attachment is tagged with post meta `_dariobimbi_banner_for` =
+ * <page_id> so a future re-run can find the existing attachment instead of
+ * creating duplicates if the banner ever needs to be refreshed.
+ */
+function dariobimbi_set_banner_as_featured( int $page_id, string $source_path ): int {
+    if ( ! file_exists( $source_path ) ) {
+        return 0;
+    }
+    if ( has_post_thumbnail( $page_id ) ) {
+        return 0;
+    }
+
+    /* Look for a previously side-loaded attachment for this page. If we
+       already imported the banner once and the user later cleared the
+       Featured Image, re-attach the existing attachment rather than
+       making a duplicate copy in the Media Library. */
+    $existing = get_posts( [
+        'post_type'      => 'attachment',
+        'post_status'    => 'inherit',
+        'posts_per_page' => 1,
+        'meta_key'       => '_dariobimbi_banner_for',
+        'meta_value'     => (string) $page_id,
+        'fields'         => 'ids',
+    ] );
+    if ( ! empty( $existing ) ) {
+        set_post_thumbnail( $page_id, (int) $existing[0] );
+        return (int) $existing[0];
+    }
+
+    require_once ABSPATH . 'wp-admin/includes/image.php';
+    require_once ABSPATH . 'wp-admin/includes/file.php';
+
+    $upload   = wp_upload_dir();
+    if ( ! empty( $upload['error'] ) || empty( $upload['path'] ) ) {
+        return 0;
+    }
+    if ( ! wp_mkdir_p( $upload['path'] ) ) {
+        return 0;
+    }
+
+    $filename = wp_unique_filename( $upload['path'], basename( $source_path ) );
+    $dest     = trailingslashit( $upload['path'] ) . $filename;
+
+    if ( ! @copy( $source_path, $dest ) ) {
+        return 0;
+    }
+
+    $filetype = wp_check_filetype( $filename, null );
+    $att_id   = wp_insert_attachment(
+        [
+            'guid'           => trailingslashit( $upload['url'] ) . $filename,
+            'post_mime_type' => $filetype['type'] ?: 'image/png',
+            'post_title'     => sanitize_text_field( pathinfo( $filename, PATHINFO_FILENAME ) ),
+            'post_content'   => '',
+            'post_status'    => 'inherit',
+        ],
+        $dest,
+        $page_id
+    );
+
+    if ( is_wp_error( $att_id ) || ! $att_id ) {
+        @unlink( $dest );
+        return 0;
+    }
+
+    $metadata = wp_generate_attachment_metadata( $att_id, $dest );
+    wp_update_attachment_metadata( $att_id, $metadata );
+
+    update_post_meta( $att_id, '_dariobimbi_banner_for', (string) $page_id );
+    update_post_meta( $att_id, '_wp_attachment_image_alt', sprintf( '%s — project banner', get_the_title( $page_id ) ) );
+
+    set_post_thumbnail( $page_id, (int) $att_id );
+
+    return (int) $att_id;
+}
 
 /**
  * Ensure a Page exists with the given slug under the given parent. Only the

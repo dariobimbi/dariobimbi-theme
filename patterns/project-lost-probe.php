@@ -9,7 +9,8 @@
  * `lost-probe`), pick the "Project — The Lost Probe" template.
  * Final URL: /projects/lost-probe/.
  */
-$assets = esc_url( get_stylesheet_directory_uri() . '/assets/projects/lost-probe/' );
+$assets      = esc_url( get_stylesheet_directory_uri() . '/assets/projects/lost-probe/' );
+$assets_path = get_stylesheet_directory() . '/assets/projects/lost-probe/';
 ?>
 <!-- wp:group {"align":"full","className":"content-page project-page project-lost-probe","style":{"spacing":{"padding":{"top":"var:preset|spacing|70","bottom":"var:preset|spacing|70","left":"var:preset|spacing|30","right":"var:preset|spacing|30"}}},"layout":{"type":"constrained"}} -->
 <div class="wp-block-group alignfull content-page project-page project-lost-probe" style="padding-top:var(--wp--preset--spacing--70);padding-right:var(--wp--preset--spacing--30);padding-bottom:var(--wp--preset--spacing--70);padding-left:var(--wp--preset--spacing--30)">
@@ -32,6 +33,21 @@ $assets = esc_url( get_stylesheet_directory_uri() . '/assets/projects/lost-probe
         <figcaption>Promotional cover artwork for The Lost Probe.</figcaption>
     </figure>
     <!-- /wp:html -->
+
+    <?php /* Trailer / commercial preview. Renders only when the converted
+             MP4 exists at assets/projects/lost-probe/lp-trailer.mp4 — see the
+             conversion note in the pattern's docstring. */ ?>
+    <?php if ( file_exists( $assets_path . 'lp-trailer.mp4' ) ) : ?>
+    <!-- wp:html -->
+    <figure class="project-figure">
+        <video controls preload="none" poster="<?php echo $assets; ?>banner-hero.png" width="1280" height="720" playsinline>
+            <source src="<?php echo $assets; ?>lp-trailer.mp4" type="video/mp4">
+            Your browser does not support embedded video. <a href="<?php echo $assets; ?>lp-trailer.mp4">Download the trailer</a>.
+        </video>
+        <figcaption>Original game trailer from 2014.</figcaption>
+    </figure>
+    <!-- /wp:html -->
+    <?php endif; ?>
 
     <!-- wp:heading {"level":2} -->
     <h2 class="wp-block-heading">The story</h2>

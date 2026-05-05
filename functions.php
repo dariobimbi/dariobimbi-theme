@@ -12,6 +12,7 @@ require_once __DIR__ . '/inc/auto-pages.php';
 require_once __DIR__ . '/inc/sitemap.php';
 require_once __DIR__ . '/inc/robots.php';
 require_once __DIR__ . '/inc/contact.php';
+require_once __DIR__ . '/inc/project-banner.php';
 
 add_action( 'after_setup_theme', function () {
     add_theme_support( 'title-tag' );

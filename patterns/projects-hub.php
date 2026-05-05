@@ -96,15 +96,39 @@ $default_meta = [
                 ? $m['blurb']
                 : ( $child->post_excerpt !== '' ? $child->post_excerpt : 'Open it up to read the full write-up.' );
         ?>
+        <?php
+            /* Card preview image: prefer the wide cinematic banner-hero.png
+               (Gemini art) when present, fall back to the 1200×630 OG card.
+               Both live under assets/projects/<slug>/. */
+            $hero_path = get_stylesheet_directory()     . '/assets/projects/' . $slug . '/banner-hero.png';
+            $hero_url  = get_stylesheet_directory_uri() . '/assets/projects/' . $slug . '/banner-hero.png';
+            $og_path   = get_stylesheet_directory()     . '/assets/projects/' . $slug . '/banner.png';
+            $og_url    = get_stylesheet_directory_uri() . '/assets/projects/' . $slug . '/banner.png';
+
+            if ( file_exists( $hero_path ) ) {
+                $preview_url = $hero_url;
+            } elseif ( file_exists( $og_path ) ) {
+                $preview_url = $og_url;
+            } else {
+                $preview_url = '';
+            }
+        ?>
         <li class="project-card">
             <a class="project-card-link" href="<?php echo esc_url( get_permalink( $child ) ); ?>" aria-labelledby="project-<?php echo esc_attr( $slug ); ?>-title">
-                <p class="project-card-tag has-<?php echo esc_attr( $m['tone'] ); ?>-color has-text-color"><?php echo esc_html( $m['tag'] ); ?></p>
-                <h3 class="project-card-title" id="project-<?php echo esc_attr( $slug ); ?>-title"><?php echo esc_html( get_the_title( $child ) ); ?></h3>
-                <p class="project-card-blurb"><?php echo esc_html( $blurb ); ?></p>
-                <?php if ( ! empty( $m['status'] ) ) : ?>
-                    <p class="project-card-status"><?php echo esc_html( $m['status'] ); ?></p>
+                <?php if ( $preview_url ) : ?>
+                <div class="project-card-preview" aria-hidden="true">
+                    <img class="project-card-preview-img" src="<?php echo esc_url( $preview_url ); ?>" alt="" loading="lazy" decoding="async">
+                </div>
                 <?php endif; ?>
-                <span class="project-card-cta">Read more <span class="project-card-arrow" aria-hidden="true">→</span></span>
+                <div class="project-card-body">
+                    <p class="project-card-tag has-<?php echo esc_attr( $m['tone'] ); ?>-color has-text-color"><?php echo esc_html( $m['tag'] ); ?></p>
+                    <h3 class="project-card-title" id="project-<?php echo esc_attr( $slug ); ?>-title"><?php echo esc_html( get_the_title( $child ) ); ?></h3>
+                    <p class="project-card-blurb"><?php echo esc_html( $blurb ); ?></p>
+                    <?php if ( ! empty( $m['status'] ) ) : ?>
+                        <p class="project-card-status"><?php echo esc_html( $m['status'] ); ?></p>
+                    <?php endif; ?>
+                    <span class="project-card-cta">Read more <span class="project-card-arrow" aria-hidden="true">→</span></span>
+                </div>
             </a>
         </li>
         <?php endforeach; ?>

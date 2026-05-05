@@ -4,7 +4,7 @@ Theme URI: https://dariobimbi.com
 Author: Dario Bimbi
 Author URI: https://www.linkedin.com/in/dario-bimbi-7512a36b
 Description: Personal portfolio block theme for Dario Bimbi, Web Developer at Clicks Web Design Inc. Dark, gradient-forward, system-font typography, no external dependencies.
-Version: 0.7.2
+Version: 0.7.7
 Requires at least: 6.4
 Tested up to: 6.7
 Requires PHP: 7.4
@@ -1001,6 +1001,7 @@ a { text-underline-offset: 0.2em; }
     background: var(--wp--preset--color--surface);
     border: 1px solid var(--wp--preset--color--subtle);
     border-radius: 14px;
+    overflow: hidden; /* clip the preview image to the rounded corners */
     transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
 }
 .project-card:hover {
@@ -1011,13 +1012,40 @@ a { text-underline-offset: 0.2em; }
 .project-card-link {
     display: flex;
     flex-direction: column;
-    gap: 0.65rem;
-    padding: 1.5rem 1.5rem 1.65rem;
     text-decoration: none;
     color: inherit;
     height: 100%;
 }
 .project-card-link:hover { text-decoration: none; }
+
+/* Image preview at the top of each card. Aspect ratio fits the wide
+   cinematic banner-hero.png well; the OG banner.png (1.9:1) crops
+   slightly but the central content survives. */
+.project-card-preview {
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: var(--wp--preset--color--background);
+    border-bottom: 1px solid var(--wp--preset--color--subtle);
+}
+.project-card-preview-img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    transition: transform 320ms cubic-bezier(.2, .7, .2, 1);
+}
+.project-card:hover .project-card-preview-img {
+    transform: scale(1.04);
+}
+
+.project-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    padding: 1.5rem 1.5rem 1.65rem;
+    flex: 1;
+}
 .project-card-tag {
     margin: 0;
     font-family: var(--wp--preset--font-family--mono);
@@ -1060,10 +1088,56 @@ a { text-underline-offset: 0.2em; }
 
 /* ---- Project detail pages ------------------------------------------- */
 
+/* Auto-prepended hero banner at the top of project pages. The PHP that
+   emits it lives in inc/project-banner.php and prefers a wide
+   banner-hero.png from assets/projects/<slug>/, falling back to the
+   1200×630 Featured Image when no hero variant exists on disk.
+
+   The figure is a sibling of .project-page (rendered just before it by
+   the render_block filter), not inside it — so the selector is
+   unscoped. The figure's alignfull class handles the viewport-edge
+   breakout via WordPress's constrained-layout rules. Height is clamped
+   responsively: caps at 400px on wide viewports, stays at least 200px
+   on narrow ones. */
+.project-banner {
+    margin: 0 0 var(--wp--preset--spacing--60);
+    height: clamp(200px, 28vw, 400px);
+    overflow: hidden;
+    border: 0;
+    border-radius: 0;
+    box-shadow: inset 0 -1px 0 var(--wp--preset--color--subtle);
+}
+.project-banner__img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    /* Defeat WP's default img sizing (height:auto, max-width:100%) which
+       would otherwise win because of source order. */
+    max-width: none;
+}
+
+/* Project page figures: cap inline figures to a reading-column width on
+   desktop so they sit alongside the text rather than spanning the full
+   1100px content area. Hero and video figures keep a touch more room
+   since they're the visual lead and the motion benefits from scale. */
 .project-page .project-hero,
 .project-page .project-figure,
 .project-page .project-gallery {
-    margin: var(--wp--preset--spacing--40) 0;
+    margin: var(--wp--preset--spacing--40) auto;
+}
+.project-page .project-hero {
+    max-width: 880px;
+}
+.project-page .project-figure {
+    max-width: 720px;
+}
+/* Video figures get a wider cap — at 720px a 1280×720 source plays at
+   roughly 405px tall, which is small for a trailer. 960px lets it
+   breathe without overwhelming the column. */
+.project-page .project-figure:has(video) {
+    max-width: 960px;
 }
 .project-page .project-hero img,
 .project-page .project-figure img,
@@ -1082,6 +1156,7 @@ a { text-underline-offset: 0.2em; }
     line-height: 1.5;
 }
 .project-page .project-gallery {
+    max-width: 960px;
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 1rem;
