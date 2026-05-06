@@ -516,7 +516,7 @@ $projects = [
         'slug'     => 'dariobimbi-com',
         'eyebrow'  => 'Web · WordPress · This site',
         'title'    => 'dariobimbi.com',
-        'subtitle' => 'Custom block theme written from scratch. No plugins, no page builder, no JavaScript framework.',
+        'subtitle' => 'Custom block theme written from scratch. No page builder, no JavaScript framework.',
         'motif'    => 'motif_dariobimbi_com',
     ],
 ];

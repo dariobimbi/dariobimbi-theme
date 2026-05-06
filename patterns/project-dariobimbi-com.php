@@ -3,7 +3,7 @@
  * Title: Project — dariobimbi.com
  * Slug: dariobimbi/project-dariobimbi-com
  * Categories: dariobimbi
- * Description: Full write-up for dariobimbi.com itself. A custom WordPress block theme written from scratch with no plugins, no page builder, no external fonts, and no JavaScript framework. Hand-rolled SEO module, FSE-editable templates, scoped per-demo styles.
+ * Description: Full write-up for dariobimbi.com itself. A custom WordPress block theme written from scratch with no page builder, no external fonts, and no JavaScript framework. Hand-rolled SEO module, FSE-editable templates, scoped per-demo styles.
  *
  * To use: child Page "dariobimbi.com" under the Projects parent (slug
  * `dariobimbi-com`), pick the "Project — dariobimbi.com" template.
@@ -23,7 +23,7 @@ $assets = esc_url( get_stylesheet_directory_uri() . '/assets/projects/dariobimbi
     <!-- /wp:heading -->
 
     <!-- wp:paragraph {"fontSize":"large","textColor":"muted","style":{"typography":{"lineHeight":"1.55"},"spacing":{"margin":{"bottom":"var:preset|spacing|40"}}}} -->
-    <p class="has-muted-color has-text-color has-large-font-size" style="line-height:1.55;margin-bottom:var(--wp--preset--spacing--40)">This site. A custom WordPress block theme written from scratch, with no page builder, no external fonts, no JavaScript framework, and no plugins.</p>
+    <p class="has-muted-color has-text-color has-large-font-size" style="line-height:1.55;margin-bottom:var(--wp--preset--spacing--40)">This site. A custom WordPress block theme written from scratch, with no page builder, no external fonts, and no JavaScript framework.</p>
     <!-- /wp:paragraph -->
 
     <!-- wp:html -->
@@ -38,7 +38,7 @@ $assets = esc_url( get_stylesheet_directory_uri() . '/assets/projects/dariobimbi
     <!-- /wp:heading -->
 
     <!-- wp:paragraph -->
-    <p>The pitch on this site is partly the site itself. I work with WordPress every day at my day job, and I wanted a portfolio that showed I could build a clean WordPress experience without leaning on the usual ecosystem of plugins and page builders. Everything you see here, from the SEO meta tags in the head to the contact CTA at the bottom, is hand-written PHP, HTML, and CSS in the theme directory.</p>
+    <p>The pitch on this site is partly the site itself. I work with WordPress every day at my day job, and I wanted a portfolio that showed I could build a clean WordPress site without reaching for a page builder or a JavaScript framework. Everything you see here, from the SEO meta tags in the head to the contact CTA at the bottom, is hand-written PHP, HTML, and CSS in the theme directory.</p>
     <!-- /wp:paragraph -->
 
     <!-- wp:heading {"level":2} -->
@@ -50,7 +50,7 @@ $assets = esc_url( get_stylesheet_directory_uri() . '/assets/projects/dariobimbi
     <!-- /wp:paragraph -->
 
     <!-- wp:paragraph -->
-    <p>There is also a hand-rolled SEO module in <code>inc/seo.php</code> that handles titles, meta descriptions, Open Graph and Twitter card tags, and JSON-LD structured data. No Yoast, no Rank Math, no plugin at all. The SEO defaults are set as constants at the top of that file, and any per-page tuning lives next to the rendering logic so it is easy to read.</p>
+    <p>There is also a hand-rolled SEO module in <code>inc/seo.php</code> that handles titles, meta descriptions, Open Graph and Twitter card tags, and JSON-LD structured data. The SEO defaults are set as constants at the top of that file, and any per-page tuning lives next to the rendering logic so it is easy to read.</p>
     <!-- /wp:paragraph -->
 
     <!-- wp:heading {"level":2} -->

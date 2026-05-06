@@ -10,17 +10,17 @@
 <div class="wp-block-group alignfull section" style="padding-top:var(--wp--preset--spacing--60);padding-right:var(--wp--preset--spacing--30);padding-bottom:var(--wp--preset--spacing--60);padding-left:var(--wp--preset--spacing--30)">
 
     <!-- wp:html -->
-    <div class="code-rain" aria-hidden="true">
-        <span>&lt;/&gt;</span>
-        <span>{ }</span>
-        <span>=&gt;</span>
-        <span>&lt;?php</span>
-        <span>$_</span>
-        <span>fn()</span>
-        <span>;;</span>
-        <span>[ ]</span>
-        <span>++</span>
-        <span>!=</span>
+    <div class="code-rain" aria-hidden="true" role="presentation">
+        <span aria-hidden="true">&lt;/&gt;</span>
+        <span aria-hidden="true">{ }</span>
+        <span aria-hidden="true">=&gt;</span>
+        <span aria-hidden="true">&lt;?php</span>
+        <span aria-hidden="true">$_</span>
+        <span aria-hidden="true">fn()</span>
+        <span aria-hidden="true">;;</span>
+        <span aria-hidden="true">[ ]</span>
+        <span aria-hidden="true">++</span>
+        <span aria-hidden="true">!=</span>
     </div>
     <!-- /wp:html -->
 

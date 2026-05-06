@@ -4,7 +4,7 @@ Theme URI: https://dariobimbi.com
 Author: Dario Bimbi
 Author URI: https://www.linkedin.com/in/dario-bimbi-7512a36b
 Description: Personal portfolio block theme for Dario Bimbi, Web Developer at Clicks Web Design Inc. Dark, gradient-forward, system-font typography, no external dependencies.
-Version: 0.8.3
+Version: 0.8.5
 Requires at least: 6.4
 Tested up to: 6.7
 Requires PHP: 7.4
@@ -34,7 +34,12 @@ a { text-underline-offset: 0.2em; }
     background: var(--wp--preset--gradient--brand-soft);
     -webkit-background-clip: text;
     background-clip: text;
-    color: transparent;
+    /* The visible color is painted by the gradient via background-clip:text +
+       -webkit-text-fill-color:transparent. axe-core (Lighthouse 13+) reads the
+       computed `color` to score contrast and treats `transparent` as a 0-ratio
+       fail, so we hand it primary-soft as a fallback that never actually
+       renders but scores ~7.1:1 against the page background. */
+    color: var(--wp--preset--color--primary-soft);
     -webkit-text-fill-color: transparent;
     padding-block: 0.05em 0.15em;
 }

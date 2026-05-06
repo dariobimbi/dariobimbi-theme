@@ -32,8 +32,8 @@ $groups = [
             <!-- wp:group {"layout":{"type":"constrained"},"style":{"spacing":{"blockGap":"var:preset|spacing|20"}}} -->
             <div class="wp-block-group">
 
-                <!-- wp:heading {"level":4} -->
-                <h4 class="wp-block-heading"><?php echo esc_html( $g['label'] ); ?></h4>
+                <!-- wp:heading {"level":3} -->
+                <h3 class="wp-block-heading"><?php echo esc_html( $g['label'] ); ?></h3>
                 <!-- /wp:heading -->
 
                 <!-- wp:html -->

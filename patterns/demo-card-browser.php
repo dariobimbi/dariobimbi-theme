@@ -198,6 +198,33 @@ body:has(.demo-card-browser) {
     background: transparent !important;
 }
 
+/* The site's primary nav was tuned for the dark gradient theme, so its
+   open-dropdown state uses a translucent blue→violet gradient with
+   light-foreground text. Against this demo's white background that
+   reads as pale-lavender-on-white — almost invisible. Override the
+   open / hover / focus states here so the trigger pills paint as a
+   solid Pokémon-red→yellow gradient with white text, matching the
+   demo's palette and giving real contrast against the page. Scoped to
+   the body class set by this pattern's JS so the rest of the site
+   keeps its original styling. */
+body.has-card-browser-page .site-nav-dropdown[open] > .site-nav-trigger,
+body:has(.demo-card-browser) .site-nav-dropdown[open] > .site-nav-trigger {
+    background: linear-gradient(135deg, #ee1c25 0%, #f59e0b 100%);
+    border-color: #ee1c25;
+    color: #ffffff;
+}
+body.has-card-browser-page .site-nav-trigger:hover,
+body.has-card-browser-page .site-nav-trigger:focus-visible,
+body.has-card-browser-page .site-nav-trigger--link:hover,
+body.has-card-browser-page .site-nav-trigger--link:focus-visible,
+body:has(.demo-card-browser) .site-nav-trigger:hover,
+body:has(.demo-card-browser) .site-nav-trigger:focus-visible,
+body:has(.demo-card-browser) .site-nav-trigger--link:hover,
+body:has(.demo-card-browser) .site-nav-trigger--link:focus-visible {
+    border-color: #ee1c25;
+    color: #ee1c25;
+}
+
 /* Eyebrow on this demo is dark muted text without the "</>" code-comment
    prefix — that prefix reads as portfolio voice, which clashes with
    pokemoncenter.com's plain marketing register. */

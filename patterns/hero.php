@@ -5,7 +5,11 @@
  * Categories: dariobimbi, featured
  * Description: Full-bleed banner image followed by gradient headline, lead, and CTAs. Contains an animated gradient mesh behind the content.
  */
-$banner_url = esc_url( get_stylesheet_directory_uri() . '/assets/banner.png' );
+$assets         = get_stylesheet_directory_uri() . '/assets';
+$banner_webp_sm = esc_url( $assets . '/banner-hero-800.webp' );
+$banner_webp_lg = esc_url( $assets . '/banner-hero.webp' );
+$banner_jpg_sm  = esc_url( $assets . '/banner-hero-800.jpg' );
+$banner_jpg_lg  = esc_url( $assets . '/banner-hero.jpg' );
 ?>
 <!-- wp:group {"align":"full","className":"section hero-stage","style":{"spacing":{"padding":{"top":"0","bottom":"var:preset|spacing|60"},"blockGap":"var:preset|spacing|40"}},"layout":{"type":"constrained"}} -->
 <div class="wp-block-group alignfull section hero-stage" style="padding-top:0;padding-bottom:var(--wp--preset--spacing--60)">
@@ -14,9 +18,14 @@ $banner_url = esc_url( get_stylesheet_directory_uri() . '/assets/banner.png' );
     <div class="hero-mesh" aria-hidden="true"></div>
     <!-- /wp:html -->
 
-    <!-- wp:image {"align":"full","sizeSlug":"full","style":{"spacing":{"margin":{"top":"0","bottom":"var:preset|spacing|40"}}}} -->
-    <figure class="wp-block-image alignfull size-full" style="margin-top:0;margin-bottom:var(--wp--preset--spacing--40)"><img src="<?php echo $banner_url; ?>" alt="Dario Bimbi, Web Developer. Build. Design. Solve. Improve." /></figure>
-    <!-- /wp:image -->
+    <!-- wp:html -->
+    <figure class="wp-block-image alignfull size-full" style="margin-top:0;margin-bottom:var(--wp--preset--spacing--40)">
+        <picture>
+            <source type="image/webp" srcset="<?php echo $banner_webp_sm; ?> 800w, <?php echo $banner_webp_lg; ?> 1600w" sizes="100vw">
+            <img src="<?php echo $banner_jpg_lg; ?>" srcset="<?php echo $banner_jpg_sm; ?> 800w, <?php echo $banner_jpg_lg; ?> 1600w" sizes="100vw" width="1600" height="639" alt="Dario Bimbi, Web Developer. Build. Design. Solve. Improve." fetchpriority="high" loading="eager" decoding="async">
+        </picture>
+    </figure>
+    <!-- /wp:html -->
 
     <!-- wp:paragraph {"align":"center","className":"status-pill"} -->
     <p class="has-text-align-center status-pill">Currently at <a href="https://clickswebdesign.com">Clicks Web Design</a></p>

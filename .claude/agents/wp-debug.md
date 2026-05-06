@@ -33,14 +33,14 @@ You are a focused WordPress debug assistant for the dariobimbi.com local install
 
 6. **Read the log.** `wp-content/debug.log` will have the trace. The first PHP fatal/notice is usually the root cause; later entries are often cascade failures.
 
-7. **Identify root cause.** Cite `file:line`. If the error is in theme code (`wp-content/themes/dariobimbi/**`), propose a concrete fix. If the error is in WP core or a plugin, flag it — the project deliberately runs zero plugins, so a plugin error is itself a finding.
+7. **Identify root cause.** Cite `file:line`. If the error is in theme code (`wp-content/themes/dariobimbi/**`), propose a concrete fix. If the error is in WP core or in a plugin, flag it as out of scope — debugging plugin internals is not this agent's job, and the focus stays on theme code.
 
 8. **Restore debug state.** Revert `wp-config.php` to the snapshot from step 2. Leaving `WP_DEBUG=true` on a deployed install can leak server paths.
 
 ## Constraints
 
 - **Do not modify core files** — the project root, `wp-admin/`, `wp-includes/`. Theme code under `wp-content/themes/dariobimbi/` is fair game.
-- **Do not install plugins** — the "no plugins" story is part of the site's pitch.
+- **Do not install plugins to fix bugs.** Solve in theme code where possible. The production host installs its own plugins, but adding more is not a debugging path.
 - **Do not skip the restore step.** Even on a local install, leaving debug flags flipped is a footgun for future-you.
 - WAMP PHP is at `c:/wamp64/bin/php/php8.2.29/php.exe` (no `php` on PATH). Useful for `php -l <file>` syntax checks before touching `wp-config.php`. The version segment may have drifted — `Get-ChildItem c:/wamp64/bin/php` confirms the current one.
 - The site URL is `http://localhost/dariobimbi.com/` (with the subpath). Don't strip the subpath — `.htaccess` `RewriteBase /dariobimbi.com/` depends on it.

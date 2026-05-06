@@ -14,6 +14,7 @@ require_once __DIR__ . '/inc/robots.php';
 require_once __DIR__ . '/inc/contact.php';
 require_once __DIR__ . '/inc/project-banner.php';
 require_once __DIR__ . '/inc/justtcg-proxy.php';
+require_once __DIR__ . '/inc/security-headers.php';
 
 add_action( 'after_setup_theme', function () {
     add_theme_support( 'title-tag' );
@@ -39,8 +40,8 @@ add_action( 'wp_head', function () {
     echo "\n<!--\n"
        . "    Hey, source-viewer. Welcome to the basement.\n"
        . "\n"
-       . "    This site is hand-built — custom block theme, no plugins, no\n"
-       . "    page builder, no jQuery, no build step. The CSS playground\n"
+       . "    This site is hand-built — custom block theme, no page builder,\n"
+       . "    no jQuery, no build step. The CSS playground\n"
        . "    further down is a real editor: textarea + hand-rolled tokenizer\n"
        . "    + Shadow-DOM preview, all in ~250 lines of vanilla JS.\n"
        . "\n"
