@@ -15,9 +15,11 @@ desktop.ini
 # Composer (dev-only IDE stubs, regenerable via `composer install`)
 vendor/
 
-# Lost Probe source media — not referenced by the theme.
-# These are already tracked in history; run `git rm --cached <path>` to
-# stop tracking them going forward (history still carries them).
+# Lost Probe source media. Not referenced by the theme at runtime; only
+# banner.png and banner-hero.png in this folder are read. The .avi, the
+# two oversized .wmv screen captures, and The_Lost_Probe.exe were purged
+# from history with git filter-repo to clear GitHub's 100 MB blob limit.
+# Backups live on the user's Desktop, outside the repo.
 assets/projects/lost-probe/*.avi
 assets/projects/lost-probe/*.wmv
 assets/projects/lost-probe/*.exe
