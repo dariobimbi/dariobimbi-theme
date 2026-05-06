@@ -72,9 +72,21 @@
                     </select>
                 </label>
                 <label class="pdex-control">
+                    <span>Card Type</span>
+                    <select data-control="card-type">
+                        <option value="">All card types</option>
+                    </select>
+                </label>
+                <label class="pdex-control">
                     <span>Rarity</span>
                     <select data-control="rarity">
                         <option value="">All rarities</option>
+                    </select>
+                </label>
+                <label class="pdex-control">
+                    <span>Printing</span>
+                    <select data-control="printing">
+                        <option value="">All printings</option>
                     </select>
                 </label>
                 <input type="search" class="pdex-card-search" data-control="card-search" placeholder="Filter by card name…" aria-label="Filter cards by name" />
@@ -1038,16 +1050,31 @@ body:has(.demo-pokedex) {
         searchTerm: '',
         selectedPokemon: null,
         cardData: null,       // Set in Task 10
-        cardFilters: { sort: 'release-desc', set: '', rarity: '', search: '' },
+        cardFilters: { sort: 'release-desc', set: '', cardType: '', rarity: '', printing: '', search: '' },
         cardRetries: 0
     };
 
+    var CARD_TYPES = [
+        { slug: 'pokemon',   label: 'Pokémon' },
+        { slug: 'trainer',   label: 'Trainer' },
+        { slug: 'item',      label: 'Item' },
+        { slug: 'supporter', label: 'Supporter' },
+        { slug: 'stadium',   label: 'Stadium' },
+        { slug: 'tool',      label: 'Tool' },
+        { slug: 'energy',    label: 'Energy' }
+    ];
+    var CARD_TYPE_SLUGS = CARD_TYPES.map(function (t) { return t.slug; });
+
     function applyParamsToFilters(params, current) {
         var allowedSorts = ['release-desc', 'release-asc', 'rarity-desc', 'set-number', 'price-desc', 'price-asc', 'trending'];
+        var cardType = typeof params.cardType === 'string' ? params.cardType : '';
+        if (cardType && CARD_TYPE_SLUGS.indexOf(cardType) === -1) cardType = '';
         return {
             sort: allowedSorts.indexOf(params.sort) !== -1 ? params.sort : 'release-desc',
             set: typeof params.set === 'string' ? params.set : '',
+            cardType: cardType,
             rarity: typeof params.rarity === 'string' ? params.rarity : '',
+            printing: typeof params.printing === 'string' ? params.printing : '',
             search: typeof params.search === 'string' ? params.search : ''
         };
     }
@@ -1077,7 +1104,9 @@ body:has(.demo-pokedex) {
         var list = state.cardData.slice();
 
         if (f.set) list = list.filter(function (c) { return c.set && c.set.id === f.set; });
+        if (f.cardType) list = list.filter(function (c) { return matchesCardType(c, f.cardType); });
         if (f.rarity) list = list.filter(function (c) { return (c.rarity || '') === f.rarity; });
+        if (f.printing) list = list.filter(function (c) { return cardPrintings(c).indexOf(f.printing) !== -1; });
         if (f.search) {
             var term = f.search.toLowerCase();
             list = list.filter(function (c) { return (c.name || '').toLowerCase().indexOf(term) !== -1; });
@@ -1117,6 +1146,52 @@ body:has(.demo-pokedex) {
             }
         });
         return list;
+    }
+
+    function matchesCardType(card, slug) {
+        if (!slug) return true;
+        var supertype = card.supertype || '';
+        var subtypes = card.subtypes || [];
+        if (slug === 'pokemon') return supertype === 'Pokémon';
+        if (slug === 'energy')  return supertype === 'Energy';
+        if (slug === 'trainer') return supertype === 'Trainer';
+        if (slug === 'item')      return subtypes.indexOf('Item') !== -1;
+        if (slug === 'supporter') return subtypes.indexOf('Supporter') !== -1;
+        if (slug === 'stadium')   return subtypes.indexOf('Stadium') !== -1;
+        if (slug === 'tool')      return subtypes.indexOf('Pokémon Tool') !== -1 || subtypes.indexOf('Tool') !== -1;
+        return true;
+    }
+
+    // Maps a tcgplayer.prices variant key (e.g. "reverseHolofoil",
+    // "1stEditionHolofoil") into one of a small set of human-readable buckets.
+    // The pokemontcg.io feed exposes a long tail of variant keys; bucketing
+    // keeps the Printing dropdown short and matches how TCGplayer itself
+    // groups them in its own filter UI.
+    function printingBucket(variantKey) {
+        if (!variantKey) return null;
+        if (variantKey === 'normal')           return 'Normal';
+        if (variantKey === 'holofoil')         return 'Holofoil';
+        if (variantKey === 'reverseHolofoil')  return 'Reverse Holofoil';
+        if (variantKey.indexOf('1stEdition') !== -1) return '1st Edition';
+        if (variantKey.indexOf('unlimited') !== -1)  return 'Unlimited';
+        return variantLabel(variantKey);
+    }
+
+    function cardPrintings(card) {
+        var prices = card.tcgplayer && card.tcgplayer.prices;
+        if (!prices) return [];
+        var seen = {};
+        Object.keys(prices).forEach(function (k) {
+            var bucket = printingBucket(k);
+            if (bucket) seen[bucket] = true;
+        });
+        return Object.keys(seen);
+    }
+
+    var PRINTING_ORDER = ['Normal', 'Holofoil', 'Reverse Holofoil', '1st Edition', 'Unlimited'];
+    function printingRank(name) {
+        var idx = PRINTING_ORDER.indexOf(name);
+        return idx === -1 ? PRINTING_ORDER.length : idx;
     }
 
     function rarityRank(rarity) {
@@ -1186,6 +1261,49 @@ body:has(.demo-pokedex) {
         select.value = state.cardFilters.rarity;
     }
 
+    function populateCardTypeFilter() {
+        var select = ROOT.querySelector('select[data-control="card-type"]');
+        var counts = {};
+        (state.cardData || []).forEach(function (c) {
+            CARD_TYPES.forEach(function (t) {
+                if (matchesCardType(c, t.slug)) {
+                    counts[t.slug] = (counts[t.slug] || 0) + 1;
+                }
+            });
+        });
+        // Only list types that actually appear for this Pokémon. Most
+        // Pokémon's card list is overwhelmingly "Pokémon" cards plus a small
+        // handful of related Trainers, so showing the full menu would be
+        // noisy.
+        var available = CARD_TYPES.filter(function (t) { return counts[t.slug]; });
+        select.innerHTML = '<option value="">All card types</option>' + available.map(function (t) {
+            return '<option value="' + escapeHtml(t.slug) + '">' + escapeHtml(t.label) + ' (' + counts[t.slug] + ')</option>';
+        }).join('');
+        if (state.cardFilters.cardType && !counts[state.cardFilters.cardType]) {
+            state.cardFilters.cardType = '';
+        }
+        select.value = state.cardFilters.cardType;
+    }
+
+    function populatePrintingFilter() {
+        var select = ROOT.querySelector('select[data-control="printing"]');
+        var counts = {};
+        (state.cardData || []).forEach(function (c) {
+            cardPrintings(c).forEach(function (p) {
+                counts[p] = (counts[p] || 0) + 1;
+            });
+        });
+        var printings = Object.keys(counts);
+        printings.sort(function (a, b) { return printingRank(a) - printingRank(b); });
+        select.innerHTML = '<option value="">All printings</option>' + printings.map(function (p) {
+            return '<option value="' + escapeHtml(p) + '">' + escapeHtml(p) + ' (' + counts[p] + ')</option>';
+        }).join('');
+        if (state.cardFilters.printing && !counts[state.cardFilters.printing]) {
+            state.cardFilters.printing = '';
+        }
+        select.value = state.cardFilters.printing;
+    }
+
     function buildMetaRows(card) {
         var rows = [];
         if (card.set) rows.push(['Set', (card.set.name || '?') + ' · ' + (card.number || '?')]);
@@ -1204,9 +1322,9 @@ body:has(.demo-pokedex) {
         var grid = ROOT.querySelector('.pdex-grid--cards');
         var cards = getVisibleCards();
         if (!cards.length) {
-            var hasFilters = state.cardFilters.set || state.cardFilters.rarity || state.cardFilters.search;
+            var hasFilters = state.cardFilters.set || state.cardFilters.cardType || state.cardFilters.rarity || state.cardFilters.printing || state.cardFilters.search;
             var msg = hasFilters
-                ? 'No cards match the current filters. Try clearing the set, rarity, or search filter.'
+                ? 'No cards match the current filters. Try clearing one of the dropdowns above or the search field.'
                 : 'No TCG cards found for ' + getDisplayName(state.selectedPokemon || '') + ' yet.';
             grid.innerHTML = '<p style="grid-column:1/-1;color:var(--pdex-muted);text-align:center;padding:3rem 1rem;">' + escapeHtml(msg) + '</p>';
             return;
@@ -1522,7 +1640,9 @@ body:has(.demo-pokedex) {
                     state.cardData = cards;
                     state.cardFilters = applyParamsToFilters(s.params, state.cardFilters);
                     populateSetFilter();
+                    populateCardTypeFilter();
                     populateRarityFilter();
+                    populatePrintingFilter();
                     ROOT.querySelector('select[data-control="sort"]').value = state.cardFilters.sort;
                     ROOT.querySelector('input[data-control="card-search"]').value = state.cardFilters.search;
                     renderCardGrid();
@@ -1978,7 +2098,9 @@ body:has(.demo-pokedex) {
             if (state.cardFilters.sort !== 'release-desc') params.sort = state.cardFilters.sort;
         }
         if (state.cardFilters.set) params.set = state.cardFilters.set;
+        if (state.cardFilters.cardType) params.cardType = state.cardFilters.cardType;
         if (state.cardFilters.rarity) params.rarity = state.cardFilters.rarity;
+        if (state.cardFilters.printing) params.printing = state.cardFilters.printing;
         if (state.cardFilters.search) params.search = state.cardFilters.search;
         router.replace({ view: 'cards', name: s.name, params: params });
         renderCardGrid();
@@ -1990,8 +2112,14 @@ body:has(.demo-pokedex) {
     ROOT.querySelector('select[data-control="set"]').addEventListener('change', function (e) {
         updateCardFilter('set', e.target.value);
     });
+    ROOT.querySelector('select[data-control="card-type"]').addEventListener('change', function (e) {
+        updateCardFilter('cardType', e.target.value);
+    });
     ROOT.querySelector('select[data-control="rarity"]').addEventListener('change', function (e) {
         updateCardFilter('rarity', e.target.value);
+    });
+    ROOT.querySelector('select[data-control="printing"]').addEventListener('change', function (e) {
+        updateCardFilter('printing', e.target.value);
     });
     ROOT.querySelector('input[data-control="card-search"]').addEventListener('input', debounce(function (e) {
         updateCardFilter('search', e.target.value.trim());

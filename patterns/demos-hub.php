@@ -96,6 +96,14 @@ $meta = [
         'tech'     => [ 'PokéAPI', 'pokemontcg.io', 'Vanilla JS' ],
         'badge'    => 'New',
     ],
+    'card-browser' => [
+        'category' => 'web',
+        'tag'      => 'Live API + Proxy',
+        'preview'  => 'card-browser',
+        'blurb'    => 'Browse Pokémon TCG cards and sealed products by set, in English or Japanese, with filters for rarity, condition, printing, and price. Live prices come from JustTCG through a WordPress REST proxy that keeps the API key server-side and caches against the free-tier rate limit.',
+        'tech'     => [ 'JustTCG', 'WP REST API', 'Transient cache' ],
+        'badge'    => 'New',
+    ],
 ];
 
 /* Default category for any child page without a $meta entry. */
@@ -276,6 +284,13 @@ $section_labels = [
                                 <?php endforeach; ?>
                             </span>
                         </span>
+                    <?php elseif ( $m['preview'] === 'card-browser' ) : ?>
+                        <?php // Three Pokémon-style mini cards fanned out and gently
+                             // bobbing. Top stripe + circle "art" placeholder reads as
+                             // "Pokémon TCG card" without leaning on Game Freak art. ?>
+                        <span class="cp-tcg-card cp-tcg-card-1"></span>
+                        <span class="cp-tcg-card cp-tcg-card-2"></span>
+                        <span class="cp-tcg-card cp-tcg-card-3"></span>
                     <?php else : ?>
                         <span class="cp-default"></span>
                         <span class="cp-default"></span>

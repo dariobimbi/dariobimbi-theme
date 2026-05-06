@@ -4,7 +4,7 @@ Theme URI: https://dariobimbi.com
 Author: Dario Bimbi
 Author URI: https://www.linkedin.com/in/dario-bimbi-7512a36b
 Description: Personal portfolio block theme for Dario Bimbi, Web Developer at Clicks Web Design Inc. Dark, gradient-forward, system-font typography, no external dependencies.
-Version: 0.7.7
+Version: 0.8.3
 Requires at least: 6.4
 Tested up to: 6.7
 Requires PHP: 7.4
@@ -1814,6 +1814,73 @@ a { text-underline-offset: 0.2em; }
     50%      { opacity: 0.6; box-shadow: 0 0 2px rgba(239, 68, 68, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.55); }
 }
 
+/* --- Preview: card-browser (three Pokémon-style mini cards fanned out) --- */
+.demo-card-preview--card-browser {
+    background: linear-gradient(180deg, #ee1c25 0%, #ffcb05 100%);
+    overflow: hidden;
+}
+.demo-card-preview--card-browser::after { display: none; }
+.demo-card-preview--card-browser .cp-tcg-card {
+    position: absolute;
+    bottom: 18%;
+    width: 50px;
+    height: 70px;
+    background: #ffffff;
+    border: 2px solid #1d1d1f;
+    border-radius: 6px;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.28);
+    overflow: hidden;
+    animation: cp-tcg-bob 4s ease-in-out infinite;
+}
+/* Top stripe = card energy band; the inner ::after circle is the
+   "art window" placeholder. currentColor lets each card reuse the
+   same template with a different per-card color override. */
+.demo-card-preview--card-browser .cp-tcg-card::before {
+    content: "";
+    position: absolute;
+    top: 4px; left: 4px; right: 4px;
+    height: 12px;
+    background: currentColor;
+    border-radius: 3px;
+}
+.demo-card-preview--card-browser .cp-tcg-card::after {
+    content: "";
+    position: absolute;
+    top: 22px; left: 50%;
+    width: 26px; height: 26px;
+    margin-left: -13px;
+    border-radius: 999px;
+    background: currentColor;
+    opacity: 0.55;
+}
+.demo-card-preview--card-browser .cp-tcg-card-1 {
+    color: #1976d2;
+    left: calc(50% - 70px);
+    transform: rotate(-14deg);
+    animation-delay: 0s;
+}
+.demo-card-preview--card-browser .cp-tcg-card-2 {
+    color: #ee1c25;
+    left: calc(50% - 25px);
+    transform: rotate(0deg);
+    z-index: 2;
+    animation-delay: 0.6s;
+}
+.demo-card-preview--card-browser .cp-tcg-card-3 {
+    color: #f59e0b;
+    left: calc(50% + 20px);
+    transform: rotate(14deg);
+    animation-delay: 1.2s;
+}
+/* Animate via the standalone `translate` property so each card's
+   per-element `transform: rotate(...)` keeps its angle. The cards
+   bob up a few pixels in sequence — gentle "freshly opened pack"
+   feel without competing with neighbour previews. */
+@keyframes cp-tcg-bob {
+    0%, 100% { translate: 0 0; }
+    50%      { translate: 0 -7px; }
+}
+
 /* --- Card body --- */
 .demo-card-body {
     padding: 1.4rem 1.5rem 1.5rem;
@@ -1937,6 +2004,7 @@ a { text-underline-offset: 0.2em; }
     .demo-card-preview--life .cp-life,
     .demo-card-preview--pokedex .cp-poke-sprite,
     .demo-card-preview--pokedex .cp-poke-led,
+    .demo-card-preview--card-browser .cp-tcg-card,
     .demo-card-arrow--bounce {
         animation: none !important;
     }
