@@ -11,3 +11,13 @@ desktop.ini
 
 # Logs
 *.log
+
+# Composer (dev-only IDE stubs, regenerable via `composer install`)
+vendor/
+
+# Lost Probe source media — not referenced by the theme.
+# These are already tracked in history; run `git rm --cached <path>` to
+# stop tracking them going forward (history still carries them).
+assets/projects/lost-probe/*.avi
+assets/projects/lost-probe/*.wmv
+assets/projects/lost-probe/*.exe
