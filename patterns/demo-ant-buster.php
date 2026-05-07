@@ -328,6 +328,19 @@ body.has-ant-buster-page {
       ctx.stroke();
     }
 
+    if (game.time < 4) {
+      if (game.cannons.length === 0) {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(60, 100, 200, 70);
+        ctx.fillStyle = '#fee761';
+        ctx.font = '10px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('Drag a cannon from the shop', 160, 130);
+        ctx.fillText('onto the picnic blanket to start!', 160, 145);
+        ctx.textAlign = 'start';
+      }
+    }
+
     if (game.state === 'lost') {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
       ctx.fillRect(0, 0, WIDTH, HEIGHT);
