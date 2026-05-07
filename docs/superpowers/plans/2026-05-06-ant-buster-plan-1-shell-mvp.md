@@ -54,8 +54,8 @@ Create `patterns/demo-ant-buster.php`:
  * Inserter: no
  */
 ?>
-<!-- wp:group {"align":"full","className":"content-page ant-buster-page","style":{"spacing":{"padding":{"top":"var:preset|spacing|70","bottom":"var:preset|spacing|70","left":"var:preset|spacing|30","right":"var:preset|spacing|30"}}},"layout":{"type":"constrained"}} -->
-<div class="wp-block-group alignfull content-page ant-buster-page" style="padding-top:var(--wp--preset--spacing--70);padding-right:var(--wp--preset--spacing--30);padding-bottom:var(--wp--preset--spacing--70);padding-left:var(--wp--preset--spacing--30)">
+<!-- wp:group {"align":"full","className":"content-page demo-ant-buster","style":{"spacing":{"padding":{"top":"var:preset|spacing|70","bottom":"var:preset|spacing|70","left":"var:preset|spacing|30","right":"var:preset|spacing|30"}}},"layout":{"type":"constrained"}} -->
+<div class="wp-block-group alignfull content-page demo-ant-buster" style="padding-top:var(--wp--preset--spacing--70);padding-right:var(--wp--preset--spacing--30);padding-bottom:var(--wp--preset--spacing--70);padding-left:var(--wp--preset--spacing--30)">
 
   <!-- wp:paragraph {"className":"eyebrow"} -->
   <p class="eyebrow">demo</p>
@@ -70,8 +70,8 @@ Create `patterns/demo-ant-buster.php`:
   <!-- /wp:paragraph -->
 
   <!-- wp:html -->
-  <div class="ab-stage" id="ab-stage">
-    <canvas id="ab-canvas" width="480" height="270"></canvas>
+  <div class="ab-stage">
+    <canvas id="ab-canvas" data-role="canvas" aria-label="Ant Buster game canvas" width="480" height="270"></canvas>
   </div>
   <!-- /wp:html -->
 
@@ -105,15 +105,17 @@ Create `templates/page-demo-ant-buster.html`:
 
 - [ ] **Step 4: Register the template in `theme.json`**
 
-Open `theme.json` and find the `customTemplates` array. Add this entry alongside the others (preserve existing entries; insertion order doesn't matter):
+Open `theme.json` and find the `customTemplates` array. The existing entries are organized in two groups: `page-demo-*` (demos) followed by `page-projects` and `page-project-*` (projects). Add this entry to the demos group, immediately after the existing `page-demo-card-browser` entry and before the first `page-projects` entry:
 
 ```json
 {
   "name": "page-demo-ant-buster",
-  "title": "Demo: Ant Buster",
+  "title": "Demo — Ant Buster",
   "postTypes": ["page"]
 }
 ```
+
+The `—` is an em-dash (U+2014). Every other demo entry in this file uses this exact `Demo — <Name>` format. Pay attention to commas: the surrounding entries need correct trailing commas after your insert.
 
 - [ ] **Step 5: Bump the theme version in `style.css`**
 
@@ -157,7 +159,7 @@ Open `patterns/demo-ant-buster.php` and replace the `<style>` block with:
 
 ```php
 <style>
-.ant-buster-page {
+.demo-ant-buster {
   --ab-bg: #1a1c2c;
   --ab-frame: #2a2f3e;
 }
@@ -166,7 +168,7 @@ body.has-ant-buster-page {
   background-color: var(--wp--preset--color--background) !important;
 }
 
-.ant-buster-page .ab-stage {
+.demo-ant-buster .ab-stage {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -178,9 +180,8 @@ body.has-ant-buster-page {
   max-width: 100%;
 }
 
-.ant-buster-page #ab-canvas {
+.demo-ant-buster #ab-canvas {
   width: 960px;
-  height: 540px;
   max-width: 100%;
   height: auto;
   aspect-ratio: 16 / 9;
@@ -192,12 +193,12 @@ body.has-ant-buster-page {
   display: block;
 }
 
-.ant-buster-page #ab-canvas.ab-dragging {
+.demo-ant-buster #ab-canvas.ab-dragging {
   cursor: grabbing;
 }
 
 @media (max-width: 1000px) {
-  .ant-buster-page #ab-canvas {
+  .demo-ant-buster #ab-canvas {
     width: 100%;
   }
 }
@@ -398,7 +399,7 @@ Find the `// === SPRITES === (Task 4)` marker and replace it with:
       x.fillStyle = '#feae34';
       x.fillRect(8, 12 + (1 - fillRatio) * 12, 16, fillRatio * 12);
       x.fillStyle = '#fee761';
-      x.fillRect(10, 8 + (1 - fillRatio) * 8, 12, fillRatio * 6);
+      x.fillRect(10, 8 + (1 - fillRatio) * 12, 12, fillRatio * 6);
       x.fillStyle = '#e43b44';
       x.fillRect(15, 4, 2, 6);                  // candle
       x.fillStyle = '#fee761';

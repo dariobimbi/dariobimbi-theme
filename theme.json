@@ -130,6 +130,7 @@
         { "name": "page-demo-microgame",   "title": "Demo — Microgame",        "postTypes": [ "page" ] },
         { "name": "page-demo-pokedex",     "title": "Demo — Pokédex",          "postTypes": [ "page" ] },
         { "name": "page-demo-card-browser","title": "Demo — Pokémon TCG Browser","postTypes": [ "page" ] },
+        { "name": "page-demo-ant-buster",  "title": "Demo — Ant Buster",         "postTypes": [ "page" ] },
         { "name": "page-projects",                  "title": "Projects Hub",                "postTypes": [ "page" ] },
         { "name": "page-project-space-dwarves",     "title": "Project — Space Dwarves",     "postTypes": [ "page" ] },
         { "name": "page-project-lost-probe",        "title": "Project — The Lost Probe",    "postTypes": [ "page" ] },
