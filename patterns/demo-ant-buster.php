@@ -273,6 +273,46 @@ body.has-ant-buster-page {
       ctx.drawImage(sprite, Math.round(a.x - 8), Math.round(a.y - 8));
     }
 
+    // Shop card for Howitzer
+    var cardX = PLAYFIELD_W + 8;
+    var cardY = 32;
+    ctx.fillStyle = '#2a2f3e';
+    ctx.fillRect(cardX, cardY, 56, 64);
+    ctx.drawImage(game.sprites.cannonBase, cardX + 12, cardY + 4);
+    ctx.drawImage(game.sprites.cannonTurret, cardX + 18, cardY + 10);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '8px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('Howitzer', cardX + 28, cardY + 50);
+    ctx.fillStyle = (game.gold >= CANNON_DEFS.howitzer.cost) ? '#fee761' : '#888';
+    ctx.fillText('50g', cardX + 28, cardY + 60);
+    ctx.textAlign = 'start';
+
+    // Placed cannons
+    for (var ci = 0; ci < game.cannons.length; ci++) {
+      var c = game.cannons[ci];
+      ctx.drawImage(game.sprites.cannonBase, Math.round(c.x - 16), Math.round(c.y - 16));
+      ctx.save();
+      ctx.translate(Math.round(c.x), Math.round(c.y));
+      ctx.rotate(c.heading + Math.PI / 2);
+      ctx.drawImage(game.sprites.cannonTurret, -10, -16);
+      ctx.restore();
+    }
+
+    // Drag preview
+    if (ui.dragging) {
+      var ok = canPlaceCannon(ui.mouseX, ui.mouseY);
+      ctx.globalAlpha = 0.6;
+      ctx.drawImage(game.sprites.cannonBase, Math.round(ui.mouseX - 16), Math.round(ui.mouseY - 16));
+      ctx.drawImage(game.sprites.cannonTurret, Math.round(ui.mouseX - 10), Math.round(ui.mouseY - 16));
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = ok ? 'rgba(255, 255, 255, 0.5)' : 'rgba(228, 59, 68, 0.7)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(ui.mouseX, ui.mouseY, CANNON_DEFS.howitzer.range, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
     if (game.state === 'lost') {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
       ctx.fillRect(0, 0, WIDTH, HEIGHT);
@@ -369,6 +409,122 @@ body.has-ant-buster-page {
   for (var ai = 0; ai < 5; ai++) {
     spawnAnt('worker');
   }
+
+  // === CANNONS ===
+  var CANNON_DEFS = {
+    howitzer: {
+      name: 'Howitzer',
+      cost: 50,
+      damage: 5,
+      fireRate: 0.6,         // shots per second
+      range: 110,
+      projectileSpeed: 200
+    }
+  };
+
+  function cannonAt(x, y) {
+    for (var i = 0; i < game.cannons.length; i++) {
+      var c = game.cannons[i];
+      var dx = c.x - x;
+      var dy = c.y - y;
+      if (dx * dx + dy * dy < 16 * 16) {
+        return c;
+      }
+    }
+    return null;
+  }
+
+  function canPlaceCannon(x, y) {
+    if (x < 0) { return false; }
+    if (x > PLAYFIELD_W) { return false; }
+    if (y < HUD_H) { return false; }
+    if (y > HEIGHT) { return false; }
+    var dxCake = x - game.cake.x;
+    var dyCake = y - game.cake.y;
+    if (dxCake * dxCake + dyCake * dyCake < 24 * 24) { return false; }
+    var dxAnt = x - game.anthill.x;
+    var dyAnt = y - game.anthill.y;
+    if (dxAnt * dxAnt + dyAnt * dyAnt < 24 * 24) { return false; }
+    if (cannonAt(x, y)) { return false; }
+    return true;
+  }
+
+  function placeCannon(defKey, x, y) {
+    var def = CANNON_DEFS[defKey];
+    if (!def) { return false; }
+    if (game.gold < def.cost) { return false; }
+    if (!canPlaceCannon(x, y)) { return false; }
+    game.gold -= def.cost;
+    game.cannons.push({
+      defKey: defKey,
+      x: x,
+      y: y,
+      heading: 0,
+      cooldown: 0,
+      target: null
+    });
+    return true;
+  }
+
+  // === INPUT ===
+  var ui = {
+    dragging: null,         // { defKey } when dragging from shop
+    mouseX: 0,
+    mouseY: 0
+  };
+
+  function canvasToGame(evt) {
+    var rect = canvas.getBoundingClientRect();
+    var sx = WIDTH / rect.width;
+    var sy = HEIGHT / rect.height;
+    return {
+      x: (evt.clientX - rect.left) * sx,
+      y: (evt.clientY - rect.top) * sy
+    };
+  }
+
+  function shopCardAt(x, y) {
+    if (x < PLAYFIELD_W + 8) { return null; }
+    if (x > PLAYFIELD_W + 8 + 56) { return null; }
+    if (y < 32) { return null; }
+    if (y > 32 + 64) { return null; }
+    return 'howitzer';
+  }
+
+  canvas.addEventListener('mousedown', function (evt) {
+    var p = canvasToGame(evt);
+    ui.mouseX = p.x;
+    ui.mouseY = p.y;
+    var card = shopCardAt(p.x, p.y);
+    if (card) {
+      ui.dragging = { defKey: card };
+      canvas.classList.add('ab-dragging');
+    }
+  });
+
+  canvas.addEventListener('mousemove', function (evt) {
+    var p = canvasToGame(evt);
+    ui.mouseX = p.x;
+    ui.mouseY = p.y;
+  });
+
+  canvas.addEventListener('mouseup', function (evt) {
+    var p = canvasToGame(evt);
+    ui.mouseX = p.x;
+    ui.mouseY = p.y;
+    if (ui.dragging) {
+      placeCannon(ui.dragging.defKey, p.x, p.y);
+      ui.dragging = null;
+      canvas.classList.remove('ab-dragging');
+    }
+  });
+
+  canvas.addEventListener('mouseleave', function () {
+    if (ui.dragging) {
+      ui.dragging = null;
+      canvas.classList.remove('ab-dragging');
+    }
+  });
 
   // === UPDATE === (Task 6+)
   function update(dt) {
