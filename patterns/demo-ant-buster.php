@@ -281,7 +281,12 @@ body.has-ant-buster-page {
     // Ants
     for (var i = 0; i < game.ants.length; i++) {
       var a = game.ants[i];
-      var sprite = a.dead ? game.sprites.splat : game.sprites.worker;
+      var sprite;
+      if (a.dead) {
+        sprite = game.sprites.splat;
+      } else {
+        sprite = game.sprites[ANT_KINDS[a.kind].spriteKey];
+      }
       ctx.drawImage(sprite, Math.round(a.x - 8), Math.round(a.y - 8));
       if (!a.dead) {
         if (a.carrying) {
@@ -396,21 +401,68 @@ body.has-ant-buster-page {
   }
 
   // === ANTS ===
-  function spawnAnt(type) {
+  // Per-kind ant stats. Plan 2 introduces this table; Plan 1's literals are migrated here.
+  // Worker and Carrier share most numbers in Plan 2; the table is structured for the
+  // 8 remaining kinds (Brood, Soldier, Scout, etc.) added in later tasks. Effects slot
+  // (per-ant `effects` map) is wired in Task 4 — for now it just exists, empty.
+  var ANT_KINDS = {
+    worker: {
+      name: 'Worker',
+      hp: 10,
+      speed: 30,
+      carryingSpeedMult: 0.7,    // Plan 1: carrying ants slow to 70% on the way home
+      gold: 2,
+      alignment: 0.2,
+      jitterRate: 4.0,
+      wanderFreqMin: 0.3, wanderFreqMax: 0.7,
+      wanderAmpMin: 0.9, wanderAmpMax: 1.5,
+      spriteKey: 'worker',
+      spriteW: 16, spriteH: 16,
+      slowResist: 0,
+      damageMult: 1,
+      pierceMult: 1,
+      canPickup: true,
+      onDeath: null,
+      armor: 0
+    },
+    carrier: {
+      name: 'Carrier',
+      hp: 15,
+      speed: 30,
+      carryingSpeedMult: 0.7,
+      gold: 4,
+      alignment: 0.2,
+      jitterRate: 4.0,
+      wanderFreqMin: 0.3, wanderFreqMax: 0.7,
+      wanderAmpMin: 0.9, wanderAmpMax: 1.5,
+      spriteKey: 'worker',
+      spriteW: 16, spriteH: 16,
+      slowResist: 0,
+      damageMult: 1,
+      pierceMult: 1,
+      canPickup: true,
+      onDeath: null,
+      armor: 0
+    }
+  };
+
+  function spawnAnt(kindKey) {
+    var k = ANT_KINDS[kindKey];
     var ant = {
-      type: type,
+      kind: kindKey,
       x: game.anthill.x,
       y: game.anthill.y + (Math.random() * 60 - 30),
-      hp: 10,
-      maxHp: 10,
-      speed: 30,
+      hp: k.hp,
+      maxHp: k.hp,
+      speed: k.speed,
       heading: (Math.random() * 2 - 1) * 0.5,   // radians; small random offset from east
       dead: false,
       deathTime: 0,
       carrying: false,
       wanderPhase: Math.random() * Math.PI * 2,
-      wanderFreq: 0.3 + Math.random() * 0.4,        // Hz; low-frequency sway
-      wanderAmp: 0.9 + Math.random() * 0.6          // radians of heading bias
+      wanderFreq: k.wanderFreqMin + Math.random() * (k.wanderFreqMax - k.wanderFreqMin),
+      wanderAmp: k.wanderAmpMin + Math.random() * (k.wanderAmpMax - k.wanderAmpMin),
+      effects: {}                                   // Task 4 fills this with status-effect entries
     };
     game.ants.push(ant);
   }
@@ -479,15 +531,16 @@ body.has-ant-buster-page {
       targetX = game.cake.x;
       targetY = game.cake.y;
     }
-    var alignment = 0.2;
-    var jitterRate = 4.0;
+    var k = ANT_KINDS[ant.kind];
+    var alignment = k.alignment;
+    var jitterRate = k.jitterRate;
     var wanderScale = 1.0;
     var speed = ant.speed;
     if (ant.carrying) {
       alignment = 0.6;       // more determined return trip
       jitterRate = 1.5;      // less wander when going home
       wanderScale = 0.3;     // tighten the sway when loaded
-      speed = ant.speed * 0.7;
+      speed = ant.speed * k.carryingSpeedMult;
     } else {
       // Final approach: within 2 squares (32px) of the cake, lock in for the grab.
       var dxc = ant.x - game.cake.x;
@@ -730,7 +783,7 @@ body.has-ant-buster-page {
           if (a.hp <= 0) {
             a.dead = true;
             a.deathTime = 0;
-            game.gold += 2;       // Worker drops 2 gold; per-type table comes in Plan 2
+            game.gold += ANT_KINDS[a.kind].gold;
             if (a.carrying) {
               game.cake.slices += 1;
               a.carrying = false;
