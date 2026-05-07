@@ -638,7 +638,8 @@ body.has-ant-buster-page {
     if (c.kills) { killCount = c.kills; } else { killCount = 0; }
     ctx.fillText('KILLS ' + killCount, px + 6, py + 66);
 
-    // Upgrade buttons (up to 2) — only present when sk.upgradesTo is non-empty.
+    // Upgrade buttons (up to 3) — only present when sk.upgradesTo is non-empty.
+    // Base cannons offer 3 mid options, mid cannons offer 2 finals, finals offer 0.
     var upgrades = sk.upgradesTo;
     if (!upgrades) { upgrades = []; }
     for (var i = 0; i < upgrades.length; i++) {
@@ -652,7 +653,7 @@ body.has-ant-buster-page {
       ctx.fillText('-> ' + udef.name + ' (' + udef.cost + 'g)', px + 10, by + 12);
       ui.upgradeRects[i] = { x: px + 6, y: by, w: pw - 12, h: 18, toKind: uk };
     }
-    for (var k = upgrades.length; k < 2; k++) { ui.upgradeRects[k] = null; }
+    for (var k = upgrades.length; k < 3; k++) { ui.upgradeRects[k] = null; }
 
     // Sell button — pinned near the bottom of the panel rect.
     var refund = sellRefund(c);
@@ -730,6 +731,20 @@ body.has-ant-buster-page {
     ctx.beginPath();
     ctx.arc(c.x, c.y, selKind.range, 0, Math.PI * 2);
     ctx.stroke();
+
+    // Hover-preview: when the player hovers an upgrade button, show the upgrade
+    // target's range as a dashed purple circle. Honest preview before spending gold.
+    if (ui.hoveredUpgrade) {
+      var udef = CANNON_KINDS[ui.hoveredUpgrade];
+      if (udef) {
+        ctx.strokeStyle = '#a040c0';
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, udef.range, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
   }
 
   // Layer 6: static cannon bases. Split from the turret pass so the round bases
@@ -1112,6 +1127,8 @@ body.has-ant-buster-page {
       drawShop();
       ui.upgradeRects[0] = null;
       ui.upgradeRects[1] = null;
+      ui.upgradeRects[2] = null;
+      ui.hoveredUpgrade = null;
       ui.sellRect = null;
     }
     drawOverlays();            // 13. drag preview, banner, modals (paused/win/lose/idle)
@@ -2178,6 +2195,8 @@ body.has-ant-buster-page {
     ui.selectedCannon = null;
     ui.upgradeRects[0] = null;
     ui.upgradeRects[1] = null;
+    ui.upgradeRects[2] = null;
+    ui.hoveredUpgrade = null;
     ui.sellRect = null;
     ui.shopRects = [];
   }
@@ -2192,7 +2211,8 @@ body.has-ant-buster-page {
     speedRect: { x: 24, y: 4, w: 24, h: 16 },
     restartRunRect: null,   // populated when the pause overlay is visible
     selectedCannon: null,   // currently inspected cannon (click on a placed cannon to select)
-    upgradeRects: [null, null], // up-to-2 upgrade buttons in the tower panel
+    upgradeRects: [null, null, null], // up-to-3 upgrade buttons (3 for base, 2 for mid, 0 for final)
+    hoveredUpgrade: null,   // when hovering an upgrade button, the target kind key (for range preview)
     sellRect: null,         // sell button in the tower panel
     shopRects: []           // populated by drawShop; one rect per shop card
   };
@@ -2261,10 +2281,10 @@ body.has-ant-buster-page {
         }
       }
       // Click inside the right-column panel while a cannon is selected — test
-      // the upgrade buttons (up to 2) then the sell button.
+      // the upgrade buttons (up to 3) then the sell button.
       if (ui.selectedCannon) {
         if (p.x >= PLAYFIELD_W) {
-          for (var ri = 0; ri < 2; ri++) {
+          for (var ri = 0; ri < ui.upgradeRects.length; ri++) {
             var ur = ui.upgradeRects[ri];
             if (ur) {
               if (inRect(p, ur)) {
@@ -2302,6 +2322,24 @@ body.has-ant-buster-page {
     var p = canvasToGame(evt);
     ui.mouseX = p.x;
     ui.mouseY = p.y;
+    // Track upgrade-button hover so drawRangeCircle can preview the target's range
+    // as a dashed secondary circle. Avoids `&&` for the inline-script gotcha.
+    var hovered = null;
+    for (var ri = 0; ri < ui.upgradeRects.length; ri++) {
+      var ur = ui.upgradeRects[ri];
+      if (!ur) { continue; }
+      if (p.x >= ur.x) {
+        if (p.x <= ur.x + ur.w) {
+          if (p.y >= ur.y) {
+            if (p.y <= ur.y + ur.h) {
+              hovered = ur.toKind;
+              break;
+            }
+          }
+        }
+      }
+    }
+    ui.hoveredUpgrade = hovered;
   });
 
   canvas.addEventListener('mouseup', function (evt) {
