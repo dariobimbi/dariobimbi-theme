@@ -171,6 +171,23 @@ body.has-ant-buster-page {
     return c;
   }
 
+  function makeSoldierSprite() {
+    var c = makeCanvas(16, 16);
+    var x = c.getContext('2d');
+    x.fillStyle = '#2a2d42';                    // darker base than worker
+    x.beginPath();
+    x.ellipse(8, 9, 6, 5, 0, 0, Math.PI * 2);   // chunkier body
+    x.fill();
+    x.fillStyle = '#1a1d32';                    // very dark head
+    x.fillRect(6, 4, 4, 3);                     // blocky head / helmet
+    x.fillStyle = '#3a4466';                    // helmet highlight
+    x.fillRect(7, 3, 2, 1);                     // small helmet peak on top
+    x.fillStyle = '#181425';
+    x.fillRect(5, 2, 1, 1);                     // antenna L
+    x.fillRect(10, 2, 1, 1);                    // antenna R
+    return c;
+  }
+
   function makeScout() {
     var c = makeCanvas(12, 12);
     var x = c.getContext('2d');
@@ -381,6 +398,7 @@ body.has-ant-buster-page {
 
   game.sprites = {
     worker: makeWorkerSprite(),
+    soldier: makeSoldierSprite(),
     scout: makeScout(),
     splat: makeAntSplat(),
     cannonBase: makeCannonBase(),
@@ -866,6 +884,25 @@ body.has-ant-buster-page {
       canPickup: true,
       onDeath: null,
       armor: 0
+    },
+    soldier: {
+      name: 'Soldier',
+      hp: 40,
+      speed: 20,
+      gold: 5,
+      alignment: 0.2,
+      jitterRate: 3.0,
+      wanderFreqMin: 0.2, wanderFreqMax: 0.5,
+      wanderAmpMin: 0.6, wanderAmpMax: 1.0,
+      spriteKey: 'soldier',
+      spriteW: 16, spriteH: 16,
+      carryingSpeedMult: 0.7,
+      slowResist: 0.5,
+      damageMult: 1,
+      pierceMult: 1,
+      canPickup: true,
+      onDeath: null,
+      armor: 0.5
     }
   };
 
@@ -1404,7 +1441,12 @@ body.has-ant-buster-page {
   // armored ants will reduce damage unless `pierce` is set. For now this is
   // a thin wrapper so the hook point exists.
   function applyDamage(ant, amount, pierce) {
-    ant.hp = ant.hp - amount;
+    var k = ANT_KINDS[ant.kind];
+    var dmg = amount;
+    if (pierce === false || pierce === null || !pierce) {
+      dmg = dmg * (1 - (k.armor || 0));
+    }
+    ant.hp = ant.hp - dmg;
   }
 
   // Centralized kill handling. Used by both projectile collision and beam tick
