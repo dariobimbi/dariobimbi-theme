@@ -114,8 +114,21 @@ body.has-ant-buster-page {
     waveState: 'prep',        // 'prep' | 'wave' | 'won' | 'lost'
     prepRemaining: 30,        // seconds remaining in current prep window
     spawner: { groupIndex: 0, spawnedInGroup: 0, nextSpawnAt: 0, queueDone: false },
-    banner: { active: false, text: '', startedAt: 0, duration: 2.5, isBoss: false }
+    banner: { active: false, text: '', startedAt: 0, duration: 2.5, isBoss: false },
+    paused: false,
+    speed: 1
   };
+
+  // Module-level rect helper used by HUD hit-tests. Avoids inline `&&` chains
+  // (which the WP content filter occasionally HTML-encodes) and centralizes the
+  // pattern that future tasks will reuse for upgrade buttons, selected-tower UI, etc.
+  function inRect(p, r) {
+    if (p.x < r.x) { return false; }
+    if (p.x > r.x + r.w) { return false; }
+    if (p.y < r.y) { return false; }
+    if (p.y > r.y + r.h) { return false; }
+    return true;
+  }
 
   // Show a wave-intro banner. Duration is longer for boss waves.
   function showBanner(text, isBoss) {
@@ -283,13 +296,13 @@ body.has-ant-buster-page {
     ctx.font = '10px monospace';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#fee761';
-    ctx.fillText('Gold: ' + game.gold, 6, 12);
+    ctx.fillText('Gold: ' + game.gold, 54, 12);
     ctx.fillStyle = '#e43b44';
-    ctx.fillText('Cake: ' + game.cake.slices + '/8', 76, 12);
+    ctx.fillText('Cake: ' + game.cake.slices + '/8', 124, 12);
     ctx.fillStyle = '#ff8888';
-    ctx.fillText('Lost: ' + game.cake.lost + '/8', 156, 12);
+    ctx.fillText('Lost: ' + game.cake.lost + '/8', 200, 12);
     ctx.fillStyle = '#ffffff';
-    ctx.fillText('Wave: ' + (game.waveIndex + 1) + '/' + WAVES.length, 240, 12);
+    ctx.fillText('W: ' + (game.waveIndex + 1) + '/' + WAVES.length, 276, 12);
     if (game.waveState === 'prep') {
       ctx.fillStyle = '#aef0a0';
       ctx.fillText('Prep: ' + Math.ceil(game.prepRemaining) + 's', 320, 12);
@@ -308,6 +321,34 @@ body.has-ant-buster-page {
     } else {
       ui.sendNextRect = null;
     }
+    // Pause + speed HUD widgets (left edge of the HUD strip, above gold).
+    // Pause: two vertical bars when running, single right-pointing triangle when paused.
+    ctx.fillStyle = '#2a2f3e';
+    ctx.fillRect(ui.pauseRect.x, ui.pauseRect.y, ui.pauseRect.w, ui.pauseRect.h);
+    ctx.fillStyle = '#fee761';
+    if (game.paused) {
+      // Play triangle
+      ctx.beginPath();
+      ctx.moveTo(ui.pauseRect.x + 5, ui.pauseRect.y + 4);
+      ctx.lineTo(ui.pauseRect.x + 12, ui.pauseRect.y + 8);
+      ctx.lineTo(ui.pauseRect.x + 5, ui.pauseRect.y + 12);
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      ctx.fillRect(ui.pauseRect.x + 5, ui.pauseRect.y + 4, 2, 8);
+      ctx.fillRect(ui.pauseRect.x + 9, ui.pauseRect.y + 4, 2, 8);
+    }
+    // Speed widget — 1x or 2x label.
+    ctx.fillStyle = '#2a2f3e';
+    ctx.fillRect(ui.speedRect.x, ui.speedRect.y, ui.speedRect.w, ui.speedRect.h);
+    ctx.fillStyle = '#fee761';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    var speedLabel;
+    if (game.speed === 2) { speedLabel = '2x'; } else { speedLabel = '1x'; }
+    ctx.fillText(speedLabel, ui.speedRect.x + ui.speedRect.w / 2, ui.speedRect.y + ui.speedRect.h / 2);
+    ctx.textAlign = 'start';
     ctx.textBaseline = 'alphabetic';
 
     // Shop panel (right)
@@ -429,6 +470,29 @@ body.has-ant-buster-page {
           ctx.textAlign = 'start';
         }
       }
+    }
+
+    // Pause overlay — drawn after gameplay, before win/lose overlays so those still
+    // win the z-order if the game is paused at terminal state (shouldn't happen, but safe).
+    if (game.paused) {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+      ctx.fillStyle = '#fee761';
+      ctx.font = '20px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('PAUSED', WIDTH / 2, HEIGHT / 2 - 12);
+      ctx.font = '10px monospace';
+      ctx.fillText('Space to resume', WIDTH / 2, HEIGHT / 2 + 8);
+      var rrx = WIDTH / 2 - 36;
+      var rry = HEIGHT / 2 + 22;
+      ctx.fillStyle = '#a44';
+      ctx.fillRect(rrx, rry, 72, 14);
+      ctx.fillStyle = '#fee761';
+      ctx.fillText('Restart Run', WIDTH / 2, rry + 11);
+      ctx.textAlign = 'start';
+      ui.restartRunRect = { x: rrx, y: rry, w: 72, h: 14 };
+    } else {
+      ui.restartRunRect = null;
     }
 
     if (game.waveState === 'lost') {
@@ -1016,7 +1080,10 @@ body.has-ant-buster-page {
     game.banner.startedAt = 0;
     game.banner.duration = 2.5;
     game.banner.isBoss = false;
+    game.paused = false;
+    game.speed = 1;
     ui.sendNextRect = null;
+    ui.restartRunRect = null;
   }
 
   // === INPUT ===
@@ -1024,7 +1091,10 @@ body.has-ant-buster-page {
     dragging: null,         // { kind } when dragging from shop
     mouseX: 0,
     mouseY: 0,
-    sendNextRect: null      // bounds of the Send-Next button (set when rendered in prep)
+    sendNextRect: null,     // bounds of the Send-Next button (set when rendered in prep)
+    pauseRect: { x: 4, y: 4, w: 16, h: 16 },
+    speedRect: { x: 24, y: 4, w: 24, h: 16 },
+    restartRunRect: null    // populated when the pause overlay is visible
   };
 
   function canvasToGame(evt) {
@@ -1049,6 +1119,22 @@ body.has-ant-buster-page {
     var p = canvasToGame(evt);
     ui.mouseX = p.x;
     ui.mouseY = p.y;
+    // Pause overlay's Restart Run button — only live while paused. Tested first so
+    // it wins over the HUD pause toggle behind it (which is in the same x range).
+    if (game.paused) {
+      if (ui.restartRunRect) {
+        if (inRect(p, ui.restartRunRect)) { resetGame(); return; }
+      }
+    }
+    // HUD pause + speed widgets — always live during 'playing' state. Tested before
+    // any other hit-test in case the playfield ever extends under them.
+    if (game.state === 'playing') {
+      if (inRect(p, ui.pauseRect)) { game.paused = !game.paused; return; }
+      if (inRect(p, ui.speedRect)) {
+        if (game.speed === 1) { game.speed = 2; } else { game.speed = 1; }
+        return;
+      }
+    }
     if (game.waveState === 'won') { resetGame(); return; }
     if (game.waveState === 'lost') { resetGame(); return; }
     if (game.state === 'idle') { game.state = 'playing'; return; }
@@ -1101,15 +1187,20 @@ body.has-ant-buster-page {
   });
 
   // === UPDATE ===
+  // Speed toggle (1×/2×) scales sim time for ants and projectiles only. game.time
+  // advances on real dt so the wave-intro banner and prep countdown animate at
+  // wall-clock speed regardless of speed setting (spec §UI-5).
   function update(dt) {
+    if (game.paused) { return; }
     if (game.state !== 'playing') { return; }
     if (game.waveState === 'won') { return; }
     if (game.waveState === 'lost') { return; }
     game.time += dt;
+    var simDt = dt * game.speed;
     updateWaveState(dt);
-    updateAnts(dt);
-    updateCannons(dt);
-    updateProjectiles(dt);
+    updateAnts(simDt);
+    updateCannons(simDt);
+    updateProjectiles(simDt);
     checkPickupsAndDeliveries();
     pruneAnts();
   }
@@ -1130,7 +1221,10 @@ body.has-ant-buster-page {
   }
   requestAnimationFrame(frame);
 
-  // Enter key skips the prep window (same effect as the Send-Next button).
+  // Keybinds:
+  //   Enter — skip prep window (same as Send-Next button)
+  //   Space — toggle pause (preventDefault so the page doesn't scroll)
+  //   1 / 2 — set speed to 1× / 2×
   window.addEventListener('keydown', function (e) {
     if (e.key === 'Enter') {
       if (game.waveState === 'prep') {
@@ -1140,7 +1234,15 @@ body.has-ant-buster-page {
           game.prepRemaining = 0;
         }
       }
+      return;
     }
+    if (e.key === ' ') {
+      e.preventDefault();
+      game.paused = !game.paused;
+      return;
+    }
+    if (e.key === '1') { game.speed = 1; return; }
+    if (e.key === '2') { game.speed = 2; return; }
   });
 
   // Expose game for debugging from devtools console
