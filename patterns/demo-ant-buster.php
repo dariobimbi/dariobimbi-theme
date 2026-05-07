@@ -658,18 +658,20 @@ body.has-ant-buster-page {
     ctx.textAlign = 'start';
   }
 
-  function render() {
-    // Background
+  // === Render helpers (z-order spec §3.5, layers 1–13) ===
+  // render() is the single entry point and walks back-to-front through the
+  // canonical layer list. Each helper below owns one layer (or one z-slot).
+
+  // Layer 1: blanket + grass tiles + cake plate background.
+  function drawBackground() {
     ctx.fillStyle = '#193c3e';
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-    // Grass border (whole canvas is grass-colored already; blanket sits on top)
+    // Picnic blanket — alternating red/white check on top of the grass field.
     var blanketX = 48;
     var blanketY = 48;
     var blanketW = 384;
     var blanketH = 272;
-
-    // Picnic blanket — alternating red/white check
     var checkSize = 16;
     for (var by = 0; by < blanketH; by += checkSize) {
       for (var bx = 0; bx < blanketW; bx += checkSize) {
@@ -679,16 +681,27 @@ body.has-ant-buster-page {
       }
     }
 
-    // Anthill
-    ctx.drawImage(game.sprites.anthill, game.anthill.x - 16, game.anthill.y - 16);
+    // Shop panel background (right column). Drawn early so HUD/shop content
+    // composites over it later in the layer list.
+    ctx.fillStyle = '#1a1c2c';
+    ctx.fillRect(PLAYFIELD_W, 0, SHOP_W, HEIGHT);
+  }
 
-    // Cake (regenerated each frame since it depends on slice count)
+  // Layer 2: cake (regenerated each frame because it depends on slice count).
+  function drawCake() {
     var cakeSprite = makeCake(game.cake.slices);
     ctx.drawImage(cakeSprite, game.cake.x - 16, game.cake.y - 16);
+  }
 
-    // Task 23: fallen slices on the ground (z-order layer 4 — above blanket/anthill/cake,
-    // below cannons and ants so a worker carrying a slice visibly walks over it). Inline
-    // 6x4 frosted-orange block with a tiny shadow strip and a yellow highlight pixel.
+  // Layer 3: anthill.
+  function drawAnthill() {
+    ctx.drawImage(game.sprites.anthill, game.anthill.x - 16, game.anthill.y - 16);
+  }
+
+  // Layer 4: fallen slices on the ground. Inline 6x4 frosted-orange block with a
+  // tiny shadow strip and a yellow highlight pixel — they read as on the ground
+  // because cannons and ants render over them.
+  function drawSlices() {
     for (var si = 0; si < game.slices.length; si++) {
       var sl = game.slices[si];
       ctx.fillStyle = 'rgba(0,0,0,0.3)';
@@ -698,8 +711,134 @@ body.has-ant-buster-page {
       ctx.fillStyle = '#fee761';
       ctx.fillRect(sl.x - 2, sl.y - 1, 2, 1);
     }
+  }
 
-    // HUD bar
+  // Layer 5: range circle for the selected cannon. Drawn under ants and cannons
+  // so it never obscures moving entities.
+  function drawRangeCircle(c) {
+    var selKind = CANNON_KINDS[c.kind];
+    ctx.strokeStyle = 'rgba(255, 231, 97, 0.5)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, selKind.range, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Layer 6: static cannon bases. Split from the turret pass so the round bases
+  // sit under ants while the turrets read on top.
+  function drawCannonBases() {
+    for (var ci = 0; ci < game.cannons.length; ci++) {
+      var c = game.cannons[ci];
+      ctx.drawImage(game.sprites.cannonBase, Math.round(c.x - 16), Math.round(c.y - 16));
+    }
+  }
+
+  // Layer 7: ants, sorted top-down by y so a lower ant draws over a higher one.
+  // The slice() copy keeps game.ants stable for indices/refs used elsewhere.
+  function drawAnts() {
+    var sorted = game.ants.slice().sort(function(a, b) { return a.y - b.y; });
+    for (var i = 0; i < sorted.length; i++) {
+      var a = sorted[i];
+      var k = ANT_KINDS[a.kind];
+      var sprite;
+      if (a.dead) {
+        sprite = game.sprites.splat;
+      } else {
+        sprite = game.sprites[k.spriteKey];
+      }
+      if (a.intangible) {
+        ctx.save();
+        ctx.globalAlpha = 0.3;
+        ctx.drawImage(sprite, Math.round(a.x - k.spriteW / 2), Math.round(a.y - k.spriteH / 2));
+        ctx.restore();
+      } else {
+        ctx.drawImage(sprite, Math.round(a.x - k.spriteW / 2), Math.round(a.y - k.spriteH / 2));
+      }
+      if (!a.dead) {
+        if (a.carrying) {
+          // Crumb sub-step: tiny orange dot above the ant body.
+          ctx.fillStyle = '#feae34';
+          ctx.fillRect(Math.round(a.x - 3), Math.round(a.y - 12), 6, 4);
+          ctx.fillStyle = '#fee761';
+          ctx.fillRect(Math.round(a.x - 2), Math.round(a.y - 11), 4, 2);
+        }
+      }
+    }
+  }
+
+  // Layer 8: cannon turrets + disabled-spark indicators (the muzzle-flash slot
+  // for future tasks). Bases are drawn earlier; this pass covers the rotating
+  // turret sprite.
+  function drawCannonTurrets() {
+    for (var ci = 0; ci < game.cannons.length; ci++) {
+      var c = game.cannons[ci];
+      ctx.save();
+      ctx.translate(Math.round(c.x), Math.round(c.y));
+      ctx.rotate(c.heading + Math.PI / 2);
+      var turretSprite = game.sprites.turrets[c.kind];
+      if (!turretSprite) { turretSprite = game.sprites.turrets.howitzer; }
+      ctx.drawImage(turretSprite, -10, -16);
+      ctx.restore();
+      if (c.disabled) {
+        if (Math.floor(game.time * 6) % 2 === 0) {
+          ctx.fillStyle = '#ff5040';
+          ctx.fillRect(c.x - 1, c.y - 16, 2, 2);
+          ctx.fillRect(c.x + 3, c.y - 14, 2, 2);
+        }
+      }
+    }
+  }
+
+  // Layer 9a: projectiles.
+  function drawProjectiles() {
+    for (var pi = 0; pi < game.projectiles.length; pi++) {
+      var p = game.projectiles[pi];
+      ctx.drawImage(game.sprites.projectile, Math.round(p.x - 2), Math.round(p.y - 2));
+    }
+  }
+
+  // Layer 9b: beam lines (Glacier). Thin icy line from a beam cannon to its
+  // current live target. Only drawn while the target is alive.
+  function drawBeams() {
+    for (var bi = 0; bi < game.cannons.length; bi++) {
+      var bc = game.cannons[bi];
+      var bdef = CANNON_KINDS[bc.kind];
+      if (bdef.beam) {
+        if (bc.beamTarget) {
+          if (!bc.beamTarget.dead) {
+            ctx.strokeStyle = '#a4d4ff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(bc.x, bc.y);
+            ctx.lineTo(bc.beamTarget.x, bc.beamTarget.y);
+            ctx.stroke();
+          }
+        }
+      }
+    }
+  }
+
+  // Layer 10: transient effects — AoE rings today, hit sparks/splat fades/
+  // phase shimmer/status indicators slot in here as later tasks add them.
+  // Each entry advances its own `t` in updateEffects; render uses p = t/life
+  // as an animation parameter (0 to 1) for ring expansion + fade.
+  function drawEffects() {
+    for (var ei = 0; ei < game.effects.length; ei++) {
+      var ef = game.effects[ei];
+      if (ef.kind === 'bomber_aoe') {
+        var p = ef.t / ef.life;
+        ctx.strokeStyle = 'rgba(255,80,40,' + (1 - p) + ')';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(ef.x, ef.y, 60 * p, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+  }
+
+  // Layer 11: HUD strip across the top of the playfield. Gold, cake, lost,
+  // wave index, prep timer, send-next button, pause + speed widgets.
+  function drawHud() {
     ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
     ctx.fillRect(0, 0, PLAYFIELD_W, HUD_H);
     ctx.font = '10px monospace';
@@ -715,7 +854,6 @@ body.has-ant-buster-page {
     if (game.waveState === 'prep') {
       ctx.fillStyle = '#aef0a0';
       ctx.fillText('Prep: ' + Math.ceil(game.prepRemaining) + 's', 320, 12);
-      // Send-Next button on the right of the HUD strip
       var btnX = PLAYFIELD_W - 80;
       var btnY = 4;
       var btnW = 76;
@@ -730,13 +868,12 @@ body.has-ant-buster-page {
     } else {
       ui.sendNextRect = null;
     }
-    // Pause + speed HUD widgets (left edge of the HUD strip, above gold).
-    // Pause: two vertical bars when running, single right-pointing triangle when paused.
+    // Pause widget: two vertical bars when running, right-pointing triangle
+    // when paused.
     ctx.fillStyle = '#2a2f3e';
     ctx.fillRect(ui.pauseRect.x, ui.pauseRect.y, ui.pauseRect.w, ui.pauseRect.h);
     ctx.fillStyle = '#fee761';
     if (game.paused) {
-      // Play triangle
       ctx.beginPath();
       ctx.moveTo(ui.pauseRect.x + 5, ui.pauseRect.y + 4);
       ctx.lineTo(ui.pauseRect.x + 12, ui.pauseRect.y + 8);
@@ -759,52 +896,159 @@ body.has-ant-buster-page {
     ctx.fillText(speedLabel, ui.speedRect.x + ui.speedRect.w / 2, ui.speedRect.y + ui.speedRect.h / 2);
     ctx.textAlign = 'start';
     ctx.textBaseline = 'alphabetic';
+  }
 
-    // Shop panel (right)
-    ctx.fillStyle = '#1a1c2c';
-    ctx.fillRect(PLAYFIELD_W, 0, SHOP_W, HEIGHT);
+  // Layer 13a: drag preview (ghost cannon under the cursor while dragging from
+  // the shop). Sits inside the overlays bucket because it is UI feedback drawn
+  // above gameplay, but below pause/win/lose modals.
+  function drawDragPreview() {
+    if (!ui.dragging) { return; }
+    var ok = canPlaceCannon(ui.mouseX, ui.mouseY);
+    var dragDef = CANNON_KINDS[ui.dragging.kind];
+    var dragTurret = game.sprites.turrets[ui.dragging.kind];
+    if (!dragTurret) { dragTurret = game.sprites.turrets.howitzer; }
+    ctx.globalAlpha = 0.6;
+    ctx.drawImage(game.sprites.cannonBase, Math.round(ui.mouseX - 16), Math.round(ui.mouseY - 16));
+    ctx.drawImage(dragTurret, Math.round(ui.mouseX - 10), Math.round(ui.mouseY - 16));
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = ok ? 'rgba(255, 255, 255, 0.5)' : 'rgba(228, 59, 68, 0.7)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(ui.mouseX, ui.mouseY, dragDef.range, 0, Math.PI * 2);
+    ctx.stroke();
+  }
 
-    // Range circle for the selected cannon — drawn under ants + cannons so it
-    // never obscures moving entities (Plan 2 spec §3.5 z-order layer 5).
-    if (ui.selectedCannon) {
-      var selKind = CANNON_KINDS[ui.selectedCannon.kind];
-      ctx.strokeStyle = 'rgba(255, 231, 97, 0.5)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.arc(ui.selectedCannon.x, ui.selectedCannon.y, selKind.range, 0, Math.PI * 2);
-      ctx.stroke();
+  // Wave-intro banner — slides in (alpha ramp), dwells, fades out over the
+  // last 0.5s. Lives in the overlay layer so it can ride above gameplay.
+  function drawBanner() {
+    if (!game.banner.active) { return; }
+    var bt = game.time - game.banner.startedAt;
+    if (bt > game.banner.duration) {
+      game.banner.active = false;
+      return;
     }
+    var alpha = 1;
+    if (bt < 0.4) { alpha = bt / 0.4; }
+    if (bt > game.banner.duration - 0.5) { alpha = (game.banner.duration - bt) / 0.5; }
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = game.banner.isBoss ? '#a44' : '#3a4466';
+    ctx.fillRect(WIDTH / 2 - 48, 36, 96, 16);
+    ctx.fillStyle = '#fee761';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(game.banner.text, WIDTH / 2, 44);
+    ctx.restore();
+  }
 
-    // Ants
-    for (var i = 0; i < game.ants.length; i++) {
-      var a = game.ants[i];
-      var k = ANT_KINDS[a.kind];
-      var sprite;
-      if (a.dead) {
-        sprite = game.sprites.splat;
-      } else {
-        sprite = game.sprites[k.spriteKey];
-      }
-      if (a.intangible) {
-        ctx.save();
-        ctx.globalAlpha = 0.3;
-        ctx.drawImage(sprite, Math.round(a.x - k.spriteW / 2), Math.round(a.y - k.spriteH / 2));
-        ctx.restore();
-      } else {
-        ctx.drawImage(sprite, Math.round(a.x - k.spriteW / 2), Math.round(a.y - k.spriteH / 2));
-      }
-      if (!a.dead) {
-        if (a.carrying) {
-          ctx.fillStyle = '#feae34';
-          ctx.fillRect(Math.round(a.x - 3), Math.round(a.y - 12), 6, 4);
-          ctx.fillStyle = '#fee761';
-          ctx.fillRect(Math.round(a.x - 2), Math.round(a.y - 11), 4, 2);
-        }
-      }
+  function drawIdleOverlay() {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    ctx.fillStyle = '#fee761';
+    ctx.font = '16px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('ANT BUSTER', WIDTH / 2, HEIGHT / 2 - 16);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '10px monospace';
+    ctx.fillText('Defend the cake from the ants', WIDTH / 2, HEIGHT / 2 + 4);
+    ctx.fillText('Click to start', WIDTH / 2, HEIGHT / 2 + 22);
+    ctx.textAlign = 'start';
+  }
+
+  function drawTutorialHint() {
+    if (game.state !== 'playing') { return; }
+    if (game.time >= 4) { return; }
+    if (game.cannons.length !== 0) { return; }
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.fillRect(60, 100, 200, 70);
+    ctx.fillStyle = '#fee761';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('Drag a cannon from the shop', 160, 130);
+    ctx.fillText('onto the picnic blanket to start!', 160, 145);
+    ctx.textAlign = 'start';
+  }
+
+  function drawPauseOverlay() {
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    ctx.fillStyle = '#fee761';
+    ctx.font = '20px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('PAUSED', WIDTH / 2, HEIGHT / 2 - 12);
+    ctx.font = '10px monospace';
+    ctx.fillText('Space to resume', WIDTH / 2, HEIGHT / 2 + 8);
+    var rrx = WIDTH / 2 - 36;
+    var rry = HEIGHT / 2 + 22;
+    ctx.fillStyle = '#a44';
+    ctx.fillRect(rrx, rry, 72, 14);
+    ctx.fillStyle = '#fee761';
+    ctx.fillText('Restart Run', WIDTH / 2, rry + 11);
+    ctx.textAlign = 'start';
+    ui.restartRunRect = { x: rrx, y: rry, w: 72, h: 14 };
+  }
+
+  function drawLoseOverlay() {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    ctx.fillStyle = '#e43b44';
+    ctx.font = '16px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('THE ANTS WIN', WIDTH / 2, HEIGHT / 2 - 12);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '10px monospace';
+    ctx.fillText('Click to restart', WIDTH / 2, HEIGHT / 2 + 8);
+    ctx.textAlign = 'start';
+  }
+
+  function drawWinOverlay() {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    ctx.fillStyle = '#fee761';
+    ctx.font = '16px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('CAKE SAVED', WIDTH / 2, HEIGHT / 2 - 12);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '10px monospace';
+    ctx.fillText('Click to restart', WIDTH / 2, HEIGHT / 2 + 8);
+    ctx.textAlign = 'start';
+  }
+
+  // Layer 13: overlays — drag preview, wave banner, then full-screen modals.
+  // Modal order: pause first, then win/lose so terminal-state screens still
+  // win the z-order if both are somehow active in the same frame.
+  function drawOverlays() {
+    drawDragPreview();
+    drawBanner();
+    drawTutorialHint();
+    if (game.paused) {
+      drawPauseOverlay();
+    } else {
+      ui.restartRunRect = null;
     }
+    if (game.state === 'idle') { drawIdleOverlay(); }
+    if (game.waveState === 'won') { drawWinOverlay(); }
+    if (game.waveState === 'lost') { drawLoseOverlay(); }
+  }
 
-    // Right column: tower-detail panel when a cannon is selected, otherwise shop.
-    if (ui.selectedCannon) {
+  // Single render() entry point. Walks the canonical 13-layer z-order from
+  // the spec §3.5, back to front. Each step is its own helper so additions
+  // land in a clearly-named slot rather than accreting inline.
+  function render() {
+    drawBackground();          // 1. blanket + grass + shop bg
+    drawCake();                // 2. cake (current damage state)
+    drawAnthill();             // 3. anthill
+    drawSlices();              // 4. fallen slices on the ground
+    if (ui.selectedCannon) { drawRangeCircle(ui.selectedCannon); } // 5. range circle
+    drawCannonBases();         // 6. static cannon bases (under turrets/ants)
+    drawAnts();                // 7. ants, sorted top-down by y
+    drawCannonTurrets();       // 8. cannon turrets + muzzle/disable indicators
+    drawProjectiles();         // 9a. projectiles
+    drawBeams();               // 9b. beam lines (Glacier)
+    drawEffects();             // 10. AoE flashes + future hit/splat fx
+    drawHud();                 // 11. HUD strip
+    if (ui.selectedCannon) {   // 12. shop / tower-detail panel
       drawTowerPanel(ui.selectedCannon);
     } else {
       drawShop();
@@ -812,185 +1056,7 @@ body.has-ant-buster-page {
       ui.upgradeRects[1] = null;
       ui.sellRect = null;
     }
-
-    // Placed cannons
-    for (var ci = 0; ci < game.cannons.length; ci++) {
-      var c = game.cannons[ci];
-      ctx.drawImage(game.sprites.cannonBase, Math.round(c.x - 16), Math.round(c.y - 16));
-      ctx.save();
-      ctx.translate(Math.round(c.x), Math.round(c.y));
-      ctx.rotate(c.heading + Math.PI / 2);
-      var turretSprite = game.sprites.turrets[c.kind];
-      if (!turretSprite) { turretSprite = game.sprites.turrets.howitzer; }
-      ctx.drawImage(turretSprite, -10, -16);
-      ctx.restore();
-      // Disabled-spark indicator (Task 20): two tiny pixels above the turret that
-      // blink on game.time so a Bomber-disabled cannon reads as "out of action".
-      if (c.disabled) {
-        if (Math.floor(game.time * 6) % 2 === 0) {
-          ctx.fillStyle = '#ff5040';
-          ctx.fillRect(c.x - 1, c.y - 16, 2, 2);
-          ctx.fillRect(c.x + 3, c.y - 14, 2, 2);
-        }
-      }
-    }
-
-    // Projectiles
-    for (var pi = 0; pi < game.projectiles.length; pi++) {
-      var p = game.projectiles[pi];
-      ctx.drawImage(game.sprites.projectile, Math.round(p.x - 2), Math.round(p.y - 2));
-    }
-
-    // Beams (z-order layer 9, post-projectiles): thin icy line from a beam
-    // cannon to its current target. Only drawn while the target is alive.
-    for (var bi = 0; bi < game.cannons.length; bi++) {
-      var bc = game.cannons[bi];
-      var bdef = CANNON_KINDS[bc.kind];
-      if (bdef.beam) {
-        if (bc.beamTarget) {
-          if (!bc.beamTarget.dead) {
-            ctx.strokeStyle = '#a4d4ff';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(bc.x, bc.y);
-            ctx.lineTo(bc.beamTarget.x, bc.beamTarget.y);
-            ctx.stroke();
-          }
-        }
-      }
-    }
-
-    // Effects (z-order layer 10, post-beams, pre-HUD): transient gameplay flashes.
-    // Each entry advances its own `t` in updateEffects; render uses p = t/life as
-    // an animation parameter (0 → 1) for ring expansion + fade.
-    for (var ei = 0; ei < game.effects.length; ei++) {
-      var ef = game.effects[ei];
-      if (ef.kind === 'bomber_aoe') {
-        var p = ef.t / ef.life;
-        ctx.strokeStyle = 'rgba(255,80,40,' + (1 - p) + ')';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(ef.x, ef.y, 60 * p, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-    }
-
-    // Drag preview
-    if (ui.dragging) {
-      var ok = canPlaceCannon(ui.mouseX, ui.mouseY);
-      var dragDef = CANNON_KINDS[ui.dragging.kind];
-      var dragTurret = game.sprites.turrets[ui.dragging.kind];
-      if (!dragTurret) { dragTurret = game.sprites.turrets.howitzer; }
-      ctx.globalAlpha = 0.6;
-      ctx.drawImage(game.sprites.cannonBase, Math.round(ui.mouseX - 16), Math.round(ui.mouseY - 16));
-      ctx.drawImage(dragTurret, Math.round(ui.mouseX - 10), Math.round(ui.mouseY - 16));
-      ctx.globalAlpha = 1;
-      ctx.strokeStyle = ok ? 'rgba(255, 255, 255, 0.5)' : 'rgba(228, 59, 68, 0.7)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.arc(ui.mouseX, ui.mouseY, dragDef.range, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-
-    // Wave-intro banner — slides in (alpha ramp), dwells, fades out over the last 0.5s.
-    if (game.banner.active) {
-      var bt = game.time - game.banner.startedAt;
-      if (bt > game.banner.duration) {
-        game.banner.active = false;
-      } else {
-        var alpha = 1;
-        if (bt < 0.4) { alpha = bt / 0.4; }
-        if (bt > game.banner.duration - 0.5) { alpha = (game.banner.duration - bt) / 0.5; }
-        ctx.save();
-        ctx.globalAlpha = alpha;
-        ctx.fillStyle = game.banner.isBoss ? '#a44' : '#3a4466';
-        ctx.fillRect(WIDTH / 2 - 48, 36, 96, 16);
-        ctx.fillStyle = '#fee761';
-        ctx.font = '10px monospace';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(game.banner.text, WIDTH / 2, 44);
-        ctx.restore();
-      }
-    }
-
-    if (game.state === 'idle') {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-      ctx.fillRect(0, 0, WIDTH, HEIGHT);
-      ctx.fillStyle = '#fee761';
-      ctx.font = '16px monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText('ANT BUSTER', WIDTH / 2, HEIGHT / 2 - 16);
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '10px monospace';
-      ctx.fillText('Defend the cake from the ants', WIDTH / 2, HEIGHT / 2 + 4);
-      ctx.fillText('Click to start', WIDTH / 2, HEIGHT / 2 + 22);
-      ctx.textAlign = 'start';
-    }
-
-    if (game.state === 'playing') {
-      if (game.time < 4) {
-        if (game.cannons.length === 0) {
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-          ctx.fillRect(60, 100, 200, 70);
-          ctx.fillStyle = '#fee761';
-          ctx.font = '10px monospace';
-          ctx.textAlign = 'center';
-          ctx.fillText('Drag a cannon from the shop', 160, 130);
-          ctx.fillText('onto the picnic blanket to start!', 160, 145);
-          ctx.textAlign = 'start';
-        }
-      }
-    }
-
-    // Pause overlay — drawn after gameplay, before win/lose overlays so those still
-    // win the z-order if the game is paused at terminal state (shouldn't happen, but safe).
-    if (game.paused) {
-      ctx.fillStyle = 'rgba(0,0,0,0.5)';
-      ctx.fillRect(0, 0, WIDTH, HEIGHT);
-      ctx.fillStyle = '#fee761';
-      ctx.font = '20px monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText('PAUSED', WIDTH / 2, HEIGHT / 2 - 12);
-      ctx.font = '10px monospace';
-      ctx.fillText('Space to resume', WIDTH / 2, HEIGHT / 2 + 8);
-      var rrx = WIDTH / 2 - 36;
-      var rry = HEIGHT / 2 + 22;
-      ctx.fillStyle = '#a44';
-      ctx.fillRect(rrx, rry, 72, 14);
-      ctx.fillStyle = '#fee761';
-      ctx.fillText('Restart Run', WIDTH / 2, rry + 11);
-      ctx.textAlign = 'start';
-      ui.restartRunRect = { x: rrx, y: rry, w: 72, h: 14 };
-    } else {
-      ui.restartRunRect = null;
-    }
-
-    if (game.waveState === 'lost') {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-      ctx.fillRect(0, 0, WIDTH, HEIGHT);
-      ctx.fillStyle = '#e43b44';
-      ctx.font = '16px monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText('THE ANTS WIN', WIDTH / 2, HEIGHT / 2 - 12);
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '10px monospace';
-      ctx.fillText('Click to restart', WIDTH / 2, HEIGHT / 2 + 8);
-      ctx.textAlign = 'start';
-    }
-
-    if (game.waveState === 'won') {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-      ctx.fillRect(0, 0, WIDTH, HEIGHT);
-      ctx.fillStyle = '#fee761';
-      ctx.font = '16px monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText('CAKE SAVED', WIDTH / 2, HEIGHT / 2 - 12);
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '10px monospace';
-      ctx.fillText('Click to restart', WIDTH / 2, HEIGHT / 2 + 8);
-      ctx.textAlign = 'start';
-    }
+    drawOverlays();            // 13. drag preview, banner, modals (paused/win/lose/idle)
   }
 
   // === ANTS ===
