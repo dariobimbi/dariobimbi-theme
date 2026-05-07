@@ -1292,7 +1292,7 @@ body.has-ant-buster-page {
   }
 
   // Bias the desired heading sideways around any cannon roughly on the path ahead.
-  // Ants treat cannons as soft obstacles; the hard overlap push-out runs after movement.
+  // Ants treat cannons as soft obstacles; a clamped soft repulsion runs after movement.
   function steerAroundCannons(ant, desiredHeading) {
     var lookAhead = 28;
     var combined = 18;          // ant radius + cannon radius (rough)
@@ -1420,25 +1420,38 @@ body.has-ant-buster-page {
       ant.y = HEIGHT - margin;
       ant.heading = -ant.heading;
     }
-    // Hard push-out: cannons are solid, ants cannot end a frame inside one.
-    var minD = 18;
+    // Soft repulsion: accumulate unit-vector contributions from each nearby cannon, scaled by
+    // (influence - dN) / influence so contact-close towers push hardest. Magnitude is then
+    // clamped to 1.5 * speed * dt per spec SYS-5 so two adjacent towers cannot catapult an ant
+    // through a wall in one frame. The steerAroundCannons heading bias above does the wider
+    // "flow around" behavior; this displacement just keeps ants from settling inside a tower.
+    var rx = 0;
+    var ry = 0;
+    var towerRadius = 12;
+    var influence = towerRadius + 4;
     for (var ci = 0; ci < game.cannons.length; ci++) {
       var cn = game.cannons[ci];
       var dxN = ant.x - cn.x;
       var dyN = ant.y - cn.y;
       var dN = Math.sqrt(dxN * dxN + dyN * dyN);
-      if (dN < minD) {
-        if (dN < 0.0001) {
-          // Exactly on top of the cannon (e.g. cannon placed on ant): nudge perpendicular to heading.
-          ant.x = cn.x + Math.cos(ant.heading + Math.PI / 2) * minD;
-          ant.y = cn.y + Math.sin(ant.heading + Math.PI / 2) * minD;
-        } else {
-          ant.x = cn.x + (dxN / dN) * minD;
-          ant.y = cn.y + (dyN / dN) * minD;
-        }
+      if (dN < influence) {
+        if (dN < 0.001) { dN = 0.001; }
+        var force = (influence - dN) / influence;
+        rx = rx + (dxN / dN) * force;
+        ry = ry + (dyN / dN) * force;
       }
     }
-    // Final non-reflective clamp in case push-out drove us back through a wall.
+    var rmag = Math.sqrt(rx * rx + ry * ry);
+    var rclamp = 1.5 * speed * dt;
+    if (rmag > rclamp) {
+      if (rmag > 0) {
+        rx = rx * (rclamp / rmag);
+        ry = ry * (rclamp / rmag);
+      }
+    }
+    ant.x = ant.x + rx;
+    ant.y = ant.y + ry;
+    // Final non-reflective clamp in case soft repulsion pushed us past a wall.
     if (ant.x < margin) { ant.x = margin; }
     if (ant.x > PLAYFIELD_W - margin) { ant.x = PLAYFIELD_W - margin; }
     if (ant.y < HUD_H + margin) { ant.y = HUD_H + margin; }
