@@ -113,8 +113,18 @@ body.has-ant-buster-page {
     waveIndex: 0,             // index into WAVES
     waveState: 'prep',        // 'prep' | 'wave' | 'won' | 'lost'
     prepRemaining: 30,        // seconds remaining in current prep window
-    spawner: { groupIndex: 0, spawnedInGroup: 0, nextSpawnAt: 0, queueDone: false }
+    spawner: { groupIndex: 0, spawnedInGroup: 0, nextSpawnAt: 0, queueDone: false },
+    banner: { active: false, text: '', startedAt: 0, duration: 2.5, isBoss: false }
   };
+
+  // Show a wave-intro banner. Duration is longer for boss waves.
+  function showBanner(text, isBoss) {
+    game.banner.active = true;
+    game.banner.text = text;
+    game.banner.startedAt = game.time;
+    game.banner.duration = isBoss ? 3 : 2.5;
+    game.banner.isBoss = isBoss;
+  }
 
   // === CANVAS SETUP ===
   var canvas = document.getElementById('ab-canvas');
@@ -280,6 +290,24 @@ body.has-ant-buster-page {
     ctx.fillText('Lost: ' + game.cake.lost + '/8', 156, 12);
     ctx.fillStyle = '#ffffff';
     ctx.fillText('Wave: ' + (game.waveIndex + 1) + '/' + WAVES.length, 240, 12);
+    if (game.waveState === 'prep') {
+      ctx.fillStyle = '#aef0a0';
+      ctx.fillText('Prep: ' + Math.ceil(game.prepRemaining) + 's', 320, 12);
+      // Send-Next button on the right of the HUD strip
+      var btnX = PLAYFIELD_W - 80;
+      var btnY = 4;
+      var btnW = 76;
+      var btnH = 16;
+      ui.sendNextRect = { x: btnX, y: btnY, w: btnW, h: btnH };
+      ctx.fillStyle = '#5a7d4a';
+      ctx.fillRect(btnX, btnY, btnW, btnH);
+      ctx.fillStyle = '#fee761';
+      ctx.textAlign = 'center';
+      ctx.fillText('Send Next', btnX + btnW / 2, btnY + btnH / 2);
+      ctx.textAlign = 'start';
+    } else {
+      ui.sendNextRect = null;
+    }
     ctx.textBaseline = 'alphabetic';
 
     // Shop panel (right)
@@ -350,6 +378,28 @@ body.has-ant-buster-page {
       ctx.beginPath();
       ctx.arc(ui.mouseX, ui.mouseY, CANNON_KINDS.howitzer.range, 0, Math.PI * 2);
       ctx.stroke();
+    }
+
+    // Wave-intro banner — slides in (alpha ramp), dwells, fades out over the last 0.5s.
+    if (game.banner.active) {
+      var bt = game.time - game.banner.startedAt;
+      if (bt > game.banner.duration) {
+        game.banner.active = false;
+      } else {
+        var alpha = 1;
+        if (bt < 0.4) { alpha = bt / 0.4; }
+        if (bt > game.banner.duration - 0.5) { alpha = (game.banner.duration - bt) / 0.5; }
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = game.banner.isBoss ? '#a44' : '#3a4466';
+        ctx.fillRect(WIDTH / 2 - 48, 36, 96, 16);
+        ctx.fillStyle = '#fee761';
+        ctx.font = '10px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(game.banner.text, WIDTH / 2, 44);
+        ctx.restore();
+      }
     }
 
     if (game.state === 'idle') {
@@ -901,6 +951,8 @@ body.has-ant-buster-page {
         game.spawner.spawnedInGroup = 0;
         game.spawner.nextSpawnAt = game.time + WAVES[game.waveIndex].spawns[0].delay;
         game.spawner.queueDone = false;
+        var wv = WAVES[game.waveIndex];
+        showBanner('Wave ' + wv.number + '/' + WAVES.length, !!wv.boss);
       }
       return;
     }
@@ -959,13 +1011,20 @@ body.has-ant-buster-page {
     game.spawner.spawnedInGroup = 0;
     game.spawner.nextSpawnAt = 0;
     game.spawner.queueDone = false;
+    game.banner.active = false;
+    game.banner.text = '';
+    game.banner.startedAt = 0;
+    game.banner.duration = 2.5;
+    game.banner.isBoss = false;
+    ui.sendNextRect = null;
   }
 
   // === INPUT ===
   var ui = {
     dragging: null,         // { kind } when dragging from shop
     mouseX: 0,
-    mouseY: 0
+    mouseY: 0,
+    sendNextRect: null      // bounds of the Send-Next button (set when rendered in prep)
   };
 
   function canvasToGame(evt) {
@@ -993,6 +1052,23 @@ body.has-ant-buster-page {
     if (game.waveState === 'won') { resetGame(); return; }
     if (game.waveState === 'lost') { resetGame(); return; }
     if (game.state === 'idle') { game.state = 'playing'; return; }
+    if (game.waveState === 'prep') {
+      if (ui.sendNextRect) {
+        var r = ui.sendNextRect;
+        if (p.x >= r.x) {
+          if (p.x <= r.x + r.w) {
+            if (p.y >= r.y) {
+              if (p.y <= r.y + r.h) {
+                var bonus = Math.floor(game.prepRemaining / 2);
+                game.gold = game.gold + bonus;
+                game.prepRemaining = 0;
+                return;
+              }
+            }
+          }
+        }
+      }
+    }
     var card = shopCardAt(p.x, p.y);
     if (card) {
       ui.dragging = { kind: card };
@@ -1053,6 +1129,19 @@ body.has-ant-buster-page {
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
+
+  // Enter key skips the prep window (same effect as the Send-Next button).
+  window.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      if (game.waveState === 'prep') {
+        if (game.state === 'playing') {
+          var bonus = Math.floor(game.prepRemaining / 2);
+          game.gold = game.gold + bonus;
+          game.prepRemaining = 0;
+        }
+      }
+    }
+  });
 
   // Expose game for debugging from devtools console
   window.__ab = game;
