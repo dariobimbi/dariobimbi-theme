@@ -262,6 +262,44 @@ body.has-ant-buster-page {
   // Note: cake sprite is regenerated in render() per frame because it depends on slice count.
 
   // === RENDERING ===
+  function drawShop() {
+    var cardX = PLAYFIELD_W + 8;
+    var cardY = 32;
+    ctx.fillStyle = '#2a2f3e';
+    ctx.fillRect(cardX, cardY, 56, 64);
+    ctx.drawImage(game.sprites.cannonBase, cardX + 12, cardY + 4);
+    ctx.drawImage(game.sprites.cannonTurret, cardX + 18, cardY + 10);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '8px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('Howitzer', cardX + 28, cardY + 50);
+    ctx.fillStyle = (game.gold >= CANNON_KINDS.howitzer.cost) ? '#fee761' : '#888';
+    ctx.fillText('50g', cardX + 28, cardY + 60);
+    ctx.textAlign = 'start';
+  }
+
+  function drawTowerPanel(c) {
+    var sk = CANNON_KINDS[c.kind];
+    var px = PLAYFIELD_W + 8;
+    var py = 32;
+    var pw = SHOP_W - 16;
+    ctx.fillStyle = '#262b44';
+    ctx.fillRect(px, py, pw, 200);
+    ctx.fillStyle = '#fee761';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(sk.name, px + 6, py + 14);
+    ctx.fillStyle = '#cccccc';
+    ctx.fillText('DMG ' + sk.damage, px + 6, py + 30);
+    ctx.fillText('RATE ' + sk.fireRate + '/s', px + 6, py + 42);
+    ctx.fillText('RANGE ' + sk.range, px + 6, py + 54);
+    var killCount;
+    if (c.kills) { killCount = c.kills; } else { killCount = 0; }
+    ctx.fillText('KILLS ' + killCount, px + 6, py + 66);
+    // Upgrade + sell buttons land in Task 9 — leave that area blank
+    ctx.textAlign = 'start';
+  }
+
   function render() {
     // Background
     ctx.fillStyle = '#193c3e';
@@ -355,6 +393,17 @@ body.has-ant-buster-page {
     ctx.fillStyle = '#1a1c2c';
     ctx.fillRect(PLAYFIELD_W, 0, SHOP_W, HEIGHT);
 
+    // Range circle for the selected cannon — drawn under ants + cannons so it
+    // never obscures moving entities (Plan 2 spec §3.5 z-order layer 5).
+    if (ui.selectedCannon) {
+      var selKind = CANNON_KINDS[ui.selectedCannon.kind];
+      ctx.strokeStyle = 'rgba(255, 231, 97, 0.5)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(ui.selectedCannon.x, ui.selectedCannon.y, selKind.range, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
     // Ants
     for (var i = 0; i < game.ants.length; i++) {
       var a = game.ants[i];
@@ -375,20 +424,12 @@ body.has-ant-buster-page {
       }
     }
 
-    // Shop card for Howitzer
-    var cardX = PLAYFIELD_W + 8;
-    var cardY = 32;
-    ctx.fillStyle = '#2a2f3e';
-    ctx.fillRect(cardX, cardY, 56, 64);
-    ctx.drawImage(game.sprites.cannonBase, cardX + 12, cardY + 4);
-    ctx.drawImage(game.sprites.cannonTurret, cardX + 18, cardY + 10);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '8px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('Howitzer', cardX + 28, cardY + 50);
-    ctx.fillStyle = (game.gold >= CANNON_KINDS.howitzer.cost) ? '#fee761' : '#888';
-    ctx.fillText('50g', cardX + 28, cardY + 60);
-    ctx.textAlign = 'start';
+    // Right column: tower-detail panel when a cannon is selected, otherwise shop.
+    if (ui.selectedCannon) {
+      drawTowerPanel(ui.selectedCannon);
+    } else {
+      drawShop();
+    }
 
     // Placed cannons
     for (var ci = 0; ci < game.cannons.length; ci++) {
@@ -1084,6 +1125,7 @@ body.has-ant-buster-page {
     game.speed = 1;
     ui.sendNextRect = null;
     ui.restartRunRect = null;
+    ui.selectedCannon = null;
   }
 
   // === INPUT ===
@@ -1094,7 +1136,8 @@ body.has-ant-buster-page {
     sendNextRect: null,     // bounds of the Send-Next button (set when rendered in prep)
     pauseRect: { x: 4, y: 4, w: 16, h: 16 },
     speedRect: { x: 24, y: 4, w: 24, h: 16 },
-    restartRunRect: null    // populated when the pause overlay is visible
+    restartRunRect: null,   // populated when the pause overlay is visible
+    selectedCannon: null    // currently inspected cannon (click on a placed cannon to select)
   };
 
   function canvasToGame(evt) {
@@ -1152,6 +1195,20 @@ body.has-ant-buster-page {
               }
             }
           }
+        }
+      }
+    }
+    if (game.state === 'playing') {
+      if (p.x < PLAYFIELD_W) {
+        var hit = cannonAt(p.x, p.y);
+        if (hit) {
+          ui.selectedCannon = hit;
+          return;
+        }
+        // click in playfield but not on a cannon: deselect
+        if (ui.selectedCannon) {
+          ui.selectedCannon = null;
+          return;
         }
       }
     }
@@ -1243,10 +1300,12 @@ body.has-ant-buster-page {
     }
     if (e.key === '1') { game.speed = 1; return; }
     if (e.key === '2') { game.speed = 2; return; }
+    if (e.key === 'Escape') { ui.selectedCannon = null; return; }
   });
 
   // Expose game for debugging from devtools console
   window.__ab = game;
+  window.__abUi = ui;
   window.__abStatusKinds = STATUS_KINDS;
   window.__abApplyStatus = applyStatus;
 })();
