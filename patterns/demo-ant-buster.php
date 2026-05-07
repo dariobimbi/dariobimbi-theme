@@ -109,6 +109,7 @@ body.has-ant-buster-page {
     cannons: [],
     projectiles: [],
     effects: [],              // transient visual effects (e.g. Bomber AoE flash); see updateEffects
+    slices: [],               // fallen cake slices on the ground (Task 23); 8s timeout returns to cake
     sprites: {},              // populated in Task 4
     gold: 150,
     waveIndex: 0,             // index into WAVES
@@ -684,6 +685,19 @@ body.has-ant-buster-page {
     // Cake (regenerated each frame since it depends on slice count)
     var cakeSprite = makeCake(game.cake.slices);
     ctx.drawImage(cakeSprite, game.cake.x - 16, game.cake.y - 16);
+
+    // Task 23: fallen slices on the ground (z-order layer 4 — above blanket/anthill/cake,
+    // below cannons and ants so a worker carrying a slice visibly walks over it). Inline
+    // 6x4 frosted-orange block with a tiny shadow strip and a yellow highlight pixel.
+    for (var si = 0; si < game.slices.length; si++) {
+      var sl = game.slices[si];
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.fillRect(sl.x - 3, sl.y + 1, 6, 2);
+      ctx.fillStyle = '#ff9c40';
+      ctx.fillRect(sl.x - 3, sl.y - 2, 6, 4);
+      ctx.fillStyle = '#fee761';
+      ctx.fillRect(sl.x - 2, sl.y - 1, 2, 1);
+    }
 
     // HUD bar
     ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
@@ -1460,6 +1474,27 @@ body.has-ant-buster-page {
           // Tanks and similar do not pick up cake — just walk past
           continue;
         }
+        // Task 23: ground-slice pickup. Before checking the cake itself, see if the
+        // ant is standing on a fallen slice from a recent kill. 10 px radius (squared
+        // = 100) keeps pickup tight enough that ants do not snag a slice they are
+        // walking past. claimedBy is set defensively even though we splice on the
+        // same frame — leaves a hook for any future cross-frame claim animation.
+        var pickedFromGround = false;
+        for (var si = 0; si < game.slices.length; si++) {
+          var sl = game.slices[si];
+          if (sl.claimedBy) { continue; }
+          var dxs = a.x - sl.x;
+          var dys = a.y - sl.y;
+          if (dxs * dxs + dys * dys <= 100) {
+            a.carrying = true;
+            sl.claimedBy = a;
+            a.heading = angleTowards(a.x, a.y, game.anthill.x, game.anthill.y);
+            game.slices.splice(si, 1);
+            pickedFromGround = true;
+            break;
+          }
+        }
+        if (pickedFromGround) { continue; }
         if (game.cake.slices > 0) {
           var dxCake = a.x - game.cake.x;
           var dyCake = a.y - game.cake.y;
@@ -1778,8 +1813,13 @@ body.has-ant-buster-page {
     ant.deathTime = 0;
     var k = ANT_KINDS[ant.kind];
     game.gold = game.gold + k.gold;
+    // Task 23: dropping a slice on the ground (replaces Plan 1's instant cake.slices++ snap-back).
+    // The slice sits where the ant fell. Another canPickup ant can claim it (ground pickup branch
+    // in checkPickupsAndDeliveries); after 8s of nobody claiming, it returns to the cake without
+    // a life deduction (updateSlices). Cake accounting: kill->drop is neutral on cake.slices,
+    // timeout refunds it, ground pickup just transfers ownership.
     if (ant.carrying) {
-      game.cake.slices = game.cake.slices + 1;
+      game.slices.push({ x: ant.x, y: ant.y, droppedAt: game.time, claimedBy: null });
       ant.carrying = false;
     }
     if (killer) {
@@ -1941,6 +1981,7 @@ body.has-ant-buster-page {
     game.cannons = [];
     game.projectiles = [];
     game.effects = [];
+    game.slices = [];
     game.gold = 150;
     game.waveIndex = 0;
     game.waveState = 'prep';
@@ -2121,6 +2162,25 @@ body.has-ant-buster-page {
     game.effects = kept;
   }
 
+  // Task 23: tick fallen-slice timeouts. After 8s of nobody picking up a dropped
+  // slice, it snaps back to the cake without a life deduction (the player is not
+  // penalized for an enemy that died mid-carry). dt is unused — we compare against
+  // game.time which advances in update() — but kept in the signature for parity
+  // with the other update* functions.
+  function updateSlices(dt) {
+    var kept = [];
+    for (var i = 0; i < game.slices.length; i++) {
+      var s = game.slices[i];
+      var age = game.time - s.droppedAt;
+      if (age >= 8) {
+        game.cake.slices = game.cake.slices + 1;
+        continue;
+      }
+      kept.push(s);
+    }
+    game.slices = kept;
+  }
+
   function update(dt) {
     if (game.paused) { return; }
     if (game.state !== 'playing') { return; }
@@ -2133,6 +2193,7 @@ body.has-ant-buster-page {
     updateCannons(simDt);
     updateProjectiles(simDt);
     updateEffects(simDt);
+    updateSlices(simDt);
     checkPickupsAndDeliveries();
     pruneAnts();
   }
