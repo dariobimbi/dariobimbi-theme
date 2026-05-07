@@ -12,6 +12,17 @@ desktop.ini
 # Logs
 *.log
 
+# Playwright MCP debug artifacts (page snapshots, console logs, screenshots).
+# Generated when an agent uses the Playwright MCP tools to verify a demo in
+# the browser. Useful in-session, never useful in history.
+.playwright-mcp/
+
+# Loose screenshots dropped at the theme root by debug runs. Real image
+# assets live under assets/ and are not affected by these patterns.
+/screenshot.png
+/ab-*.png
+/ant-buster-*.png
+
 # Composer (dev-only IDE stubs, regenerable via `composer install`)
 vendor/
 
