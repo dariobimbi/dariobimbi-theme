@@ -229,6 +229,30 @@ body.has-ant-buster-page {
     return c;
   }
 
+  function makeCannonTurretSiege() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    // Chunky stubby barrel; dark red.
+    x.fillStyle = '#5a3a44';
+    x.fillRect(7, 4, 6, 12);                    // wide barrel
+    x.fillStyle = '#3a1a24';
+    x.fillRect(6, 2, 8, 3);                     // wide tip
+    return c;
+  }
+
+  function makeCannonTurretRailgun() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    // Sleek long barrel; dark red-violet.
+    x.fillStyle = '#6f3a44';
+    x.fillRect(9, 0, 2, 17);                    // very long thin barrel
+    x.fillStyle = '#4f1a24';
+    x.fillRect(8, 0, 4, 3);                     // tip
+    x.fillStyle = '#9a5a64';
+    x.fillRect(7, 12, 6, 4);                    // breech block
+    return c;
+  }
+
   function makeCake(slices) {
     var c = makeCanvas(32, 32);
     var x = c.getContext('2d');
@@ -282,6 +306,8 @@ body.has-ant-buster-page {
     cannonTurret: makeCannonTurret(),         // kept for backward refs; lookups now go through turrets[kind]
     turrets: {
       howitzer: makeCannonTurret(),
+      siege: makeCannonTurretSiege(),
+      railgun: makeCannonTurretRailgun(),
       repeater: makeCannonTurretRepeater(),
       twingun: makeCannonTurretTwinGun()
     },
@@ -992,6 +1018,29 @@ body.has-ant-buster-page {
       projectileSpeed: 200,
       family: 'heavy',
       tier: 1,
+      upgradesTo: ['siege']
+    },
+    siege: {
+      name: 'Siege',
+      cost: 50,
+      damage: 12,
+      fireRate: 0.6,
+      range: 110,
+      projectileSpeed: 240,
+      family: 'heavy',
+      tier: 2,
+      upgradesTo: ['railgun']
+    },
+    railgun: {
+      name: 'Railgun',
+      cost: 90,
+      damage: 25,
+      fireRate: 0.6,
+      range: 120,
+      projectileSpeed: 360,
+      family: 'heavy',
+      tier: 3,
+      pierce: true,
       upgradesTo: []
     },
     repeater: {
@@ -1113,8 +1162,16 @@ body.has-ant-buster-page {
       vx: Math.cos(heading) * def.projectileSpeed,
       vy: Math.sin(heading) * def.projectileSpeed,
       damage: def.damage,
+      pierce: !!def.pierce,
       life: 1.5     // seconds
     });
+  }
+
+  // Centralized damage application. Soldier armor (Task 16) hooks here:
+  // armored ants will reduce damage unless `pierce` is set. For now this is
+  // a thin wrapper so the hook point exists.
+  function applyDamage(ant, amount, pierce) {
+    ant.hp = ant.hp - amount;
   }
 
   function updateProjectiles(dt) {
@@ -1131,7 +1188,7 @@ body.has-ant-buster-page {
         var dx = a.x - p.x;
         var dy = a.y - p.y;
         if (dx * dx + dy * dy < 6 * 6) {
-          a.hp -= p.damage;
+          applyDamage(a, p.damage, p.pierce);
           if (a.hp <= 0) {
             a.dead = true;
             a.deathTime = 0;
