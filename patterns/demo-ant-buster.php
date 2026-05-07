@@ -776,8 +776,52 @@ body.has-ant-buster-page {
           ctx.fillStyle = '#fee761';
           ctx.fillRect(Math.round(a.x - 2), Math.round(a.y - 11), 4, 2);
         }
+        drawAntHpBar(a);
       }
     }
+  }
+
+  // HP bar dispatcher. Default: damage-triggered 16x2 red bar above the ant.
+  // Per-kind override via ANT_KINDS[kind].barStyle = { width, height, color,
+  // borderColor, persistent } — used by King (Task 29) and reserved for future
+  // bosses so their bar reads as a different threat tier from spawn. Nested
+  // ifs only — inline scripts in this theme HTML-encode the AND operator.
+  function drawAntHpBar(ant) {
+    var k = ANT_KINDS[ant.kind];
+    var style = k.barStyle;
+    var persistent = false;
+    if (style) {
+      if (style.persistent) { persistent = true; }
+    }
+    var damaged = ant.hp < ant.maxHp;
+    if (!persistent) {
+      if (!damaged) { return; }
+    }
+
+    var bw = 16;
+    var bh = 2;
+    var color = '#e43b44';
+    var border = null;
+    if (style) {
+      if (style.width) { bw = style.width; }
+      if (style.height) { bh = style.height; }
+      if (style.color) { color = style.color; }
+      if (style.borderColor) { border = style.borderColor; }
+    }
+
+    var bx = ant.x - bw / 2;
+    var by = ant.y - 14;
+    var pct = ant.hp / ant.maxHp;
+    if (pct < 0) { pct = 0; }
+
+    if (border) {
+      ctx.fillStyle = border;
+      ctx.fillRect(bx - 1, by - 1, bw + 2, bh + 2);
+    }
+    ctx.fillStyle = '#262b44';
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.fillStyle = color;
+    ctx.fillRect(bx, by, bw * pct, bh);
   }
 
   // Layer 8: cannon turrets + disabled-spark indicators (the muzzle-flash slot
@@ -1078,6 +1122,8 @@ body.has-ant-buster-page {
   // Worker and Carrier share most numbers in Plan 2; the table is structured for the
   // 8 remaining kinds (Brood, Soldier, Scout, etc.) added in later tasks. Effects slot
   // (per-ant `effects` map) is wired in Task 4 — for now it just exists, empty.
+  // barStyle (optional): { width, height, color, borderColor, persistent }.
+  // Default = damage-triggered 16x2 red bar. Override per-kind for boss escalation.
   var ANT_KINDS = {
     worker: {
       name: 'Worker',
@@ -2386,6 +2432,7 @@ body.has-ant-buster-page {
   // Expose game for debugging from devtools console
   window.__ab = game;
   window.__abCannonKinds = CANNON_KINDS;
+  window.__abAntKinds = ANT_KINDS;
   window.__abUi = ui;
   window.__abStatusKinds = STATUS_KINDS;
   window.__abApplyStatus = applyStatus;
