@@ -420,11 +420,6 @@ body.has-ant-buster-page {
     game.ants = kept;
   }
 
-  // Bootstrap ants for early-task verification (removed in Task 13)
-  for (var ai = 0; ai < 5; ai++) {
-    spawnAnt('worker');
-  }
-
   // === CANNONS ===
   var CANNON_DEFS = {
     howitzer: {
@@ -572,6 +567,47 @@ body.has-ant-buster-page {
     game.projectiles = kept;
   }
 
+  // === WAVE ===
+  var wave = {
+    active: true,
+    timeIntoWave: 0,
+    spawnIndex: 0,
+    schedule: [
+      // [timeSec, type] pairs — wave 1: 8 Workers spread over ~9s
+      [0,   'worker'],
+      [1.2, 'worker'],
+      [2.4, 'worker'],
+      [3.6, 'worker'],
+      [5.0, 'worker'],
+      [6.2, 'worker'],
+      [7.4, 'worker'],
+      [8.6, 'worker']
+    ]
+  };
+
+  function updateWave(dt) {
+    if (!wave.active) { return; }
+    wave.timeIntoWave += dt;
+    while (wave.spawnIndex < wave.schedule.length) {
+      var entry = wave.schedule[wave.spawnIndex];
+      if (entry[0] > wave.timeIntoWave) { break; }
+      spawnAnt(entry[1]);
+      wave.spawnIndex += 1;
+    }
+    // Wave complete = all spawns issued AND no live ants left
+    if (wave.spawnIndex >= wave.schedule.length) {
+      var liveAnts = 0;
+      for (var i = 0; i < game.ants.length; i++) {
+        if (!game.ants[i].dead) { liveAnts += 1; }
+      }
+      if (liveAnts === 0) {
+        wave.active = false;
+        game.state = 'won';
+        game.gold += 21;        // wave-completion bonus: 20 + wave number (wave 1)
+      }
+    }
+  }
+
   // === INPUT ===
   var ui = {
     dragging: null,         // { defKey } when dragging from shop
@@ -636,6 +672,7 @@ body.has-ant-buster-page {
   function update(dt) {
     game.time += dt;
     if (game.state !== 'playing') { return; }
+    updateWave(dt);
     updateAnts(dt);
     updateCannons(dt);
     updateProjectiles(dt);
