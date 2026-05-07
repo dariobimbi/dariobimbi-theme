@@ -216,6 +216,36 @@ body.has-ant-buster-page {
     return c;
   }
 
+  function makeCannonTurretAutocannon() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    // Chunkier than Repeater; same green family, slightly darker.
+    x.fillStyle = '#4a7d6a';
+    x.fillRect(8, 1, 4, 15);                    // wider barrel
+    x.fillStyle = '#2a5d4a';
+    x.fillRect(7, 0, 6, 3);                     // wide tip
+    x.fillStyle = '#6a9d8a';
+    x.fillRect(7, 11, 6, 4);                    // breech band
+    return c;
+  }
+
+  function makeCannonTurretVulcan() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    // Multi-barrel rotary; teal-ish.
+    x.fillStyle = '#3a8c8c';
+    x.fillRect(5, 3, 2, 13);                    // left barrel
+    x.fillRect(9, 3, 2, 13);                    // center barrel
+    x.fillRect(13, 3, 2, 13);                   // right barrel
+    x.fillStyle = '#1a5c5c';
+    x.fillRect(4, 1, 4, 3);                     // left tip
+    x.fillRect(8, 1, 4, 3);                     // center tip
+    x.fillRect(12, 1, 4, 3);                    // right tip
+    x.fillStyle = '#5aacac';
+    x.fillRect(4, 12, 12, 4);                   // wide breech housing
+    return c;
+  }
+
   function makeCannonTurretTwinGun() {
     var c = makeCanvas(20, 20);
     var x = c.getContext('2d');
@@ -309,6 +339,8 @@ body.has-ant-buster-page {
       siege: makeCannonTurretSiege(),
       railgun: makeCannonTurretRailgun(),
       repeater: makeCannonTurretRepeater(),
+      autocannon: makeCannonTurretAutocannon(),
+      vulcan: makeCannonTurretVulcan(),
       twingun: makeCannonTurretTwinGun()
     },
     anthill: makeAnthill(),
@@ -1052,7 +1084,30 @@ body.has-ant-buster-page {
       projectileSpeed: 280,
       family: 'quick',
       tier: 1,
-      upgradesTo: []         // 'autocannon' added in Task 12
+      upgradesTo: ['autocannon']
+    },
+    autocannon: {
+      name: 'Auto-Cannon',
+      cost: 50,
+      damage: 2,
+      fireRate: 6,
+      range: 130,
+      projectileSpeed: 320,
+      family: 'quick',
+      tier: 2,
+      upgradesTo: ['vulcan']
+    },
+    vulcan: {
+      name: 'Vulcan',
+      cost: 80,
+      damage: 3,
+      fireRate: 9,
+      range: 140,
+      projectileSpeed: 360,
+      family: 'quick',
+      tier: 3,
+      spoolUp: 0.5,
+      upgradesTo: []
     },
     twingun: {
       name: 'Twin Gun',
@@ -1138,16 +1193,39 @@ body.has-ant-buster-page {
   function updateCannons(dt) {
     for (var i = 0; i < game.cannons.length; i++) {
       var c = game.cannons[i];
+      // Cannon-disabled gate (Task 20 Bomber AoE will set disabled/disabledUntil).
+      if (c.disabled) {
+        if (game.time >= c.disabledUntil) { c.disabled = false; }
+      }
+      if (c.disabled) { continue; }
       var def = CANNON_KINDS[c.kind];
-      c.cooldown -= dt;
       var target = findTarget(c);
       c.target = target;
-      if (target) {
-        c.heading = angleTowards(c.x, c.y, target.x, target.y);
-        if (c.cooldown <= 0) {
-          fireProjectile(c, target);
-          c.cooldown = 1 / def.fireRate;
+      if (!target) {
+        // Spool-down for cannons with spoolUp (Vulcan).
+        if (def.spoolUp) {
+          var st = c.spoolT;
+          if (!st) { st = 0; }
+          st = st - dt / def.spoolUp;
+          if (st < 0) { st = 0; }
+          c.spoolT = st;
         }
+        continue;
+      }
+      c.heading = angleTowards(c.x, c.y, target.x, target.y);
+      var effRate = def.fireRate;
+      if (def.spoolUp) {
+        var st2 = c.spoolT;
+        if (!st2) { st2 = 0; }
+        st2 = st2 + dt / def.spoolUp;
+        if (st2 > 1) { st2 = 1; }
+        c.spoolT = st2;
+        effRate = def.fireRate * (0.3 + 0.7 * st2);
+      }
+      c.cooldown = c.cooldown - dt;
+      if (c.cooldown <= 0) {
+        fireProjectile(c, target);
+        c.cooldown = c.cooldown + 1 / effRate;
       }
     }
   }
