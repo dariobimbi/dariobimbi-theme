@@ -304,7 +304,7 @@ body.has-ant-buster-page {
     ctx.font = '8px monospace';
     ctx.textAlign = 'center';
     ctx.fillText('Howitzer', cardX + 28, cardY + 50);
-    ctx.fillStyle = (game.gold >= CANNON_DEFS.howitzer.cost) ? '#fee761' : '#888';
+    ctx.fillStyle = (game.gold >= CANNON_KINDS.howitzer.cost) ? '#fee761' : '#888';
     ctx.fillText('50g', cardX + 28, cardY + 60);
     ctx.textAlign = 'start';
 
@@ -335,7 +335,7 @@ body.has-ant-buster-page {
       ctx.strokeStyle = ok ? 'rgba(255, 255, 255, 0.5)' : 'rgba(228, 59, 68, 0.7)';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.arc(ui.mouseX, ui.mouseY, CANNON_DEFS.howitzer.range, 0, Math.PI * 2);
+      ctx.arc(ui.mouseX, ui.mouseY, CANNON_KINDS.howitzer.range, 0, Math.PI * 2);
       ctx.stroke();
     }
 
@@ -600,14 +600,17 @@ body.has-ant-buster-page {
   }
 
   // === CANNONS ===
-  var CANNON_DEFS = {
+  var CANNON_KINDS = {
     howitzer: {
       name: 'Howitzer',
       cost: 50,
       damage: 5,
       fireRate: 0.6,         // shots per second
       range: 110,
-      projectileSpeed: 200
+      projectileSpeed: 200,
+      family: 'heavy',
+      tier: 1,
+      upgradesTo: []
     }
   };
 
@@ -638,25 +641,29 @@ body.has-ant-buster-page {
     return true;
   }
 
-  function placeCannon(defKey, x, y) {
-    var def = CANNON_DEFS[defKey];
+  function placeCannon(kindKey, x, y) {
+    var def = CANNON_KINDS[kindKey];
     if (!def) { return false; }
     if (game.gold < def.cost) { return false; }
     if (!canPlaceCannon(x, y)) { return false; }
     game.gold -= def.cost;
     game.cannons.push({
-      defKey: defKey,
+      kind: kindKey,
+      kindHistory: [kindKey],   // base kind included per spec SYS-2
       x: x,
       y: y,
       heading: 0,
       cooldown: 0,
-      target: null
+      target: null,
+      kills: 0,
+      disabled: false,
+      disabledUntil: 0
     });
     return true;
   }
 
   function findTarget(cannon) {
-    var def = CANNON_DEFS[cannon.defKey];
+    var def = CANNON_KINDS[cannon.kind];
     var rangeSq = def.range * def.range;
     var nearest = null;
     var nearestDistSq = rangeSq;
@@ -677,7 +684,7 @@ body.has-ant-buster-page {
   function updateCannons(dt) {
     for (var i = 0; i < game.cannons.length; i++) {
       var c = game.cannons[i];
-      var def = CANNON_DEFS[c.defKey];
+      var def = CANNON_KINDS[c.kind];
       c.cooldown -= dt;
       var target = findTarget(c);
       c.target = target;
@@ -693,7 +700,7 @@ body.has-ant-buster-page {
 
   // === PROJECTILES ===
   function fireProjectile(cannon, target) {
-    var def = CANNON_DEFS[cannon.defKey];
+    var def = CANNON_KINDS[cannon.kind];
     var heading = angleTowards(cannon.x, cannon.y, target.x, target.y);
     game.projectiles.push({
       x: cannon.x,
@@ -808,7 +815,7 @@ body.has-ant-buster-page {
 
   // === INPUT ===
   var ui = {
-    dragging: null,         // { defKey } when dragging from shop
+    dragging: null,         // { kind } when dragging from shop
     mouseX: 0,
     mouseY: 0
   };
@@ -840,7 +847,7 @@ body.has-ant-buster-page {
     if (game.state === 'idle') { game.state = 'playing'; return; }
     var card = shopCardAt(p.x, p.y);
     if (card) {
-      ui.dragging = { defKey: card };
+      ui.dragging = { kind: card };
       canvas.classList.add('ab-dragging');
     }
   });
@@ -856,7 +863,7 @@ body.has-ant-buster-page {
     ui.mouseX = p.x;
     ui.mouseY = p.y;
     if (ui.dragging) {
-      placeCannon(ui.dragging.defKey, p.x, p.y);
+      placeCannon(ui.dragging.kind, p.x, p.y);
       ui.dragging = null;
       canvas.classList.remove('ab-dragging');
     }
