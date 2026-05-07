@@ -259,6 +259,24 @@ body.has-ant-buster-page {
     return c;
   }
 
+  function makePhase() {
+    var c = makeCanvas(16, 16);
+    var x = c.getContext('2d');
+    // Ghostly translucent purple body with thin outline.
+    x.fillStyle = '#7d4a8c';
+    x.fillRect(4, 3, 8, 10);                    // body
+    x.fillRect(3, 5, 2, 6);                     // left segment
+    x.fillRect(11, 5, 2, 6);                    // right segment
+    x.fillStyle = '#5a3a6c';
+    x.strokeStyle = '#3d2a5c';
+    x.lineWidth = 1;
+    x.strokeRect(4, 3, 8, 10);                  // outline
+    x.fillStyle = '#181425';
+    x.fillRect(6, 1, 1, 1);                     // antenna L
+    x.fillRect(9, 1, 1, 1);                     // antenna R
+    return c;
+  }
+
   function makeAntSplat() {
     var c = makeCanvas(16, 16);
     var x = c.getContext('2d');
@@ -460,6 +478,7 @@ body.has-ant-buster-page {
     tank: makeTank(),
     splitter: makeSplitter(),
     mini_splitter: makeMiniSplitter(),
+    phase: makePhase(),
     splat: makeAntSplat(),
     cannonBase: makeCannonBase(),
     cannonTurret: makeCannonTurret(),         // kept for backward refs; lookups now go through turrets[kind]
@@ -706,7 +725,14 @@ body.has-ant-buster-page {
       } else {
         sprite = game.sprites[k.spriteKey];
       }
-      ctx.drawImage(sprite, Math.round(a.x - k.spriteW / 2), Math.round(a.y - k.spriteH / 2));
+      if (a.intangible) {
+        ctx.save();
+        ctx.globalAlpha = 0.3;
+        ctx.drawImage(sprite, Math.round(a.x - k.spriteW / 2), Math.round(a.y - k.spriteH / 2));
+        ctx.restore();
+      } else {
+        ctx.drawImage(sprite, Math.round(a.x - k.spriteW / 2), Math.round(a.y - k.spriteH / 2));
+      }
       if (!a.dead) {
         if (a.carrying) {
           ctx.fillStyle = '#feae34';
@@ -1026,6 +1052,27 @@ body.has-ant-buster-page {
       canPickup: true,
       onDeath: null,
       armor: 0
+    },
+    phase: {
+      name: 'Phase',
+      hp: 20,
+      speed: 35,
+      gold: 6,
+      alignment: 0.3,
+      jitterRate: 4.0,
+      wanderFreqMin: 0.3, wanderFreqMax: 0.7,
+      wanderAmpMin: 0.9, wanderAmpMax: 1.4,
+      spriteKey: 'phase',
+      spriteW: 16, spriteH: 16,
+      carryingSpeedMult: 0.7,
+      slowResist: 0,
+      damageMult: 1,
+      pierceMult: 1,
+      canPickup: true,
+      onDeath: null,
+      armor: 0,
+      phaseInterval: 3,
+      phaseDuration: 1
     }
   };
 
@@ -1080,7 +1127,9 @@ body.has-ant-buster-page {
       wanderPhase: Math.random() * Math.PI * 2,
       wanderFreq: k.wanderFreqMin + Math.random() * (k.wanderFreqMax - k.wanderFreqMin),
       wanderAmp: k.wanderAmpMin + Math.random() * (k.wanderAmpMax - k.wanderAmpMin),
-      effects: {}                                   // Task 4 fills this with status-effect entries
+      effects: {},                                   // Task 4 fills this with status-effect entries
+      intangible: false,
+      phaseT: 0
     };
     game.ants.push(ant);
     return ant;
@@ -1155,6 +1204,12 @@ body.has-ant-buster-page {
       targetY = game.cake.y;
     }
     var k = ANT_KINDS[ant.kind];
+    if (k.phaseInterval) {
+      ant.phaseT = (ant.phaseT || 0) + dt;
+      var cycle = k.phaseInterval + k.phaseDuration;
+      var t = ant.phaseT % cycle;
+      ant.intangible = (t >= k.phaseInterval);
+    }
     var alignment = k.alignment;
     var jitterRate = k.jitterRate;
     var wanderScale = 1.0;
@@ -1469,6 +1524,7 @@ body.has-ant-buster-page {
     for (var i = 0; i < game.ants.length; i++) {
       var a = game.ants[i];
       if (a.dead) { continue; }
+      if (a.intangible) { continue; }
       var dx = a.x - cannon.x;
       var dy = a.y - cannon.y;
       var distSq = dx * dx + dy * dy;
@@ -1619,6 +1675,7 @@ body.has-ant-buster-page {
       for (var j = 0; j < game.ants.length; j++) {
         var a = game.ants[j];
         if (a.dead) { continue; }
+        if (a.intangible) { continue; }
         var dx = a.x - p.x;
         var dy = a.y - p.y;
         if (dx * dx + dy * dy < 6 * 6) {
