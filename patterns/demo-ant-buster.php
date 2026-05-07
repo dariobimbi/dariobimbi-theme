@@ -202,6 +202,24 @@ body.has-ant-buster-page {
     return c;
   }
 
+  function makeTank() {
+    var c = makeCanvas(24, 24);
+    var x = c.getContext('2d');
+    // Heavy armored body, dark grey; blocky treads visual
+    x.fillStyle = '#3a4053';
+    x.beginPath();
+    x.ellipse(12, 12, 8, 6, 0, 0, Math.PI * 2);   // main body, broader than worker
+    x.fill();
+    x.fillStyle = '#2a2f42';                       // darker accent
+    x.fillRect(5, 10, 14, 2);                      // bottom plate / tread line
+    x.fillStyle = '#4a5063';                       // lighter accent for armor plating
+    x.fillRect(4, 8, 3, 8);                        // left armor plate
+    x.fillRect(16, 8, 3, 8);                       // right armor plate
+    x.fillStyle = '#1a1c2c';                       // very dark head
+    x.fillRect(10, 5, 4, 3);                       // head
+    return c;
+  }
+
   function makeAntSplat() {
     var c = makeCanvas(16, 16);
     var x = c.getContext('2d');
@@ -400,6 +418,7 @@ body.has-ant-buster-page {
     worker: makeWorkerSprite(),
     soldier: makeSoldierSprite(),
     scout: makeScout(),
+    tank: makeTank(),
     splat: makeAntSplat(),
     cannonBase: makeCannonBase(),
     cannonTurret: makeCannonTurret(),         // kept for backward refs; lookups now go through turrets[kind]
@@ -639,13 +658,14 @@ body.has-ant-buster-page {
     // Ants
     for (var i = 0; i < game.ants.length; i++) {
       var a = game.ants[i];
+      var k = ANT_KINDS[a.kind];
       var sprite;
       if (a.dead) {
         sprite = game.sprites.splat;
       } else {
-        sprite = game.sprites[ANT_KINDS[a.kind].spriteKey];
+        sprite = game.sprites[k.spriteKey];
       }
-      ctx.drawImage(sprite, Math.round(a.x - 8), Math.round(a.y - 8));
+      ctx.drawImage(sprite, Math.round(a.x - k.spriteW / 2), Math.round(a.y - k.spriteH / 2));
       if (!a.dead) {
         if (a.carrying) {
           ctx.fillStyle = '#feae34';
@@ -903,6 +923,25 @@ body.has-ant-buster-page {
       canPickup: true,
       onDeath: null,
       armor: 0.5
+    },
+    tank: {
+      name: 'Tank',
+      hp: 150,
+      speed: 12,
+      gold: 10,
+      alignment: 0.15,
+      jitterRate: 2.0,
+      wanderFreqMin: 0.15, wanderFreqMax: 0.35,
+      wanderAmpMin: 0.4, wanderAmpMax: 0.7,
+      spriteKey: 'tank',
+      spriteW: 24, spriteH: 24,
+      carryingSpeedMult: 0.7,
+      slowResist: 0,
+      damageMult: 1,
+      pierceMult: 1,
+      canPickup: false,
+      onDeath: null,
+      armor: 0.5
     }
   };
 
@@ -1141,6 +1180,11 @@ body.has-ant-buster-page {
           }
         }
       } else {
+        var k = ANT_KINDS[a.kind];
+        if (!k.canPickup) {
+          // Tanks and similar do not pick up cake — just walk past
+          continue;
+        }
         if (game.cake.slices > 0) {
           var dxCake = a.x - game.cake.x;
           var dyCake = a.y - game.cake.y;
