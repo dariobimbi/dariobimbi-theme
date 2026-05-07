@@ -205,6 +205,30 @@ body.has-ant-buster-page {
     return c;
   }
 
+  function makeCannonTurretRepeater() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    // Thinner, longer barrel; green-ish.
+    x.fillStyle = '#5a7d4a';
+    x.fillRect(9, 1, 2, 15);                    // long thin barrel
+    x.fillStyle = '#3a5d2a';
+    x.fillRect(8, 0, 4, 2);                     // barrel tip
+    return c;
+  }
+
+  function makeCannonTurretTwinGun() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    // Two short side-by-side barrels; purple-ish.
+    x.fillStyle = '#7d4a7d';
+    x.fillRect(6, 5, 3, 11);                    // left barrel
+    x.fillRect(11, 5, 3, 11);                   // right barrel
+    x.fillStyle = '#5d2a5d';
+    x.fillRect(5, 3, 4, 3);                     // left tip
+    x.fillRect(11, 3, 4, 3);                    // right tip
+    return c;
+  }
+
   function makeCake(slices) {
     var c = makeCanvas(32, 32);
     var x = c.getContext('2d');
@@ -255,7 +279,12 @@ body.has-ant-buster-page {
     worker: makeWorkerSprite(),
     splat: makeAntSplat(),
     cannonBase: makeCannonBase(),
-    cannonTurret: makeCannonTurret(),
+    cannonTurret: makeCannonTurret(),         // kept for backward refs; lookups now go through turrets[kind]
+    turrets: {
+      howitzer: makeCannonTurret(),
+      repeater: makeCannonTurretRepeater(),
+      twingun: makeCannonTurretTwinGun()
+    },
     anthill: makeAnthill(),
     projectile: makeProjectile()
   };
@@ -264,17 +293,37 @@ body.has-ant-buster-page {
   // === RENDERING ===
   function drawShop() {
     var cardX = PLAYFIELD_W + 8;
-    var cardY = 32;
-    ctx.fillStyle = '#2a2f3e';
-    ctx.fillRect(cardX, cardY, 56, 64);
-    ctx.drawImage(game.sprites.cannonBase, cardX + 12, cardY + 4);
-    ctx.drawImage(game.sprites.cannonTurret, cardX + 18, cardY + 10);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '8px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('Howitzer', cardX + 28, cardY + 50);
-    ctx.fillStyle = (game.gold >= CANNON_KINDS.howitzer.cost) ? '#fee761' : '#888';
-    ctx.fillText('50g', cardX + 28, cardY + 60);
+    var startY = 32;
+    var cardH = 70;
+    var cardW = SHOP_W - 16;
+    var keys = ['howitzer', 'repeater', 'twingun'];
+    ui.shopRects = [];
+    for (var i = 0; i < keys.length; i++) {
+      var k = keys[i];
+      var sk = CANNON_KINDS[k];
+      var cy = startY + i * (cardH + 8);
+      // card background
+      ctx.fillStyle = '#262b44';
+      ctx.fillRect(cardX, cy, cardW, cardH);
+      // turret sprite mini icon (top-left of card)
+      var turret = game.sprites.turrets[k];
+      if (turret) { ctx.drawImage(turret, cardX + 6, cy + 6); }
+      // name
+      ctx.fillStyle = '#fee761';
+      ctx.font = '10px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText(sk.name, cardX + 32, cy + 22);
+      // cost
+      var canAfford = game.gold >= sk.cost;
+      ctx.fillStyle = canAfford ? '#fee761' : '#888';
+      ctx.fillText(sk.cost + 'g', cardX + 32, cy + 38);
+      // tier or family hint (small)
+      ctx.fillStyle = '#999';
+      ctx.font = '8px monospace';
+      ctx.fillText(sk.family, cardX + 32, cy + 52);
+      ui.shopRects.push({ x: cardX, y: cy, w: cardW, h: cardH, kind: k });
+    }
+    ctx.font = '10px monospace';   // restore default
     ctx.textAlign = 'start';
   }
 
@@ -495,7 +544,9 @@ body.has-ant-buster-page {
       ctx.save();
       ctx.translate(Math.round(c.x), Math.round(c.y));
       ctx.rotate(c.heading + Math.PI / 2);
-      ctx.drawImage(game.sprites.cannonTurret, -10, -16);
+      var turretSprite = game.sprites.turrets[c.kind];
+      if (!turretSprite) { turretSprite = game.sprites.turrets.howitzer; }
+      ctx.drawImage(turretSprite, -10, -16);
       ctx.restore();
     }
 
@@ -508,14 +559,17 @@ body.has-ant-buster-page {
     // Drag preview
     if (ui.dragging) {
       var ok = canPlaceCannon(ui.mouseX, ui.mouseY);
+      var dragDef = CANNON_KINDS[ui.dragging.kind];
+      var dragTurret = game.sprites.turrets[ui.dragging.kind];
+      if (!dragTurret) { dragTurret = game.sprites.turrets.howitzer; }
       ctx.globalAlpha = 0.6;
       ctx.drawImage(game.sprites.cannonBase, Math.round(ui.mouseX - 16), Math.round(ui.mouseY - 16));
-      ctx.drawImage(game.sprites.cannonTurret, Math.round(ui.mouseX - 10), Math.round(ui.mouseY - 16));
+      ctx.drawImage(dragTurret, Math.round(ui.mouseX - 10), Math.round(ui.mouseY - 16));
       ctx.globalAlpha = 1;
       ctx.strokeStyle = ok ? 'rgba(255, 255, 255, 0.5)' : 'rgba(228, 59, 68, 0.7)';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.arc(ui.mouseX, ui.mouseY, CANNON_KINDS.howitzer.range, 0, Math.PI * 2);
+      ctx.arc(ui.mouseX, ui.mouseY, dragDef.range, 0, Math.PI * 2);
       ctx.stroke();
     }
 
@@ -939,6 +993,29 @@ body.has-ant-buster-page {
       family: 'heavy',
       tier: 1,
       upgradesTo: []
+    },
+    repeater: {
+      name: 'Repeater',
+      cost: 50,
+      damage: 1,
+      fireRate: 4,
+      range: 130,
+      projectileSpeed: 280,
+      family: 'quick',
+      tier: 1,
+      upgradesTo: []         // 'autocannon' added in Task 12
+    },
+    twingun: {
+      name: 'Twin Gun',
+      cost: 75,
+      damage: 2,
+      fireRate: 1,
+      range: 100,
+      projectileSpeed: 240,
+      family: 'status',
+      tier: 1,
+      barrels: 2,            // multi-barrel volley logic lands in Task 13
+      upgradesTo: []         // 'frost' added in Task 13
     }
   };
 
@@ -1186,6 +1263,7 @@ body.has-ant-buster-page {
     ui.upgradeRects[0] = null;
     ui.upgradeRects[1] = null;
     ui.sellRect = null;
+    ui.shopRects = [];
   }
 
   // === INPUT ===
@@ -1199,7 +1277,8 @@ body.has-ant-buster-page {
     restartRunRect: null,   // populated when the pause overlay is visible
     selectedCannon: null,   // currently inspected cannon (click on a placed cannon to select)
     upgradeRects: [null, null], // up-to-2 upgrade buttons in the tower panel
-    sellRect: null          // sell button in the tower panel
+    sellRect: null,         // sell button in the tower panel
+    shopRects: []           // populated by drawShop; one rect per shop card
   };
 
   function canvasToGame(evt) {
@@ -1210,14 +1289,6 @@ body.has-ant-buster-page {
       x: (evt.clientX - rect.left) * sx,
       y: (evt.clientY - rect.top) * sy
     };
-  }
-
-  function shopCardAt(x, y) {
-    if (x < PLAYFIELD_W + 8) { return null; }
-    if (x > PLAYFIELD_W + 8 + 56) { return null; }
-    if (y < 32) { return null; }
-    if (y > 32 + 64) { return null; }
-    return 'howitzer';
   }
 
   canvas.addEventListener('mousedown', function (evt) {
@@ -1295,10 +1366,19 @@ body.has-ant-buster-page {
         }
       }
     }
-    var card = shopCardAt(p.x, p.y);
-    if (card) {
-      ui.dragging = { kind: card };
-      canvas.classList.add('ab-dragging');
+    if (ui.shopRects) {
+      for (var si = 0; si < ui.shopRects.length; si++) {
+        var rs = ui.shopRects[si];
+        if (inRect(p, rs)) {
+          // only start drag if affordable
+          var sk = CANNON_KINDS[rs.kind];
+          if (game.gold >= sk.cost) {
+            ui.dragging = { kind: rs.kind };
+            canvas.classList.add('ab-dragging');
+          }
+          return;
+        }
+      }
     }
   });
 
