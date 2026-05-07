@@ -540,6 +540,7 @@ body.has-ant-buster-page {
           if (a.hp <= 0) {
             a.dead = true;
             a.deathTime = 0;
+            game.gold += 2;       // Worker drops 2 gold; per-type table comes in Plan 2
           }
           hit = true;
           break;
