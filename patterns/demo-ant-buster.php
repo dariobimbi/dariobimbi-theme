@@ -108,6 +108,7 @@ body.has-ant-buster-page {
     ants: [],
     cannons: [],
     projectiles: [],
+    effects: [],              // transient visual effects (e.g. Bomber AoE flash); see updateEffects
     sprites: {},              // populated in Task 4
     gold: 150,
     waveIndex: 0,             // index into WAVES
@@ -256,6 +257,29 @@ body.has-ant-buster-page {
     x.fillStyle = '#181425';
     x.fillRect(1, 0, 1, 1);                     // antenna L
     x.fillRect(6, 0, 1, 1);                     // antenna R
+    return c;
+  }
+
+  function makeBomber() {
+    var c = makeCanvas(16, 16);
+    var x = c.getContext('2d');
+    // Red-orange ant body reading as a "carrier of explosives" with a small dark
+    // fuse-spot on top. Same overall silhouette as worker so it still reads as ant.
+    x.fillStyle = '#e43b44';
+    x.beginPath();
+    x.ellipse(8, 9, 5, 4, 0, 0, Math.PI * 2);   // body
+    x.fill();
+    x.fillStyle = '#a8302f';                    // darker red accent
+    x.fillRect(5, 9, 6, 1);                     // belly stripe
+    x.fillStyle = '#f57b3f';                    // orange head
+    x.fillRect(7, 4, 3, 3);                     // head
+    x.fillStyle = '#222034';
+    x.fillRect(8, 2, 1, 2);                     // dark fuse-like spot on top
+    x.fillStyle = '#fee761';
+    x.fillRect(8, 1, 1, 1);                     // tiny spark on the fuse tip
+    x.fillStyle = '#181425';
+    x.fillRect(6, 3, 1, 1);                     // antenna L
+    x.fillRect(10, 3, 1, 1);                    // antenna R
     return c;
   }
 
@@ -479,6 +503,7 @@ body.has-ant-buster-page {
     splitter: makeSplitter(),
     mini_splitter: makeMiniSplitter(),
     phase: makePhase(),
+    bomber: makeBomber(),
     splat: makeAntSplat(),
     cannonBase: makeCannonBase(),
     cannonTurret: makeCannonTurret(),         // kept for backward refs; lookups now go through turrets[kind]
@@ -764,6 +789,15 @@ body.has-ant-buster-page {
       if (!turretSprite) { turretSprite = game.sprites.turrets.howitzer; }
       ctx.drawImage(turretSprite, -10, -16);
       ctx.restore();
+      // Disabled-spark indicator (Task 20): two tiny pixels above the turret that
+      // blink on game.time so a Bomber-disabled cannon reads as "out of action".
+      if (c.disabled) {
+        if (Math.floor(game.time * 6) % 2 === 0) {
+          ctx.fillStyle = '#ff5040';
+          ctx.fillRect(c.x - 1, c.y - 16, 2, 2);
+          ctx.fillRect(c.x + 3, c.y - 14, 2, 2);
+        }
+      }
     }
 
     // Projectiles
@@ -788,6 +822,21 @@ body.has-ant-buster-page {
             ctx.stroke();
           }
         }
+      }
+    }
+
+    // Effects (z-order layer 10, post-beams, pre-HUD): transient gameplay flashes.
+    // Each entry advances its own `t` in updateEffects; render uses p = t/life as
+    // an animation parameter (0 → 1) for ring expansion + fade.
+    for (var ei = 0; ei < game.effects.length; ei++) {
+      var ef = game.effects[ei];
+      if (ef.kind === 'bomber_aoe') {
+        var p = ef.t / ef.life;
+        ctx.strokeStyle = 'rgba(255,80,40,' + (1 - p) + ')';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(ef.x, ef.y, 60 * p, 0, Math.PI * 2);
+        ctx.stroke();
       }
     }
 
@@ -1073,6 +1122,39 @@ body.has-ant-buster-page {
       armor: 0,
       phaseInterval: 3,
       phaseDuration: 1
+    },
+    bomber: {
+      name: 'Bomber',
+      hp: 30,
+      speed: 40,
+      gold: 7,
+      alignment: 0.3,
+      jitterRate: 4.5,
+      wanderFreqMin: 0.4, wanderFreqMax: 0.8,
+      wanderAmpMin: 1.0, wanderAmpMax: 1.5,
+      spriteKey: 'bomber',
+      spriteW: 16, spriteH: 16,
+      carryingSpeedMult: 0.7,
+      slowResist: 0,
+      damageMult: 1,
+      pierceMult: 1,
+      canPickup: true,
+      armor: 0,
+      // On death, disable every cannon within 60px for 5 seconds and push a flash
+      // effect onto game.effects. updateCannons skips disabled cannons (Task 12 gate).
+      onDeath: function(ant) {
+        var radius = 60;
+        for (var i = 0; i < game.cannons.length; i++) {
+          var c = game.cannons[i];
+          var dx = c.x - ant.x;
+          var dy = c.y - ant.y;
+          if (dx * dx + dy * dy <= radius * radius) {
+            c.disabled = true;
+            c.disabledUntil = game.time + 5;
+          }
+        }
+        game.effects.push({ kind: 'bomber_aoe', x: ant.x, y: ant.y, t: 0, life: 0.6 });
+      }
     }
   };
 
@@ -1788,6 +1870,7 @@ body.has-ant-buster-page {
     game.ants = [];
     game.cannons = [];
     game.projectiles = [];
+    game.effects = [];
     game.gold = 150;
     game.waveIndex = 0;
     game.waveState = 'prep';
@@ -1956,6 +2039,18 @@ body.has-ant-buster-page {
   // Speed toggle (1×/2×) scales sim time for ants and projectiles only. game.time
   // advances on real dt so the wave-intro banner and prep countdown animate at
   // wall-clock speed regardless of speed setting (spec §UI-5).
+  // Tick transient visual effects (e.g. Bomber AoE flash). Each entry has its own
+  // `t` (elapsed) and `life` (total seconds); when `t` reaches `life` the entry is
+  // dropped. New entries are pushed by gameplay hooks like ANT_KINDS.bomber.onDeath.
+  function updateEffects(dt) {
+    var kept = [];
+    for (var i = 0; i < game.effects.length; i++) {
+      game.effects[i].t = game.effects[i].t + dt;
+      if (game.effects[i].t < game.effects[i].life) { kept.push(game.effects[i]); }
+    }
+    game.effects = kept;
+  }
+
   function update(dt) {
     if (game.paused) { return; }
     if (game.state !== 'playing') { return; }
@@ -1967,6 +2062,7 @@ body.has-ant-buster-page {
     updateAnts(simDt);
     updateCannons(simDt);
     updateProjectiles(simDt);
+    updateEffects(simDt);
     checkPickupsAndDeliveries();
     pruneAnts();
   }
