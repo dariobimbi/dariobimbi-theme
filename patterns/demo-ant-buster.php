@@ -229,10 +229,42 @@ body.has-ant-buster-page {
   };
   // Note: cake sprite is regenerated in render() per frame because it depends on slice count.
 
-  // === RENDERING === (Task 5)
+  // === RENDERING ===
   function render() {
-    ctx.fillStyle = '#1a1c2c';
+    // Background
+    ctx.fillStyle = '#193c3e';
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+    // Grass border (whole canvas is grass-colored already; blanket sits on top)
+    var blanketX = 32;
+    var blanketY = 32;
+    var blanketW = 256;
+    var blanketH = 200;
+
+    // Picnic blanket — alternating red/white check
+    var checkSize = 16;
+    for (var by = 0; by < blanketH; by += checkSize) {
+      for (var bx = 0; bx < blanketW; bx += checkSize) {
+        var isRed = ((bx / checkSize) + (by / checkSize)) % 2 === 0;
+        ctx.fillStyle = isRed ? '#e43b44' : '#feeed8';
+        ctx.fillRect(blanketX + bx, blanketY + by, checkSize, checkSize);
+      }
+    }
+
+    // Anthill
+    ctx.drawImage(game.sprites.anthill, game.anthill.x - 16, game.anthill.y - 16);
+
+    // Cake (regenerated each frame since it depends on slice count)
+    var cakeSprite = makeCake(game.cake.slices);
+    ctx.drawImage(cakeSprite, game.cake.x - 16, game.cake.y - 16);
+
+    // HUD bar (top, dimmed)
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+    ctx.fillRect(0, 0, PLAYFIELD_W, HUD_H);
+
+    // Shop panel (right)
+    ctx.fillStyle = '#1a1c2c';
+    ctx.fillRect(PLAYFIELD_W, 0, SHOP_W, HEIGHT);
   }
 
   // === UPDATE === (Task 6+)
