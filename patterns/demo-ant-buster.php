@@ -94,8 +94,13 @@ body.has-ant-buster-page {
   var FIXED_DT = 1 / TARGET_FPS;
 
   // === GAME STATE ===
+  // Two flag layers, intentionally kept separate (Plan 2 Task 5):
+  //   game.state     — 'idle' | 'playing'   (top-level: has the player started?)
+  //   game.waveState — 'prep' | 'wave' | 'won' | 'lost'   (campaign progress)
+  // Rationale: 'idle' is a pre-game splash concern; win/lose belongs to the wave
+  // state machine. The render and input layers read whichever flag is relevant.
   var game = {
-    state: 'idle',            // 'idle' | 'playing' | 'won' | 'lost'
+    state: 'idle',            // 'idle' | 'playing'
     time: 0,                  // seconds since game start
     accumulator: 0,           // for fixed-timestep
     cake: { x: 352, y: 76, slices: 8, lost: 0 },
@@ -105,7 +110,10 @@ body.has-ant-buster-page {
     projectiles: [],
     sprites: {},              // populated in Task 4
     gold: 150,
-    wave: 1
+    waveIndex: 0,             // index into WAVES
+    waveState: 'prep',        // 'prep' | 'wave' | 'won' | 'lost'
+    prepRemaining: 30,        // seconds remaining in current prep window
+    spawner: { groupIndex: 0, spawnedInGroup: 0, nextSpawnAt: 0, queueDone: false }
   };
 
   // === CANVAS SETUP ===
@@ -271,7 +279,7 @@ body.has-ant-buster-page {
     ctx.fillStyle = '#ff8888';
     ctx.fillText('Lost: ' + game.cake.lost + '/8', 156, 12);
     ctx.fillStyle = '#ffffff';
-    ctx.fillText('Wave: ' + game.wave, 240, 12);
+    ctx.fillText('Wave: ' + (game.waveIndex + 1) + '/' + WAVES.length, 240, 12);
     ctx.textBaseline = 'alphabetic';
 
     // Shop panel (right)
@@ -373,7 +381,7 @@ body.has-ant-buster-page {
       }
     }
 
-    if (game.state === 'lost') {
+    if (game.waveState === 'lost') {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
       ctx.fillRect(0, 0, WIDTH, HEIGHT);
       ctx.fillStyle = '#e43b44';
@@ -386,7 +394,7 @@ body.has-ant-buster-page {
       ctx.textAlign = 'start';
     }
 
-    if (game.state === 'won') {
+    if (game.waveState === 'won') {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
       ctx.fillRect(0, 0, WIDTH, HEIGHT);
       ctx.fillStyle = '#fee761';
@@ -677,7 +685,7 @@ body.has-ant-buster-page {
           a.dead = true;
           a.deathTime = 0.5;     // pruneAnts drops this immediately, no splat
           if (game.cake.lost >= 8) {
-            game.state = 'lost';
+            game.waveState = 'lost';
           }
         }
       } else {
@@ -865,43 +873,72 @@ body.has-ant-buster-page {
     game.projectiles = kept;
   }
 
-  // === WAVE ===
-  var wave = {
-    active: true,
-    timeIntoWave: 0,
-    spawnIndex: 0,
-    schedule: [
-      // [timeSec, type] pairs — wave 1: 8 Workers spread over ~9s
-      [0,   'worker'],
-      [1.2, 'worker'],
-      [2.4, 'worker'],
-      [3.6, 'worker'],
-      [5.0, 'worker'],
-      [6.2, 'worker'],
-      [7.4, 'worker'],
-      [8.6, 'worker']
-    ]
-  };
-
-  function updateWave(dt) {
-    if (!wave.active) { return; }
-    wave.timeIntoWave += dt;
-    while (wave.spawnIndex < wave.schedule.length) {
-      var entry = wave.schedule[wave.spawnIndex];
-      if (entry[0] > wave.timeIntoWave) { break; }
-      spawnAnt(entry[1]);
-      wave.spawnIndex += 1;
+  // === WAVES ===
+  // Data-driven wave definitions. Plan 2 Task 5 ships wave 1 only; waves 2-5
+  // arrive in Task 22. Each wave has a `prep` window (seconds before spawning
+  // begins), a `bonus` (gold awarded on clear), and a list of spawn `groups`.
+  // Each group spawns `count` ants of `type`, one every `interval` seconds,
+  // starting `delay` seconds after the previous group finished.
+  var WAVES = [
+    {
+      number: 1,
+      prep: 30,
+      bonus: 21,
+      spawns: [
+        { type: 'worker', count: 8, interval: 1.0, delay: 0 }
+      ]
     }
-    // Wave complete = all spawns issued AND no live ants left
-    if (wave.spawnIndex >= wave.schedule.length) {
-      var liveAnts = 0;
-      for (var i = 0; i < game.ants.length; i++) {
-        if (!game.ants[i].dead) { liveAnts += 1; }
+  ];
+
+  // Spawner state machine: prep -> wave -> (prep | won) ; lost is set by the
+  // cake-loss path. Reads game.time for spawn scheduling.
+  function updateWaveState(dt) {
+    if (game.waveState === 'prep') {
+      game.prepRemaining = game.prepRemaining - dt;
+      if (game.prepRemaining <= 0) {
+        game.waveState = 'wave';
+        game.spawner.groupIndex = 0;
+        game.spawner.spawnedInGroup = 0;
+        game.spawner.nextSpawnAt = game.time + WAVES[game.waveIndex].spawns[0].delay;
+        game.spawner.queueDone = false;
       }
-      if (liveAnts === 0) {
-        wave.active = false;
-        game.state = 'won';
-        game.gold += 21;        // wave-completion bonus: 20 + wave number (wave 1)
+      return;
+    }
+    if (game.waveState === 'wave') {
+      var wv = WAVES[game.waveIndex];
+      if (!game.spawner.queueDone) {
+        var grp = wv.spawns[game.spawner.groupIndex];
+        if (game.time >= game.spawner.nextSpawnAt) {
+          spawnAnt(grp.type);
+          game.spawner.spawnedInGroup = game.spawner.spawnedInGroup + 1;
+          if (game.spawner.spawnedInGroup >= grp.count) {
+            game.spawner.groupIndex = game.spawner.groupIndex + 1;
+            game.spawner.spawnedInGroup = 0;
+            if (game.spawner.groupIndex >= wv.spawns.length) {
+              game.spawner.queueDone = true;
+            } else {
+              game.spawner.nextSpawnAt = game.time + wv.spawns[game.spawner.groupIndex].delay;
+            }
+          } else {
+            game.spawner.nextSpawnAt = game.time + grp.interval;
+          }
+        }
+      }
+      if (game.spawner.queueDone) {
+        var alive = 0;
+        for (var i = 0; i < game.ants.length; i++) {
+          if (!game.ants[i].dead) { alive = alive + 1; }
+        }
+        if (alive === 0) {
+          game.gold = game.gold + wv.bonus;
+          if (game.waveIndex + 1 >= WAVES.length) {
+            game.waveState = 'won';
+          } else {
+            game.waveIndex = game.waveIndex + 1;
+            game.waveState = 'prep';
+            game.prepRemaining = WAVES[game.waveIndex].prep;
+          }
+        }
       }
     }
   }
@@ -915,10 +952,13 @@ body.has-ant-buster-page {
     game.cannons = [];
     game.projectiles = [];
     game.gold = 150;
-    game.wave = 1;
-    wave.active = true;
-    wave.timeIntoWave = 0;
-    wave.spawnIndex = 0;
+    game.waveIndex = 0;
+    game.waveState = 'prep';
+    game.prepRemaining = WAVES[0].prep;
+    game.spawner.groupIndex = 0;
+    game.spawner.spawnedInGroup = 0;
+    game.spawner.nextSpawnAt = 0;
+    game.spawner.queueDone = false;
   }
 
   // === INPUT ===
@@ -950,8 +990,8 @@ body.has-ant-buster-page {
     var p = canvasToGame(evt);
     ui.mouseX = p.x;
     ui.mouseY = p.y;
-    if (game.state === 'won') { resetGame(); return; }
-    if (game.state === 'lost') { resetGame(); return; }
+    if (game.waveState === 'won') { resetGame(); return; }
+    if (game.waveState === 'lost') { resetGame(); return; }
     if (game.state === 'idle') { game.state = 'playing'; return; }
     var card = shopCardAt(p.x, p.y);
     if (card) {
@@ -987,8 +1027,10 @@ body.has-ant-buster-page {
   // === UPDATE ===
   function update(dt) {
     if (game.state !== 'playing') { return; }
+    if (game.waveState === 'won') { return; }
+    if (game.waveState === 'lost') { return; }
     game.time += dt;
-    updateWave(dt);
+    updateWaveState(dt);
     updateAnts(dt);
     updateCannons(dt);
     updateProjectiles(dt);
