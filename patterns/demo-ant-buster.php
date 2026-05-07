@@ -276,6 +276,25 @@ body.has-ant-buster-page {
     return c;
   }
 
+  function makeCannonTurretGlacier() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    // Pale icy blue with wider barrel and cooling fins.
+    x.fillStyle = '#a4d4ff';
+    x.fillRect(7, 3, 6, 13);                    // wide barrel
+    x.fillStyle = '#6fa4d4';
+    x.fillRect(6, 1, 8, 3);                     // wide tip
+    x.fillStyle = '#7ab4e4';
+    x.fillRect(5, 6, 2, 2);                     // left cooling fin upper
+    x.fillRect(13, 6, 2, 2);                    // right cooling fin upper
+    x.fillRect(5, 10, 2, 2);                    // left cooling fin lower
+    x.fillRect(13, 10, 2, 2);                   // right cooling fin lower
+    x.fillStyle = '#e4f4ff';
+    x.fillRect(8, 0, 4, 1);                     // crystal sparkle
+    x.fillRect(9, 7, 2, 5);                     // inner barrel highlight
+    return c;
+  }
+
   function makeCannonTurretSiege() {
     var c = makeCanvas(20, 20);
     var x = c.getContext('2d');
@@ -359,7 +378,8 @@ body.has-ant-buster-page {
       autocannon: makeCannonTurretAutocannon(),
       vulcan: makeCannonTurretVulcan(),
       twingun: makeCannonTurretTwinGun(),
-      frost: makeCannonTurretFrost()
+      frost: makeCannonTurretFrost(),
+      glacier: makeCannonTurretGlacier()
     },
     anthill: makeAnthill(),
     projectile: makeProjectile()
@@ -630,6 +650,25 @@ body.has-ant-buster-page {
     for (var pi = 0; pi < game.projectiles.length; pi++) {
       var p = game.projectiles[pi];
       ctx.drawImage(game.sprites.projectile, Math.round(p.x - 2), Math.round(p.y - 2));
+    }
+
+    // Beams (z-order layer 9, post-projectiles): thin icy line from a beam
+    // cannon to its current target. Only drawn while the target is alive.
+    for (var bi = 0; bi < game.cannons.length; bi++) {
+      var bc = game.cannons[bi];
+      var bdef = CANNON_KINDS[bc.kind];
+      if (bdef.beam) {
+        if (bc.beamTarget) {
+          if (!bc.beamTarget.dead) {
+            ctx.strokeStyle = '#a4d4ff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(bc.x, bc.y);
+            ctx.lineTo(bc.beamTarget.x, bc.beamTarget.y);
+            ctx.stroke();
+          }
+        }
+      }
     }
 
     // Drag preview
@@ -1150,6 +1189,19 @@ body.has-ant-buster-page {
       tier: 2,
       statusOnHit: { kind: 'slow', magnitude: 0.3, duration: 2 },
       upgradesTo: ['glacier']
+    },
+    glacier: {
+      name: 'Glacier',
+      cost: 90,
+      damage: 1,
+      fireRate: 0,
+      range: 130,
+      family: 'status',
+      tier: 3,
+      beam: true,
+      beamDamagePerSec: 1,
+      statusOnBeam: { kind: 'slow', magnitude: 0.5, duration: 1 },
+      upgradesTo: []
     }
   };
 
@@ -1227,8 +1279,35 @@ body.has-ant-buster-page {
       if (c.disabled) {
         if (game.time >= c.disabledUntil) { c.disabled = false; }
       }
-      if (c.disabled) { continue; }
+      if (c.disabled) {
+        c.beamTarget = null;
+        continue;
+      }
       var def = CANNON_KINDS[c.kind];
+
+      // Beam cannons (Glacier and any future beam emitter): per-tick damage +
+      // status refresh, no projectile fired. Status refresh sets duration to
+      // ~1s each tick so the slow naturally lingers ~1s after disconnect.
+      if (def.beam) {
+        var btarget = findTarget(c);
+        c.target = btarget;
+        if (!btarget) {
+          c.beamTarget = null;
+          continue;
+        }
+        c.heading = angleTowards(c.x, c.y, btarget.x, btarget.y);
+        applyDamage(btarget, def.beamDamagePerSec * dt, false);
+        if (btarget.hp <= 0) {
+          killAnt(btarget, c);
+        }
+        if (def.statusOnBeam) {
+          var sb = def.statusOnBeam;
+          applyStatus(btarget, sb.kind, sb.magnitude, sb.duration, 'beam');
+        }
+        c.beamTarget = btarget;
+        continue;
+      }
+
       var target = findTarget(c);
       c.target = target;
       if (!target) {
@@ -1294,6 +1373,23 @@ body.has-ant-buster-page {
     ant.hp = ant.hp - amount;
   }
 
+  // Centralized kill handling. Used by both projectile collision and beam tick
+  // so the gold drop and carried-slice return stay in sync. `killer` is the
+  // cannon for kill-attribution; pass null when not applicable.
+  function killAnt(ant, killer) {
+    if (ant.dead) { return; }
+    ant.dead = true;
+    ant.deathTime = 0;
+    game.gold = game.gold + ANT_KINDS[ant.kind].gold;
+    if (ant.carrying) {
+      game.cake.slices = game.cake.slices + 1;
+      ant.carrying = false;
+    }
+    if (killer) {
+      killer.kills = killer.kills + 1;
+    }
+  }
+
   function updateProjectiles(dt) {
     var kept = [];
     for (var i = 0; i < game.projectiles.length; i++) {
@@ -1314,13 +1410,7 @@ body.has-ant-buster-page {
             applyStatus(a, s.kind, s.magnitude, s.duration, 'projectile');
           }
           if (a.hp <= 0) {
-            a.dead = true;
-            a.deathTime = 0;
-            game.gold += ANT_KINDS[a.kind].gold;
-            if (a.carrying) {
-              game.cake.slices += 1;
-              a.carrying = false;
-            }
+            killAnt(a, null);
           }
           hit = true;
           break;
