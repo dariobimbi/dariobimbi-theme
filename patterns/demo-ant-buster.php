@@ -446,6 +446,37 @@ body.has-ant-buster-page {
     }
   };
 
+  // === STATUS EFFECTS ===
+  // Six-kind framework. Slow/freeze/stun scale movement; burn/poison tick HP damage; knockback
+  // is a one-shot positional impulse on apply. Cannons emit these starting in Task 13 (Frost
+  // emits 'slow'). Worker/Carrier carry slowResist=0 today; Soldier (Task 16) will use it.
+  var STATUS_KINDS = {
+    slow:      { name: 'Slow',      onApply: null, perTick: null, speedMult: function(m) { return 1 - m; } },
+    freeze:    { name: 'Freeze',    onApply: null, perTick: null, speedMult: function(m) { return 0; } },
+    burn:      { name: 'Burn',      onApply: null, perTick: function(ant, eff, dt) { ant.hp = ant.hp - eff.magnitude * dt; }, speedMult: null },
+    poison:    { name: 'Poison',    onApply: null, perTick: function(ant, eff, dt) { ant.hp = ant.hp - eff.magnitude * dt; }, speedMult: null },
+    stun:      { name: 'Stun',      onApply: null, perTick: null, speedMult: function(m) { return 0; } },
+    knockback: { name: 'Knockback', onApply: function(ant, m) { ant.x = ant.x + Math.cos(ant.heading + Math.PI) * m; ant.y = ant.y + Math.sin(ant.heading + Math.PI) * m; }, perTick: null, speedMult: null }
+  };
+
+  // Apply a status effect to an ant. Refresh rule: if the ant already has this kind active,
+  // the resulting entry takes the LONGER expiry and the HIGHER magnitude (nested ifs only).
+  function applyStatus(ant, kindKey, magnitude, duration, source) {
+    var k = ANT_KINDS[ant.kind];
+    if (kindKey === 'slow') {
+      magnitude = magnitude * (1 - (k.slowResist || 0));
+    }
+    var existing = ant.effects[kindKey];
+    var newExpiry = (game.time || 0) + duration;
+    if (existing) {
+      if (existing.magnitude > magnitude) { magnitude = existing.magnitude; }
+      if (existing.expiresAt > newExpiry) { newExpiry = existing.expiresAt; }
+    }
+    ant.effects[kindKey] = { magnitude: magnitude, expiresAt: newExpiry, source: source };
+    var def = STATUS_KINDS[kindKey];
+    if (def.onApply) { def.onApply(ant, magnitude); }
+  }
+
   function spawnAnt(kindKey) {
     var k = ANT_KINDS[kindKey];
     var ant = {
@@ -549,6 +580,30 @@ body.has-ant-buster-page {
         alignment = 0.9;
         jitterRate = 0.5;
         wanderScale = 0.0;
+      }
+    }
+    // Status-effect speed scaling: walk every active effect and apply its multiplier (slow,
+    // freeze, stun). Burn/poison/knockback have null speedMult and are skipped here.
+    var ek;
+    for (ek in ant.effects) {
+      var sdef = STATUS_KINDS[ek];
+      if (sdef.speedMult) {
+        var mag = ant.effects[ek].magnitude;
+        speed = speed * sdef.speedMult(mag);
+      }
+    }
+    // Status-effect tick damage: burn and poison drain HP each tick.
+    for (ek in ant.effects) {
+      var defT = STATUS_KINDS[ek];
+      if (defT.perTick) { defT.perTick(ant, ant.effects[ek], dt); }
+    }
+    // Expire effects whose timer has run out. Collect keys first to avoid mutating the
+    // object during iteration.
+    var keys = [];
+    for (ek in ant.effects) { keys.push(ek); }
+    for (var ki = 0; ki < keys.length; ki++) {
+      if (ant.effects[keys[ki]].expiresAt <= game.time) {
+        delete ant.effects[keys[ki]];
       }
     }
     ant.wanderPhase += ant.wanderFreq * dt * Math.PI * 2;
@@ -959,5 +1014,7 @@ body.has-ant-buster-page {
 
   // Expose game for debugging from devtools console
   window.__ab = game;
+  window.__abStatusKinds = STATUS_KINDS;
+  window.__abApplyStatus = applyStatus;
 })();
 </script>
