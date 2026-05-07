@@ -290,6 +290,39 @@ body.has-ant-buster-page {
     game.ants.push(ant);
   }
 
+  function angleTowards(fromX, fromY, toX, toY) {
+    return Math.atan2(toY - fromY, toX - fromX);
+  }
+
+  function angleDelta(from, to) {
+    var d = to - from;
+    while (d > Math.PI) { d -= Math.PI * 2; }
+    while (d < -Math.PI) { d += Math.PI * 2; }
+    return d;
+  }
+
+  function updateAnt(ant, dt) {
+    if (ant.dead) {
+      ant.deathTime += dt;
+      return;
+    }
+    var targetX = game.cake.x;
+    var targetY = game.cake.y;
+    var desiredHeading = angleTowards(ant.x, ant.y, targetX, targetY);
+    var alignment = 0.6;       // Worker default; per-type table comes in Plan 2
+    var jitterRate = 0.5;      // radians/sec of low-freq noise
+    ant.heading += angleDelta(ant.heading, desiredHeading) * alignment * dt;
+    ant.heading += (Math.random() * 2 - 1) * jitterRate * dt;
+    ant.x += Math.cos(ant.heading) * ant.speed * dt;
+    ant.y += Math.sin(ant.heading) * ant.speed * dt;
+  }
+
+  function updateAnts(dt) {
+    for (var i = 0; i < game.ants.length; i++) {
+      updateAnt(game.ants[i], dt);
+    }
+  }
+
   // Bootstrap ants for early-task verification (removed in Task 13)
   for (var ai = 0; ai < 5; ai++) {
     spawnAnt('worker');
@@ -298,6 +331,8 @@ body.has-ant-buster-page {
   // === UPDATE === (Task 6+)
   function update(dt) {
     game.time += dt;
+    if (game.state !== 'playing') { return; }
+    updateAnts(dt);
   }
 
   // === MAIN LOOP ===
