@@ -1694,6 +1694,27 @@ body.has-ant-buster-page {
   }
 
   // === CANNONS ===
+  // CANNON_KINDS schema. Required fields per cannon entry:
+  //   name, cost, damage, fireRate, range, projectileSpeed (omitted on beam),
+  //   family, tier, upgradesTo.
+  // Optional fields (Plan 3):
+  //   damageModifier: function(target, sourceCannon) -> multiplier
+  //     Per-cannon damage formula hook. Returns 1 by default (treated as no
+  //     modifier when absent). Marksman returns 1.5 vs full-HP targets;
+  //     Phantom returns 2 vs Queens; etc. Evaluated by applyDamage when a
+  //     sourceCannon is threaded through.
+  //   linePierce: number — projectile passes through up to N ants (Plan 3).
+  //   armorPierce: bool — bypass armored mitigation (Plan 3).
+  //   splash: { radius, falloff: number 0..1 } — AoE damage on impact.
+  //   homing: bool — projectile re-targets each tick (Patriot).
+  //   arc: { height, travelTime } — ballistic arcing visual + fixed land time.
+  //   returning: { phases } — projectile reverses path after first hit.
+  //   pellets: number — multi-pellet cone (Buckshot).
+  //   coneDeg: degrees — spread cone for pellets or aim jitter (Minigun).
+  //   beam: { tickDamage, tickInterval, statusOnTick } — continuous beam (Lance).
+  //   coneDot: { range, angleDeg, tickDamage, statusOnTick } — Plasma Torch.
+  //   teslaArc: { jumps, range, falloff } — chain-jump targeting (Tesla).
+  //   reveal: bool — sets target.isRevealed = true each tick (Spotter).
   var CANNON_KINDS = {
     howitzer: {
       name: 'Howitzer',
@@ -1895,7 +1916,7 @@ body.has-ant-buster-page {
           continue;
         }
         c.heading = angleTowards(c.x, c.y, btarget.x, btarget.y);
-        applyDamage(btarget, def.beamDamagePerSec * dt, false);
+        applyDamage(btarget, def.beamDamagePerSec * dt, false, c);
         if (btarget.hp <= 0) {
           killAnt(btarget, c);
         }
@@ -1975,9 +1996,18 @@ body.has-ant-buster-page {
   // Centralized damage application. Soldier armor (Task 16) hooks here:
   // armored ants will reduce damage unless `armorPierce` is set. For now this is
   // a thin wrapper so the hook point exists.
-  function applyDamage(ant, amount, armorPierce) {
+  // Plan 3: optional `sourceCannon` lets the per-cannon `damageModifier` hook
+  // multiply damage (Marksman, Sharpshooter, Phantom). Falls through cleanly
+  // when sourceCannon is omitted (existing call sites stay 3-arg compatible).
+  function applyDamage(ant, amount, armorPierce, sourceCannon) {
     var k = ANT_KINDS[ant.kind];
     var dmg = amount;
+    if (sourceCannon) {
+      var sk = CANNON_KINDS[sourceCannon.kind];
+      if (sk.damageModifier) {
+        dmg = dmg * sk.damageModifier(ant, sourceCannon);
+      }
+    }
     if (!armorPierce) {
       var armor = k.armor;
       if (!armor) { armor = 0; }
@@ -2031,7 +2061,7 @@ body.has-ant-buster-page {
         var dx = a.x - p.x;
         var dy = a.y - p.y;
         if (dx * dx + dy * dy < 6 * 6) {
-          applyDamage(a, p.damage, p.armorPierce);
+          applyDamage(a, p.damage, p.armorPierce, p.sourceCannon);
           if (p.statusOnHit) {
             var s = p.statusOnHit;
             applyStatus(a, s.kind, s.magnitude, s.duration, 'projectile');
