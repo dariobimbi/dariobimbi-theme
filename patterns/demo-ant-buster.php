@@ -23,7 +23,7 @@
 
   <!-- wp:html -->
   <div class="ab-stage">
-    <canvas id="ab-canvas" data-role="canvas" aria-label="Ant Buster game canvas" width="960" height="540"></canvas>
+    <canvas id="ab-canvas" data-role="canvas" aria-label="Ant Buster game canvas" width="1280" height="720"></canvas>
   </div>
   <!-- /wp:html -->
 
@@ -53,7 +53,7 @@ body.has-ant-buster-page {
 }
 
 .demo-ant-buster #ab-canvas {
-  width: 960px;
+  width: 1280px;
   max-width: 100%;
   height: auto;
   aspect-ratio: 16 / 9;
@@ -84,10 +84,10 @@ body.has-ant-buster-page {
   document.body.classList.add('has-ant-buster-page');
 
   // === CONSTANTS ===
-  var WIDTH = 480;
-  var HEIGHT = 270;
-  var PLAYFIELD_W = 320;
-  var PLAYFIELD_H = 246;
+  var WIDTH = 640;
+  var HEIGHT = 360;
+  var PLAYFIELD_W = 480;
+  var PLAYFIELD_H = 336;
   var HUD_H = 24;
   var SHOP_W = 160;
   var TARGET_FPS = 60;
@@ -98,8 +98,8 @@ body.has-ant-buster-page {
     state: 'idle',            // 'idle' | 'playing' | 'won' | 'lost'
     time: 0,                  // seconds since game start
     accumulator: 0,           // for fixed-timestep
-    cake: { x: 264, y: 56, slices: 8, lost: 0 },
-    anthill: { x: 16, y: 135 },
+    cake: { x: 352, y: 76, slices: 8, lost: 0 },
+    anthill: { x: 22, y: 184 },
     ants: [],
     cannons: [],
     projectiles: [],
@@ -237,10 +237,10 @@ body.has-ant-buster-page {
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
     // Grass border (whole canvas is grass-colored already; blanket sits on top)
-    var blanketX = 32;
-    var blanketY = 32;
-    var blanketW = 256;
-    var blanketH = 200;
+    var blanketX = 48;
+    var blanketY = 48;
+    var blanketW = 384;
+    var blanketH = 272;
 
     // Picnic blanket — alternating red/white check
     var checkSize = 16;
