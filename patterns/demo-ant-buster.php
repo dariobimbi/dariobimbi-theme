@@ -171,6 +171,20 @@ body.has-ant-buster-page {
     return c;
   }
 
+  function makeScout() {
+    var c = makeCanvas(12, 12);
+    var x = c.getContext('2d');
+    x.fillStyle = '#f4b41b';
+    x.fillRect(3, 3, 6, 6);                     // body
+    x.fillStyle = '#222034';
+    x.fillRect(5, 1, 2, 2);                     // head / eyes
+    x.fillRect(2, 4, 1, 2);                     // left leg
+    x.fillRect(9, 4, 1, 2);                     // right leg
+    x.fillRect(4, 10, 1, 1);                    // left rear leg
+    x.fillRect(7, 10, 1, 1);                    // right rear leg
+    return c;
+  }
+
   function makeAntSplat() {
     var c = makeCanvas(16, 16);
     var x = c.getContext('2d');
@@ -367,6 +381,7 @@ body.has-ant-buster-page {
 
   game.sprites = {
     worker: makeWorkerSprite(),
+    scout: makeScout(),
     splat: makeAntSplat(),
     cannonBase: makeCannonBase(),
     cannonTurret: makeCannonTurret(),         // kept for backward refs; lookups now go through turrets[kind]
@@ -826,6 +841,25 @@ body.has-ant-buster-page {
       wanderAmpMin: 0.9, wanderAmpMax: 1.5,
       spriteKey: 'worker',
       spriteW: 16, spriteH: 16,
+      slowResist: 0,
+      damageMult: 1,
+      pierceMult: 1,
+      canPickup: true,
+      onDeath: null,
+      armor: 0
+    },
+    scout: {
+      name: 'Scout',
+      hp: 6,
+      speed: 60,
+      carryingSpeedMult: 0.7,
+      gold: 3,
+      alignment: 0.4,
+      jitterRate: 5.0,
+      wanderFreqMin: 0.4, wanderFreqMax: 0.9,
+      wanderAmpMin: 1.0, wanderAmpMax: 1.7,
+      spriteKey: 'scout',
+      spriteW: 12, spriteH: 12,
       slowResist: 0,
       damageMult: 1,
       pierceMult: 1,
