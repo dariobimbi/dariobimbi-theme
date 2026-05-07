@@ -478,6 +478,17 @@ body.has-ant-buster-page {
     return c;
   }
 
+  function makeCannonTurretMortar() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    // Stubby high-angle mortar tube; muddy brown body, darker breech base.
+    x.fillStyle = '#5a3a1a';
+    x.fillRect(7, 2, 6, 11);                    // short fat barrel pointing up
+    x.fillStyle = '#3a2a0a';
+    x.fillRect(5, 9, 10, 8);                    // wide breech base
+    return c;
+  }
+
   function makeCake(slices) {
     var c = makeCanvas(32, 32);
     var x = c.getContext('2d');
@@ -541,6 +552,7 @@ body.has-ant-buster-page {
       howitzer: makeCannonTurret(),
       siege: makeCannonTurretSiege(),
       railgun: makeCannonTurretRailgun(),
+      mortar: makeCannonTurretMortar(),
       repeater: makeCannonTurretRepeater(),
       autocannon: makeCannonTurretAutocannon(),
       vulcan: makeCannonTurretVulcan(),
@@ -862,11 +874,21 @@ body.has-ant-buster-page {
     }
   }
 
-  // Layer 9a: projectiles.
+  // Layer 9a: projectiles. Arcing projectiles (Mortar etc.) get a cosmetic
+  // y-offset so the shell visibly rises and falls between barrel and impact.
+  // Collision resolves on linear (p.x, p.y) — arcOffset is render-only.
   function drawProjectiles() {
     for (var pi = 0; pi < game.projectiles.length; pi++) {
       var p = game.projectiles[pi];
-      ctx.drawImage(game.sprites.projectile, Math.round(p.x - 2), Math.round(p.y - 2));
+      var arcOffset = 0;
+      if (p.arcing) {
+        var t;
+        if (p.arcDuration > 0) { t = (game.time - p.arcStartedAt) / p.arcDuration; } else { t = 1; }
+        if (t > 1) { t = 1; }
+        if (t < 0) { t = 0; }
+        arcOffset = -Math.sin(t * Math.PI) * p.arcHeight;
+      }
+      ctx.drawImage(game.sprites.projectile, Math.round(p.x - 2), Math.round(p.y - 2 + arcOffset));
     }
   }
 
@@ -1725,7 +1747,7 @@ body.has-ant-buster-page {
       projectileSpeed: 200,
       family: 'heavy',
       tier: 1,
-      upgradesTo: ['siege']
+      upgradesTo: ['siege', 'mortar']    // Task 7 will append 'discus' (3rd mid)
     },
     siege: {
       name: 'Siege',
@@ -1750,6 +1772,19 @@ body.has-ant-buster-page {
       linePierce: 999,    // unlimited — pre-Plan-3 Railgun semantics
       armorPierce: true,
       upgradesTo: []
+    },
+    mortar: {
+      name: 'Mortar',
+      cost: 60,
+      damage: 8,
+      fireRate: 0.5,
+      range: 130,
+      projectileSpeed: 200,
+      family: 'heavy',
+      tier: 2,
+      splash: { radius: 40, falloff: 0.5, splashMult: 0.5 },
+      arc: { height: 24, travelTime: 0.6 },
+      upgradesTo: []           // upgradesTo: ['hellfire', 'patriot'] — populated by Tasks 10/8
     },
     repeater: {
       name: 'Repeater',
@@ -1976,7 +2011,7 @@ body.has-ant-buster-page {
         off = (i - (n - 1) / 2) * spread;
       }
       var h = heading + off;
-      game.projectiles.push({
+      var p = {
         x: cannon.x + Math.cos(h) * 12,
         y: cannon.y + Math.sin(h) * 12,
         vx: Math.cos(h) * def.projectileSpeed,
@@ -1988,8 +2023,21 @@ body.has-ant-buster-page {
         statusOnHit: statusOnHit,
         sourceCannon: cannon,
         _sawAnts: [],
-        life: 1.5
-      });
+        life: 1.5,
+        // Arc visual primitive (Plan 3 — Mortar, future Howitzer-line). Render
+        // applies `arcOffset = -sin(t * PI) * arcHeight` to draw position only;
+        // collision still resolves on the linear (p.x, p.y).
+        arcing: !!def.arc,
+        arcStartedAt: 0,
+        arcDuration: 0,
+        arcHeight: 0
+      };
+      if (def.arc) {
+        p.arcStartedAt = game.time;
+        p.arcDuration = def.arc.travelTime;
+        p.arcHeight = def.arc.height;
+      }
+      game.projectiles.push(p);
     }
   }
 
@@ -2043,6 +2091,30 @@ body.has-ant-buster-page {
     if (k.onDeath) { k.onDeath(ant); }
   }
 
+  // Splash AoE primitive (Plan 3). Iterates live ants once; applies damage
+  // scaled by `falloff` (0 = flat-radius, 1 = linear-to-zero at edge). Skips
+  // dead and intangible (Phantom phase-out, future tasks). Reads game.ants
+  // by index against the snapshot at call time, so a direct-hit kill before
+  // splash is fine — the loop sees positions, not the kill flag of the
+  // carrier specifically. `damage` is the already-scaled splash damage
+  // (caller multiplies by splashMult).
+  function applySplash(x, y, radius, damage, falloff, sourceCannon) {
+    for (var i = 0; i < game.ants.length; i++) {
+      var a = game.ants[i];
+      if (a.dead) { continue; }
+      if (a.intangible) { continue; }
+      var dx = a.x - x;
+      var dy = a.y - y;
+      var dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > radius) { continue; }
+      var pct;
+      if (falloff > 0) { pct = 1 - (dist / radius) * falloff; } else { pct = 1; }
+      if (pct < 0) { pct = 0; }
+      applyDamage(a, damage * pct, false, sourceCannon);
+      if (a.hp <= 0) { killAnt(a, sourceCannon); }
+    }
+  }
+
   function updateProjectiles(dt) {
     var kept = [];
     for (var i = 0; i < game.projectiles.length; i++) {
@@ -2065,6 +2137,21 @@ body.has-ant-buster-page {
           if (p.statusOnHit) {
             var s = p.statusOnHit;
             applyStatus(a, s.kind, s.magnitude, s.duration, 'projectile');
+          }
+          // Splash trigger (Plan 3 — Mortar, Hellfire, Demolisher, Sonic Pulse).
+          // Runs before the carrier kill check so the radius scan sees
+          // game.ants positions live; carrier is excluded later by the dead flag
+          // anyway since applySplash skips dead ants on subsequent calls.
+          var sk;
+          if (p.sourceCannon) {
+            sk = CANNON_KINDS[p.sourceCannon.kind];
+          } else {
+            sk = null;
+          }
+          if (sk) {
+            if (sk.splash) {
+              applySplash(p.x, p.y, sk.splash.radius, p.damage * sk.splash.splashMult, sk.splash.falloff, p.sourceCannon);
+            }
           }
           if (a.hp <= 0) {
             killAnt(a, p.sourceCannon ? p.sourceCannon : null);
