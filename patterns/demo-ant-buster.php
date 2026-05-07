@@ -259,6 +259,23 @@ body.has-ant-buster-page {
     return c;
   }
 
+  function makeCannonTurretFrost() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    // Thin barrel with frost crystal/icicle accents; light blue.
+    x.fillStyle = '#7da4f7';
+    x.fillRect(9, 2, 2, 14);                    // thin barrel
+    x.fillStyle = '#5a82d4';
+    x.fillRect(8, 1, 4, 2);                     // tip
+    x.fillStyle = '#bcd4fc';
+    x.fillRect(7, 5, 1, 2);                     // left icicle accent
+    x.fillRect(12, 8, 1, 2);                    // right icicle accent
+    x.fillRect(7, 11, 1, 2);                    // left lower accent
+    x.fillStyle = '#e0ecff';
+    x.fillRect(9, 0, 2, 1);                     // crystal sparkle at tip
+    return c;
+  }
+
   function makeCannonTurretSiege() {
     var c = makeCanvas(20, 20);
     var x = c.getContext('2d');
@@ -341,7 +358,8 @@ body.has-ant-buster-page {
       repeater: makeCannonTurretRepeater(),
       autocannon: makeCannonTurretAutocannon(),
       vulcan: makeCannonTurretVulcan(),
-      twingun: makeCannonTurretTwinGun()
+      twingun: makeCannonTurretTwinGun(),
+      frost: makeCannonTurretFrost()
     },
     anthill: makeAnthill(),
     projectile: makeProjectile()
@@ -1118,8 +1136,20 @@ body.has-ant-buster-page {
       projectileSpeed: 240,
       family: 'status',
       tier: 1,
-      barrels: 2,            // multi-barrel volley logic lands in Task 13
-      upgradesTo: []         // 'frost' added in Task 13
+      barrels: 2,            // multi-barrel volley logic landed in Task 13
+      upgradesTo: ['frost']
+    },
+    frost: {
+      name: 'Frost',
+      cost: 75,
+      damage: 1,
+      fireRate: 1.5,
+      range: 100,
+      projectileSpeed: 220,
+      family: 'status',
+      tier: 2,
+      statusOnHit: { kind: 'slow', magnitude: 0.3, duration: 2 },
+      upgradesTo: ['glacier']
     }
   };
 
@@ -1234,15 +1264,27 @@ body.has-ant-buster-page {
   function fireProjectile(cannon, target) {
     var def = CANNON_KINDS[cannon.kind];
     var heading = angleTowards(cannon.x, cannon.y, target.x, target.y);
-    game.projectiles.push({
-      x: cannon.x,
-      y: cannon.y,
-      vx: Math.cos(heading) * def.projectileSpeed,
-      vy: Math.sin(heading) * def.projectileSpeed,
-      damage: def.damage,
-      pierce: !!def.pierce,
-      life: 1.5     // seconds
-    });
+    var n = def.barrels || 1;
+    var spread = 0.06;                          // ~3.4 deg per step
+    for (var i = 0; i < n; i++) {
+      var off;
+      if (n === 1) {
+        off = 0;
+      } else {
+        off = (i - (n - 1) / 2) * spread;
+      }
+      var h = heading + off;
+      game.projectiles.push({
+        x: cannon.x + Math.cos(h) * 12,
+        y: cannon.y + Math.sin(h) * 12,
+        vx: Math.cos(h) * def.projectileSpeed,
+        vy: Math.sin(h) * def.projectileSpeed,
+        damage: def.damage,
+        pierce: !!def.pierce,
+        statusOnHit: def.statusOnHit || null,
+        life: 1.5     // seconds
+      });
+    }
   }
 
   // Centralized damage application. Soldier armor (Task 16) hooks here:
@@ -1267,6 +1309,10 @@ body.has-ant-buster-page {
         var dy = a.y - p.y;
         if (dx * dx + dy * dy < 6 * 6) {
           applyDamage(a, p.damage, p.pierce);
+          if (p.statusOnHit) {
+            var s = p.statusOnHit;
+            applyStatus(a, s.kind, s.magnitude, s.duration, 'projectile');
+          }
           if (a.hp <= 0) {
             a.dead = true;
             a.deathTime = 0;
