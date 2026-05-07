@@ -54,7 +54,6 @@ body.has-ant-buster-page {
 
 .demo-ant-buster #ab-canvas {
   width: 960px;
-  height: 540px;
   max-width: 100%;
   height: auto;
   aspect-ratio: 16 / 9;
