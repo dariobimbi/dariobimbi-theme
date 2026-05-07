@@ -182,7 +182,7 @@ body.has-ant-buster-page {
       x.fillStyle = '#feae34';
       x.fillRect(8, 12 + (1 - fillRatio) * 12, 16, fillRatio * 12);
       x.fillStyle = '#fee761';
-      x.fillRect(10, 8 + (1 - fillRatio) * 8, 12, fillRatio * 6);
+      x.fillRect(10, 8 + (1 - fillRatio) * 12, 12, fillRatio * 6);
       x.fillStyle = '#e43b44';
       x.fillRect(15, 4, 2, 6);                  // candle
       x.fillStyle = '#fee761';
