@@ -87,11 +87,19 @@ body.has-ant-buster-page {
   var WIDTH = 640;
   var HEIGHT = 360;
   var PLAYFIELD_W = 480;
-  var PLAYFIELD_H = 336;
   var HUD_H = 24;
   var SHOP_W = 160;
   var TARGET_FPS = 60;
   var FIXED_DT = 1 / TARGET_FPS;
+
+  // === DEBUG MODE ===
+  // Captured once at parse time from the URL. ?debug=1 enables the T hotkey
+  // (cycles spawning each ant kind at the anthill). The check uses a plain
+  // regex — splitting case avoids the `||` operator, which gets HTML-encoded
+  // inside inline scripts in this theme.
+  var DEBUG = /[?&]debug=1/.test(location.search);
+  var DEBUG_KINDS = ['worker', 'carrier', 'scout', 'soldier', 'tank', 'splitter', 'phase', 'bomber', 'queen'];
+  var debugCycleIdx = 0;
 
   // === GAME STATE ===
   // Two flag layers, intentionally kept separate (Plan 2 Task 5):
@@ -742,7 +750,13 @@ body.has-ant-buster-page {
       var k = ANT_KINDS[a.kind];
       var sprite;
       if (a.dead) {
-        sprite = game.sprites.splat;
+        // Delivered ants vanish silently. Only killed ants splat. Nested ifs avoid
+        // the AND operator (gets HTML-encoded inside inline scripts in this theme).
+        if (a.deliveredAt === 0) {
+          sprite = game.sprites.splat;
+        } else {
+          continue;
+        }
       } else {
         sprite = game.sprites[k.spriteKey];
       }
@@ -1542,7 +1556,8 @@ body.has-ant-buster-page {
         if (dxHill * dxHill + dyHill * dyHill < deliverR * deliverR) {
           game.cake.lost += 1;
           a.dead = true;
-          a.deathTime = 0.5;     // pruneAnts drops this immediately, no splat
+          a.deliveredAt = game.time;   // mark delivery so drawAnts skips the splat sprite
+          a.deathTime = 0;             // pruneAnts drops this on the next frame
           if (game.cake.lost >= 8) {
             game.waveState = 'lost';
           }
@@ -2078,6 +2093,7 @@ body.has-ant-buster-page {
     game.speed = 1;
     ui.sendNextRect = null;
     ui.restartRunRect = null;
+    ui.dragging = null;
     ui.selectedCannon = null;
     ui.upgradeRects[0] = null;
     ui.upgradeRects[1] = null;
@@ -2316,6 +2332,20 @@ body.has-ant-buster-page {
     if (e.key === '1') { game.speed = 1; return; }
     if (e.key === '2') { game.speed = 2; return; }
     if (e.key === 'Escape') { ui.selectedCannon = null; return; }
+    if (DEBUG) {
+      if (e.key === 't') {
+        var dk = DEBUG_KINDS[debugCycleIdx % DEBUG_KINDS.length];
+        spawnAntAt(dk, game.anthill.x, game.anthill.y);
+        debugCycleIdx = debugCycleIdx + 1;
+        return;
+      }
+      if (e.key === 'T') {
+        var dk2 = DEBUG_KINDS[debugCycleIdx % DEBUG_KINDS.length];
+        spawnAntAt(dk2, game.anthill.x, game.anthill.y);
+        debugCycleIdx = debugCycleIdx + 1;
+        return;
+      }
+    }
   });
 
   // Expose game for debugging from devtools console
