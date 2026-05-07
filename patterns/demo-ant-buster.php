@@ -1315,10 +1315,14 @@ body.has-ant-buster-page {
   function applyStatus(ant, kindKey, magnitude, duration, source) {
     var k = ANT_KINDS[ant.kind];
     if (kindKey === 'slow') {
-      magnitude = magnitude * (1 - (k.slowResist || 0));
+      var slowResist = k.slowResist;
+      if (!slowResist) { slowResist = 0; }
+      magnitude = magnitude * (1 - slowResist);
     }
     var existing = ant.effects[kindKey];
-    var newExpiry = (game.time || 0) + duration;
+    var nowTime = game.time;
+    if (!nowTime) { nowTime = 0; }
+    var newExpiry = nowTime + duration;
     if (existing) {
       if (existing.magnitude > magnitude) { magnitude = existing.magnitude; }
       if (existing.expiresAt > newExpiry) { newExpiry = existing.expiresAt; }
@@ -1426,7 +1430,9 @@ body.has-ant-buster-page {
     }
     var k = ANT_KINDS[ant.kind];
     if (k.phaseInterval) {
-      ant.phaseT = (ant.phaseT || 0) + dt;
+      var phaseT = ant.phaseT;
+      if (!phaseT) { phaseT = 0; }
+      ant.phaseT = phaseT + dt;
       var cycle = k.phaseInterval + k.phaseDuration;
       var t = ant.phaseT % cycle;
       ant.intangible = (t >= k.phaseInterval);
@@ -1863,7 +1869,10 @@ body.has-ant-buster-page {
   function fireProjectile(cannon, target) {
     var def = CANNON_KINDS[cannon.kind];
     var heading = angleTowards(cannon.x, cannon.y, target.x, target.y);
-    var n = def.barrels || 1;
+    var n = def.barrels;
+    if (!n) { n = 1; }
+    var statusOnHit = def.statusOnHit;
+    if (!statusOnHit) { statusOnHit = null; }
     var spread = 0.06;                          // ~3.4 deg per step
     for (var i = 0; i < n; i++) {
       var off;
@@ -1880,7 +1889,7 @@ body.has-ant-buster-page {
         vy: Math.sin(h) * def.projectileSpeed,
         damage: def.damage,
         pierce: !!def.pierce,
-        statusOnHit: def.statusOnHit || null,
+        statusOnHit: statusOnHit,
         life: 1.5     // seconds
       });
     }
@@ -1892,8 +1901,10 @@ body.has-ant-buster-page {
   function applyDamage(ant, amount, pierce) {
     var k = ANT_KINDS[ant.kind];
     var dmg = amount;
-    if (pierce === false || pierce === null || !pierce) {
-      dmg = dmg * (1 - (k.armor || 0));
+    if (!pierce) {
+      var armor = k.armor;
+      if (!armor) { armor = 0; }
+      dmg = dmg * (1 - armor);
     }
     ant.hp = ant.hp - dmg;
   }
