@@ -114,7 +114,120 @@ body.has-ant-buster-page {
   var ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = false;
 
-  // === SPRITES === (Task 4)
+  // === SPRITES ===
+  // All sprites are generated procedurally as offscreen canvases.
+  // Plan 4 will swap these out for real PNGs loaded from disk.
+  function makeCanvas(w, h) {
+    var c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    return c;
+  }
+
+  function makeWorkerSprite() {
+    var c = makeCanvas(16, 16);
+    var x = c.getContext('2d');
+    x.fillStyle = '#3a4466';
+    x.beginPath();
+    x.ellipse(8, 8, 5, 4, 0, 0, Math.PI * 2);   // body
+    x.fill();
+    x.fillStyle = '#262b44';
+    x.fillRect(7, 3, 2, 2);                     // head
+    x.fillStyle = '#181425';
+    x.fillRect(7, 1, 1, 2);                     // antenna L
+    x.fillRect(8, 1, 1, 2);                     // antenna R
+    return c;
+  }
+
+  function makeAntSplat() {
+    var c = makeCanvas(16, 16);
+    var x = c.getContext('2d');
+    x.fillStyle = '#262b44';
+    x.fillRect(4, 7, 8, 3);
+    x.fillRect(5, 6, 6, 1);
+    x.fillRect(5, 10, 6, 1);
+    return c;
+  }
+
+  function makeCannonBase() {
+    var c = makeCanvas(32, 32);
+    var x = c.getContext('2d');
+    x.fillStyle = '#5a6988';
+    x.beginPath();
+    x.arc(16, 16, 12, 0, Math.PI * 2);
+    x.fill();
+    x.fillStyle = '#8b9bb4';
+    x.beginPath();
+    x.arc(16, 16, 10, 0, Math.PI * 2);
+    x.fill();
+    return c;
+  }
+
+  function makeCannonTurret() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    x.fillStyle = '#262b44';
+    x.fillRect(8, 4, 4, 12);                    // barrel pointing up (rotated at draw time)
+    x.fillStyle = '#181425';
+    x.fillRect(7, 2, 6, 3);                     // barrel tip
+    return c;
+  }
+
+  function makeCake(slices) {
+    var c = makeCanvas(32, 32);
+    var x = c.getContext('2d');
+    var maxSlices = 8;
+    var fillRatio = slices / maxSlices;
+    if (fillRatio > 0) {
+      x.fillStyle = '#feae34';
+      x.fillRect(8, 12 + (1 - fillRatio) * 12, 16, fillRatio * 12);
+      x.fillStyle = '#fee761';
+      x.fillRect(10, 8 + (1 - fillRatio) * 8, 12, fillRatio * 6);
+      x.fillStyle = '#e43b44';
+      x.fillRect(15, 4, 2, 6);                  // candle
+      x.fillStyle = '#fee761';
+      x.fillRect(14, 2, 4, 3);                  // flame
+    }
+    x.fillStyle = '#ffffff';
+    x.fillRect(6, 24, 20, 3);                   // plate
+    return c;
+  }
+
+  function makeAnthill() {
+    var c = makeCanvas(32, 32);
+    var x = c.getContext('2d');
+    x.fillStyle = '#5a432f';
+    x.beginPath();
+    x.ellipse(16, 24, 14, 6, 0, 0, Math.PI * 2);
+    x.fill();
+    x.fillStyle = '#7a5a3a';
+    x.beginPath();
+    x.ellipse(16, 22, 11, 5, 0, 0, Math.PI * 2);
+    x.fill();
+    x.fillStyle = '#181425';
+    x.beginPath();
+    x.ellipse(16, 22, 4, 2, 0, 0, Math.PI * 2);
+    x.fill();
+    return c;
+  }
+
+  function makeProjectile() {
+    var c = makeCanvas(4, 4);
+    var x = c.getContext('2d');
+    x.fillStyle = '#181425';
+    x.fillRect(0, 0, 4, 4);
+    return c;
+  }
+
+  game.sprites = {
+    worker: makeWorkerSprite(),
+    splat: makeAntSplat(),
+    cannonBase: makeCannonBase(),
+    cannonTurret: makeCannonTurret(),
+    anthill: makeAnthill(),
+    projectile: makeProjectile()
+  };
+  // Note: cake sprite is regenerated in render() per frame because it depends on slice count.
 
   // === RENDERING === (Task 5)
   function render() {
