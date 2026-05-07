@@ -31,7 +31,50 @@
 <!-- /wp:group -->
 
 <style>
-/* Inline styles added in Task 2 */
+.demo-ant-buster {
+  --ab-bg: #1a1c2c;
+  --ab-frame: #2a2f3e;
+}
+
+body.has-ant-buster-page {
+  background-color: var(--wp--preset--color--background) !important;
+}
+
+.demo-ant-buster .ab-stage {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: var(--wp--preset--spacing--40) auto 0;
+  padding: var(--wp--preset--spacing--20);
+  background: var(--ab-frame);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  max-width: 100%;
+}
+
+.demo-ant-buster #ab-canvas {
+  width: 960px;
+  height: 540px;
+  max-width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  background: var(--ab-bg);
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  cursor: default;
+  display: block;
+}
+
+.demo-ant-buster #ab-canvas.ab-dragging {
+  cursor: grabbing;
+}
+
+@media (max-width: 1000px) {
+  .demo-ant-buster #ab-canvas {
+    width: 100%;
+  }
+}
 </style>
 
 <script>
