@@ -426,6 +426,45 @@ body.has-ant-buster-page {
     return d;
   }
 
+  // Bias the desired heading sideways around any cannon roughly on the path ahead.
+  // Ants treat cannons as soft obstacles; the hard overlap push-out runs after movement.
+  function steerAroundCannons(ant, desiredHeading) {
+    var lookAhead = 28;
+    var combined = 18;          // ant radius + cannon radius (rough)
+    var clearance = combined + 6;
+    var bias = 0;
+    var cosD = Math.cos(desiredHeading);
+    var sinD = Math.sin(desiredHeading);
+    for (var i = 0; i < game.cannons.length; i++) {
+      var c = game.cannons[i];
+      var dx = c.x - ant.x;
+      var dy = c.y - ant.y;
+      var distSq = dx * dx + dy * dy;
+      if (distSq > lookAhead * lookAhead) { continue; }
+      if (distSq < 0.0001) { continue; }
+      // Forward/lateral split relative to where the ant wants to go.
+      var forward = dx * cosD + dy * sinD;
+      if (forward <= 0) { continue; }       // cannon is behind or abreast
+      var lateral = -dx * sinD + dy * cosD;
+      var lateralAbs = lateral < 0 ? -lateral : lateral;
+      if (lateralAbs > clearance) { continue; }
+      var dist = Math.sqrt(distSq);
+      var urgency = 1 - dist / lookAhead;
+      var sideways;
+      if (lateral > 0) {
+        sideways = -1;     // cannon is to the left of desired heading -> veer right
+      } else {
+        if (lateral < 0) {
+          sideways = 1;
+        } else {
+          sideways = (ant.wanderPhase > Math.PI) ? 1 : -1;   // dead ahead, pick a side
+        }
+      }
+      bias += sideways * urgency * 1.2;
+    }
+    return desiredHeading + bias;
+  }
+
   function updateAnt(ant, dt) {
     if (ant.dead) {
       ant.deathTime += dt;
@@ -462,6 +501,7 @@ body.has-ant-buster-page {
     ant.wanderPhase += ant.wanderFreq * dt * Math.PI * 2;
     var wanderOffset = Math.sin(ant.wanderPhase) * ant.wanderAmp * wanderScale;
     var desiredHeading = angleTowards(ant.x, ant.y, targetX, targetY) + wanderOffset;
+    desiredHeading = steerAroundCannons(ant, desiredHeading);
     ant.heading += angleDelta(ant.heading, desiredHeading) * alignment * dt;
     ant.heading += (Math.random() * 2 - 1) * jitterRate * dt;
     ant.x += Math.cos(ant.heading) * speed * dt;
@@ -484,6 +524,29 @@ body.has-ant-buster-page {
       ant.y = HEIGHT - margin;
       ant.heading = -ant.heading;
     }
+    // Hard push-out: cannons are solid, ants cannot end a frame inside one.
+    var minD = 18;
+    for (var ci = 0; ci < game.cannons.length; ci++) {
+      var cn = game.cannons[ci];
+      var dxN = ant.x - cn.x;
+      var dyN = ant.y - cn.y;
+      var dN = Math.sqrt(dxN * dxN + dyN * dyN);
+      if (dN < minD) {
+        if (dN < 0.0001) {
+          // Exactly on top of the cannon (e.g. cannon placed on ant): nudge perpendicular to heading.
+          ant.x = cn.x + Math.cos(ant.heading + Math.PI / 2) * minD;
+          ant.y = cn.y + Math.sin(ant.heading + Math.PI / 2) * minD;
+        } else {
+          ant.x = cn.x + (dxN / dN) * minD;
+          ant.y = cn.y + (dyN / dN) * minD;
+        }
+      }
+    }
+    // Final non-reflective clamp in case push-out drove us back through a wall.
+    if (ant.x < margin) { ant.x = margin; }
+    if (ant.x > PLAYFIELD_W - margin) { ant.x = PLAYFIELD_W - margin; }
+    if (ant.y < HUD_H + margin) { ant.y = HUD_H + margin; }
+    if (ant.y > HEIGHT - margin) { ant.y = HEIGHT - margin; }
   }
 
   function updateAnts(dt) {
