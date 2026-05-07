@@ -1193,7 +1193,7 @@ body.has-ant-buster-page {
       onDeath: function(ant) {
         for (var i = 0; i < 2; i++) {
           var ang = Math.random() * Math.PI * 2;
-          spawnAntAt('mini_splitter', ant.x + Math.cos(ang) * 6, ant.y + Math.sin(ang) * 6);
+          spawnAntAt('mini_splitter', ant.x + Math.cos(ang) * 6, ant.y + Math.sin(ang) * 6, 'split');
         }
       },
       armor: 0
@@ -1291,7 +1291,7 @@ body.has-ant-buster-page {
       onDeath: function(ant) {
         for (var i = 0; i < 6; i++) {
           var ang = (Math.PI * 2 / 6) * i;
-          spawnAntAt('worker', ant.x + Math.cos(ang) * 12, ant.y + Math.sin(ang) * 12);
+          spawnAntAt('worker', ant.x + Math.cos(ang) * 12, ant.y + Math.sin(ang) * 12, 'queen');
         }
       }
     }
@@ -1335,12 +1335,22 @@ body.has-ant-buster-page {
   // Spawn an ant of `kindKey` at an explicit (x, y). Used by spawnAnt for the
   // normal anthill spawn, and by onDeath hooks (Splitter, Bomber, Queen) that
   // need to drop new ants at a specific position.
-  function spawnAntAt(kindKey, x, y) {
+  function spawnAntAt(kindKey, x, y, source, origin) {
+    if (!source) { source = 'wave'; }
+    var ant = spawnAnt(kindKey, source);
+    ant.x = x;
+    ant.y = y;
+    if (origin) { ant.spawnOrigin = { x: origin.x, y: origin.y }; }
+    return ant;
+  }
+
+  function spawnAnt(kindKey, source) {
+    if (!source) { source = 'wave'; }
     var k = ANT_KINDS[kindKey];
     var ant = {
       kind: kindKey,
-      x: x,
-      y: y,
+      x: game.anthill.x,
+      y: game.anthill.y + (Math.random() * 60 - 30),
       hp: k.hp,
       maxHp: k.hp,
       speed: k.speed,
@@ -1354,14 +1364,13 @@ body.has-ant-buster-page {
       wanderAmp: k.wanderAmpMin + Math.random() * (k.wanderAmpMax - k.wanderAmpMin),
       effects: {},                                   // Task 4 fills this with status-effect entries
       intangible: false,
-      phaseT: 0
+      phaseT: 0,
+      spawnSource: source,
+      spawnOrigin: { x: game.anthill.x, y: game.anthill.y },
+      firedThresholds: {}
     };
     game.ants.push(ant);
     return ant;
-  }
-
-  function spawnAnt(kindKey) {
-    return spawnAntAt(kindKey, game.anthill.x, game.anthill.y + (Math.random() * 60 - 30));
   }
 
   function angleTowards(fromX, fromY, toX, toY) {
@@ -1422,8 +1431,8 @@ body.has-ant-buster-page {
     var targetX;
     var targetY;
     if (ant.carrying) {
-      targetX = game.anthill.x;
-      targetY = game.anthill.y;
+      targetX = ant.spawnOrigin.x;
+      targetY = ant.spawnOrigin.y;
     } else {
       targetX = game.cake.x;
       targetY = game.cake.y;
@@ -1557,8 +1566,8 @@ body.has-ant-buster-page {
       var a = game.ants[i];
       if (a.dead) { continue; }
       if (a.carrying) {
-        var dxHill = a.x - game.anthill.x;
-        var dyHill = a.y - game.anthill.y;
+        var dxHill = a.x - a.spawnOrigin.x;
+        var dyHill = a.y - a.spawnOrigin.y;
         if (dxHill * dxHill + dyHill * dyHill < deliverR * deliverR) {
           game.cake.lost += 1;
           a.dead = true;
@@ -1588,7 +1597,7 @@ body.has-ant-buster-page {
           if (dxs * dxs + dys * dys <= 100) {
             a.carrying = true;
             sl.claimedBy = a;
-            a.heading = angleTowards(a.x, a.y, game.anthill.x, game.anthill.y);
+            a.heading = angleTowards(a.x, a.y, a.spawnOrigin.x, a.spawnOrigin.y);
             game.slices.splice(si, 1);
             pickedFromGround = true;
             break;
@@ -1601,7 +1610,7 @@ body.has-ant-buster-page {
           if (dxCake * dxCake + dyCake * dyCake < pickupR * pickupR) {
             game.cake.slices -= 1;
             a.carrying = true;
-            a.heading = angleTowards(a.x, a.y, game.anthill.x, game.anthill.y);
+            a.heading = angleTowards(a.x, a.y, a.spawnOrigin.x, a.spawnOrigin.y);
           }
         }
       }
