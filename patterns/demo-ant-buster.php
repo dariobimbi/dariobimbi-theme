@@ -449,6 +449,15 @@ body.has-ant-buster-page {
       jitterRate = 1.5;      // less wander when going home
       wanderScale = 0.3;     // tighten the sway when loaded
       speed = ant.speed * 0.7;
+    } else {
+      // Final approach: within 2 squares (32px) of the cake, lock in for the grab.
+      var dxc = ant.x - game.cake.x;
+      var dyc = ant.y - game.cake.y;
+      if (dxc * dxc + dyc * dyc < 32 * 32) {
+        alignment = 0.9;
+        jitterRate = 0.5;
+        wanderScale = 0.0;
+      }
     }
     ant.wanderPhase += ant.wanderFreq * dt * Math.PI * 2;
     var wanderOffset = Math.sin(ant.wanderPhase) * ant.wanderAmp * wanderScale;
