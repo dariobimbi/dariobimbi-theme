@@ -23,7 +23,7 @@
 
   <!-- wp:html -->
   <div class="ab-stage">
-    <canvas id="ab-canvas" data-role="canvas" aria-label="Ant Buster game canvas" width="960" height="540"></canvas>
+    <canvas id="ab-canvas" data-role="canvas" aria-label="Ant Buster game canvas" width="1280" height="720"></canvas>
   </div>
   <!-- /wp:html -->
 
@@ -53,7 +53,7 @@ body.has-ant-buster-page {
 }
 
 .demo-ant-buster #ab-canvas {
-  width: 960px;
+  width: 1280px;
   max-width: 100%;
   height: auto;
   aspect-ratio: 16 / 9;
@@ -84,29 +84,70 @@ body.has-ant-buster-page {
   document.body.classList.add('has-ant-buster-page');
 
   // === CONSTANTS ===
-  var WIDTH = 480;
-  var HEIGHT = 270;
-  var PLAYFIELD_W = 320;
-  var PLAYFIELD_H = 246;
+  var WIDTH = 640;
+  var HEIGHT = 360;
+  var PLAYFIELD_W = 480;
   var HUD_H = 24;
   var SHOP_W = 160;
   var TARGET_FPS = 60;
   var FIXED_DT = 1 / TARGET_FPS;
 
+  // === DEBUG MODE ===
+  // Captured once at parse time from the URL. ?debug=1 enables the T hotkey
+  // (cycles spawning each ant kind at the anthill). The check uses a plain
+  // regex — splitting case avoids the `||` operator, which gets HTML-encoded
+  // inside inline scripts in this theme.
+  var DEBUG = /[?&]debug=1/.test(location.search);
+  var DEBUG_KINDS = ['worker', 'carrier', 'scout', 'soldier', 'tank', 'splitter', 'phase', 'bomber', 'queen'];
+  var debugCycleIdx = 0;
+
   // === GAME STATE ===
+  // Two flag layers, intentionally kept separate (Plan 2 Task 5):
+  //   game.state     — 'idle' | 'playing'   (top-level: has the player started?)
+  //   game.waveState — 'prep' | 'wave' | 'won' | 'lost'   (campaign progress)
+  // Rationale: 'idle' is a pre-game splash concern; win/lose belongs to the wave
+  // state machine. The render and input layers read whichever flag is relevant.
   var game = {
-    state: 'idle',            // 'idle' | 'playing' | 'won' | 'lost'
+    state: 'idle',            // 'idle' | 'playing'
     time: 0,                  // seconds since game start
     accumulator: 0,           // for fixed-timestep
-    cake: { x: 264, y: 56, slices: 8, lost: 0 },
-    anthill: { x: 16, y: 135 },
+    cake: { x: 352, y: 76, slices: 8, lost: 0 },
+    anthill: { x: 22, y: 184 },
     ants: [],
     cannons: [],
     projectiles: [],
+    effects: [],              // transient visual effects (e.g. Bomber AoE flash); see updateEffects
+    slices: [],               // fallen cake slices on the ground (Task 23); 8s timeout returns to cake
     sprites: {},              // populated in Task 4
     gold: 150,
-    wave: 1
+    waveIndex: 0,             // index into WAVES
+    waveState: 'prep',        // 'prep' | 'wave' | 'won' | 'lost'
+    prepRemaining: 30,        // seconds remaining in current prep window
+    spawner: { groupIndex: 0, spawnedInGroup: 0, nextSpawnAt: 0, queueDone: false },
+    banner: { active: false, text: '', startedAt: 0, duration: 2.5, isBoss: false },
+    paused: false,
+    speed: 1
   };
+
+  // Module-level rect helper used by HUD hit-tests. Avoids inline `&&` chains
+  // (which the WP content filter occasionally HTML-encodes) and centralizes the
+  // pattern that future tasks will reuse for upgrade buttons, selected-tower UI, etc.
+  function inRect(p, r) {
+    if (p.x < r.x) { return false; }
+    if (p.x > r.x + r.w) { return false; }
+    if (p.y < r.y) { return false; }
+    if (p.y > r.y + r.h) { return false; }
+    return true;
+  }
+
+  // Show a wave-intro banner. Duration is longer for boss waves.
+  function showBanner(text, isBoss) {
+    game.banner.active = true;
+    game.banner.text = text;
+    game.banner.startedAt = game.time;
+    game.banner.duration = isBoss ? 3 : 2.5;
+    game.banner.isBoss = isBoss;
+  }
 
   // === CANVAS SETUP ===
   var canvas = document.getElementById('ab-canvas');
@@ -137,6 +178,155 @@ body.has-ant-buster-page {
     x.fillStyle = '#181425';
     x.fillRect(7, 1, 1, 2);                     // antenna L
     x.fillRect(8, 1, 1, 2);                     // antenna R
+    return c;
+  }
+
+  function makeSoldierSprite() {
+    var c = makeCanvas(16, 16);
+    var x = c.getContext('2d');
+    x.fillStyle = '#2a2d42';                    // darker base than worker
+    x.beginPath();
+    x.ellipse(8, 9, 6, 5, 0, 0, Math.PI * 2);   // chunkier body
+    x.fill();
+    x.fillStyle = '#1a1d32';                    // very dark head
+    x.fillRect(6, 4, 4, 3);                     // blocky head / helmet
+    x.fillStyle = '#3a4466';                    // helmet highlight
+    x.fillRect(7, 3, 2, 1);                     // small helmet peak on top
+    x.fillStyle = '#181425';
+    x.fillRect(5, 2, 1, 1);                     // antenna L
+    x.fillRect(10, 2, 1, 1);                    // antenna R
+    return c;
+  }
+
+  function makeScout() {
+    var c = makeCanvas(12, 12);
+    var x = c.getContext('2d');
+    x.fillStyle = '#f4b41b';
+    x.fillRect(3, 3, 6, 6);                     // body
+    x.fillStyle = '#222034';
+    x.fillRect(5, 1, 2, 2);                     // head / eyes
+    x.fillRect(2, 4, 1, 2);                     // left leg
+    x.fillRect(9, 4, 1, 2);                     // right leg
+    x.fillRect(4, 10, 1, 1);                    // left rear leg
+    x.fillRect(7, 10, 1, 1);                    // right rear leg
+    return c;
+  }
+
+  function makeTank() {
+    var c = makeCanvas(24, 24);
+    var x = c.getContext('2d');
+    // Heavy armored body, dark grey; blocky treads visual
+    x.fillStyle = '#3a4053';
+    x.beginPath();
+    x.ellipse(12, 12, 8, 6, 0, 0, Math.PI * 2);   // main body, broader than worker
+    x.fill();
+    x.fillStyle = '#2a2f42';                       // darker accent
+    x.fillRect(5, 10, 14, 2);                      // bottom plate / tread line
+    x.fillStyle = '#4a5063';                       // lighter accent for armor plating
+    x.fillRect(4, 8, 3, 8);                        // left armor plate
+    x.fillRect(16, 8, 3, 8);                       // right armor plate
+    x.fillStyle = '#1a1c2c';                       // very dark head
+    x.fillRect(10, 5, 4, 3);                       // head
+    return c;
+  }
+
+  function makeSplitter() {
+    var c = makeCanvas(16, 16);
+    var x = c.getContext('2d');
+    // Two halves of a splittable body, slightly offset, with a fissure line down the middle.
+    x.fillStyle = '#5a9c7d';                    // green-blue base
+    x.beginPath();
+    x.ellipse(5, 8, 4, 4, 0, 0, Math.PI * 2);   // left half body
+    x.fill();
+    x.fillStyle = '#4a8c6d';                    // slightly darker right half
+    x.beginPath();
+    x.ellipse(11, 8, 4, 4, 0, 0, Math.PI * 2);  // right half body
+    x.fill();
+    x.fillStyle = '#262b44';
+    x.fillRect(7, 7, 2, 4);                     // fissure line down middle
+    x.fillStyle = '#3a4466';
+    x.fillRect(4, 3, 2, 2);                     // left head bump
+    x.fillRect(10, 3, 2, 2);                    // right head bump
+    x.fillStyle = '#181425';
+    x.fillRect(4, 1, 1, 2);                     // antenna L
+    x.fillRect(11, 1, 1, 2);                    // antenna R
+    return c;
+  }
+
+  function makeMiniSplitter() {
+    var c = makeCanvas(8, 8);
+    var x = c.getContext('2d');
+    // Crude small version: two pixel halves with a fissure.
+    x.fillStyle = '#5a9c7d';
+    x.fillRect(1, 2, 3, 4);                     // left half
+    x.fillStyle = '#4a8c6d';
+    x.fillRect(4, 2, 3, 4);                     // right half
+    x.fillStyle = '#262b44';
+    x.fillRect(3, 2, 2, 4);                     // fissure
+    x.fillStyle = '#181425';
+    x.fillRect(1, 0, 1, 1);                     // antenna L
+    x.fillRect(6, 0, 1, 1);                     // antenna R
+    return c;
+  }
+
+  function makeBomber() {
+    var c = makeCanvas(16, 16);
+    var x = c.getContext('2d');
+    // Red-orange ant body reading as a "carrier of explosives" with a small dark
+    // fuse-spot on top. Same overall silhouette as worker so it still reads as ant.
+    x.fillStyle = '#e43b44';
+    x.beginPath();
+    x.ellipse(8, 9, 5, 4, 0, 0, Math.PI * 2);   // body
+    x.fill();
+    x.fillStyle = '#a8302f';                    // darker red accent
+    x.fillRect(5, 9, 6, 1);                     // belly stripe
+    x.fillStyle = '#f57b3f';                    // orange head
+    x.fillRect(7, 4, 3, 3);                     // head
+    x.fillStyle = '#222034';
+    x.fillRect(8, 2, 1, 2);                     // dark fuse-like spot on top
+    x.fillStyle = '#fee761';
+    x.fillRect(8, 1, 1, 1);                     // tiny spark on the fuse tip
+    x.fillStyle = '#181425';
+    x.fillRect(6, 3, 1, 1);                     // antenna L
+    x.fillRect(10, 3, 1, 1);                    // antenna R
+    return c;
+  }
+
+  function makeQueen() {
+    var c = makeCanvas(24, 24);
+    var x = c.getContext('2d');
+    // Regal silhouette: deep purple/burgundy body with crown-like light yellow pixels.
+    x.fillStyle = '#682837';
+    x.beginPath();
+    x.ellipse(12, 14, 7, 6, 0, 0, Math.PI * 2);   // body
+    x.fill();
+    x.fillStyle = '#a44444';                      // lighter burgundy for head
+    x.fillRect(10, 8, 4, 4);                      // head
+    x.fillStyle = '#fee761';                      // crown color: light yellow
+    x.fillRect(9, 6, 2, 2);                       // crown left peak
+    x.fillRect(13, 6, 2, 2);                      // crown right peak
+    x.fillRect(11, 5, 2, 2);                      // crown center peak
+    x.fillStyle = '#181425';
+    x.fillRect(8, 4, 1, 1);                       // antenna L
+    x.fillRect(15, 4, 1, 1);                      // antenna R
+    return c;
+  }
+
+  function makePhase() {
+    var c = makeCanvas(16, 16);
+    var x = c.getContext('2d');
+    // Ghostly translucent purple body with thin outline.
+    x.fillStyle = '#7d4a8c';
+    x.fillRect(4, 3, 8, 10);                    // body
+    x.fillRect(3, 5, 2, 6);                     // left segment
+    x.fillRect(11, 5, 2, 6);                    // right segment
+    x.fillStyle = '#5a3a6c';
+    x.strokeStyle = '#3d2a5c';
+    x.lineWidth = 1;
+    x.strokeRect(4, 3, 8, 10);                  // outline
+    x.fillStyle = '#181425';
+    x.fillRect(6, 1, 1, 1);                     // antenna L
+    x.fillRect(9, 1, 1, 1);                     // antenna R
     return c;
   }
 
@@ -171,6 +361,120 @@ body.has-ant-buster-page {
     x.fillRect(8, 4, 4, 12);                    // barrel pointing up (rotated at draw time)
     x.fillStyle = '#181425';
     x.fillRect(7, 2, 6, 3);                     // barrel tip
+    return c;
+  }
+
+  function makeCannonTurretRepeater() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    // Thinner, longer barrel; green-ish.
+    x.fillStyle = '#5a7d4a';
+    x.fillRect(9, 1, 2, 15);                    // long thin barrel
+    x.fillStyle = '#3a5d2a';
+    x.fillRect(8, 0, 4, 2);                     // barrel tip
+    return c;
+  }
+
+  function makeCannonTurretAutocannon() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    // Chunkier than Repeater; same green family, slightly darker.
+    x.fillStyle = '#4a7d6a';
+    x.fillRect(8, 1, 4, 15);                    // wider barrel
+    x.fillStyle = '#2a5d4a';
+    x.fillRect(7, 0, 6, 3);                     // wide tip
+    x.fillStyle = '#6a9d8a';
+    x.fillRect(7, 11, 6, 4);                    // breech band
+    return c;
+  }
+
+  function makeCannonTurretVulcan() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    // Multi-barrel rotary; teal-ish.
+    x.fillStyle = '#3a8c8c';
+    x.fillRect(5, 3, 2, 13);                    // left barrel
+    x.fillRect(9, 3, 2, 13);                    // center barrel
+    x.fillRect(13, 3, 2, 13);                   // right barrel
+    x.fillStyle = '#1a5c5c';
+    x.fillRect(4, 1, 4, 3);                     // left tip
+    x.fillRect(8, 1, 4, 3);                     // center tip
+    x.fillRect(12, 1, 4, 3);                    // right tip
+    x.fillStyle = '#5aacac';
+    x.fillRect(4, 12, 12, 4);                   // wide breech housing
+    return c;
+  }
+
+  function makeCannonTurretTwinGun() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    // Two short side-by-side barrels; purple-ish.
+    x.fillStyle = '#7d4a7d';
+    x.fillRect(6, 5, 3, 11);                    // left barrel
+    x.fillRect(11, 5, 3, 11);                   // right barrel
+    x.fillStyle = '#5d2a5d';
+    x.fillRect(5, 3, 4, 3);                     // left tip
+    x.fillRect(11, 3, 4, 3);                    // right tip
+    return c;
+  }
+
+  function makeCannonTurretFrost() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    // Thin barrel with frost crystal/icicle accents; light blue.
+    x.fillStyle = '#7da4f7';
+    x.fillRect(9, 2, 2, 14);                    // thin barrel
+    x.fillStyle = '#5a82d4';
+    x.fillRect(8, 1, 4, 2);                     // tip
+    x.fillStyle = '#bcd4fc';
+    x.fillRect(7, 5, 1, 2);                     // left icicle accent
+    x.fillRect(12, 8, 1, 2);                    // right icicle accent
+    x.fillRect(7, 11, 1, 2);                    // left lower accent
+    x.fillStyle = '#e0ecff';
+    x.fillRect(9, 0, 2, 1);                     // crystal sparkle at tip
+    return c;
+  }
+
+  function makeCannonTurretGlacier() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    // Pale icy blue with wider barrel and cooling fins.
+    x.fillStyle = '#a4d4ff';
+    x.fillRect(7, 3, 6, 13);                    // wide barrel
+    x.fillStyle = '#6fa4d4';
+    x.fillRect(6, 1, 8, 3);                     // wide tip
+    x.fillStyle = '#7ab4e4';
+    x.fillRect(5, 6, 2, 2);                     // left cooling fin upper
+    x.fillRect(13, 6, 2, 2);                    // right cooling fin upper
+    x.fillRect(5, 10, 2, 2);                    // left cooling fin lower
+    x.fillRect(13, 10, 2, 2);                   // right cooling fin lower
+    x.fillStyle = '#e4f4ff';
+    x.fillRect(8, 0, 4, 1);                     // crystal sparkle
+    x.fillRect(9, 7, 2, 5);                     // inner barrel highlight
+    return c;
+  }
+
+  function makeCannonTurretSiege() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    // Chunky stubby barrel; dark red.
+    x.fillStyle = '#5a3a44';
+    x.fillRect(7, 4, 6, 12);                    // wide barrel
+    x.fillStyle = '#3a1a24';
+    x.fillRect(6, 2, 8, 3);                     // wide tip
+    return c;
+  }
+
+  function makeCannonTurretRailgun() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    // Sleek long barrel; dark red-violet.
+    x.fillStyle = '#6f3a44';
+    x.fillRect(9, 0, 2, 17);                    // very long thin barrel
+    x.fillStyle = '#4f1a24';
+    x.fillRect(8, 0, 4, 3);                     // tip
+    x.fillStyle = '#9a5a64';
+    x.fillRect(7, 12, 6, 4);                    // breech block
     return c;
   }
 
@@ -222,27 +526,160 @@ body.has-ant-buster-page {
 
   game.sprites = {
     worker: makeWorkerSprite(),
+    soldier: makeSoldierSprite(),
+    scout: makeScout(),
+    tank: makeTank(),
+    splitter: makeSplitter(),
+    mini_splitter: makeMiniSplitter(),
+    phase: makePhase(),
+    bomber: makeBomber(),
+    queen: makeQueen(),
     splat: makeAntSplat(),
     cannonBase: makeCannonBase(),
-    cannonTurret: makeCannonTurret(),
+    cannonTurret: makeCannonTurret(),         // kept for backward refs; lookups now go through turrets[kind]
+    turrets: {
+      howitzer: makeCannonTurret(),
+      siege: makeCannonTurretSiege(),
+      railgun: makeCannonTurretRailgun(),
+      repeater: makeCannonTurretRepeater(),
+      autocannon: makeCannonTurretAutocannon(),
+      vulcan: makeCannonTurretVulcan(),
+      twingun: makeCannonTurretTwinGun(),
+      frost: makeCannonTurretFrost(),
+      glacier: makeCannonTurretGlacier()
+    },
     anthill: makeAnthill(),
     projectile: makeProjectile()
   };
   // Note: cake sprite is regenerated in render() per frame because it depends on slice count.
 
   // === RENDERING ===
-  function render() {
-    // Background
+  function drawShop() {
+    var cardX = PLAYFIELD_W + 8;
+    var startY = 32;
+    var cardH = 70;
+    var cardW = SHOP_W - 16;
+    var keys = ['howitzer', 'repeater', 'twingun'];
+    ui.shopRects = [];
+    for (var i = 0; i < keys.length; i++) {
+      var k = keys[i];
+      var sk = CANNON_KINDS[k];
+      var cy = startY + i * (cardH + 8);
+      // card background
+      ctx.fillStyle = '#262b44';
+      ctx.fillRect(cardX, cy, cardW, cardH);
+      // turret sprite mini icon (top-left of card)
+      var turret = game.sprites.turrets[k];
+      if (turret) { ctx.drawImage(turret, cardX + 6, cy + 6); }
+      // name
+      ctx.fillStyle = '#fee761';
+      ctx.font = '10px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText(sk.name, cardX + 32, cy + 22);
+      // cost
+      var canAfford = game.gold >= sk.cost;
+      ctx.fillStyle = canAfford ? '#fee761' : '#888';
+      ctx.fillText(sk.cost + 'g', cardX + 32, cy + 38);
+      // tier or family hint (small)
+      ctx.fillStyle = '#999';
+      ctx.font = '8px monospace';
+      ctx.fillText(sk.family, cardX + 32, cy + 52);
+      ui.shopRects.push({ x: cardX, y: cy, w: cardW, h: cardH, kind: k });
+    }
+    ctx.font = '10px monospace';   // restore default
+    ctx.textAlign = 'start';
+  }
+
+  // Sell refund = 70% of the floored sum of every kind ever owned (kindHistory
+  // includes the base from placeCannon and every kind pushed by upgradeCannon).
+  // Spec SYS-2's literal text double-counts the base, so this implements the
+  // intent: 70% of total spend across the upgrade chain.
+  function sellRefund(c) {
+    var total = 0;
+    for (var i = 0; i < c.kindHistory.length; i++) {
+      total = total + CANNON_KINDS[c.kindHistory[i]].cost;
+    }
+    return Math.floor(0.7 * total);
+  }
+
+  function upgradeCannon(c, toKind) {
+    var udef = CANNON_KINDS[toKind];
+    if (!udef) { return; }
+    if (game.gold < udef.cost) { return; }
+    game.gold = game.gold - udef.cost;
+    c.kind = toKind;
+    c.kindHistory.push(toKind);
+  }
+
+  function sellCannon(c) {
+    var refund = sellRefund(c);
+    game.gold = game.gold + refund;
+    var idx = game.cannons.indexOf(c);
+    if (idx >= 0) { game.cannons.splice(idx, 1); }
+    ui.selectedCannon = null;
+  }
+
+  function drawTowerPanel(c) {
+    var sk = CANNON_KINDS[c.kind];
+    var px = PLAYFIELD_W + 8;
+    var py = 32;
+    var pw = SHOP_W - 16;
+    ctx.fillStyle = '#262b44';
+    ctx.fillRect(px, py, pw, 200);
+    ctx.fillStyle = '#fee761';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(sk.name, px + 6, py + 14);
+    ctx.fillStyle = '#cccccc';
+    ctx.fillText('DMG ' + sk.damage, px + 6, py + 30);
+    ctx.fillText('RATE ' + sk.fireRate + '/s', px + 6, py + 42);
+    ctx.fillText('RANGE ' + sk.range, px + 6, py + 54);
+    var killCount;
+    if (c.kills) { killCount = c.kills; } else { killCount = 0; }
+    ctx.fillText('KILLS ' + killCount, px + 6, py + 66);
+
+    // Upgrade buttons (up to 2) — only present when sk.upgradesTo is non-empty.
+    var upgrades = sk.upgradesTo;
+    if (!upgrades) { upgrades = []; }
+    for (var i = 0; i < upgrades.length; i++) {
+      var uk = upgrades[i];
+      var udef = CANNON_KINDS[uk];
+      var by = py + 90 + i * 22;
+      var canAfford = (game.gold >= udef.cost);
+      ctx.fillStyle = canAfford ? '#3a8c3a' : '#444';
+      ctx.fillRect(px + 6, by, pw - 12, 18);
+      ctx.fillStyle = canAfford ? '#fee761' : '#888';
+      ctx.fillText('-> ' + udef.name + ' (' + udef.cost + 'g)', px + 10, by + 12);
+      ui.upgradeRects[i] = { x: px + 6, y: by, w: pw - 12, h: 18, toKind: uk };
+    }
+    for (var k = upgrades.length; k < 2; k++) { ui.upgradeRects[k] = null; }
+
+    // Sell button — pinned near the bottom of the panel rect.
+    var refund = sellRefund(c);
+    var sy = py + 200 - 26;
+    ctx.fillStyle = '#a44';
+    ctx.fillRect(px + 6, sy, pw - 12, 18);
+    ctx.fillStyle = '#fee761';
+    ctx.fillText('Sell (+' + refund + 'g)', px + 10, sy + 12);
+    ui.sellRect = { x: px + 6, y: sy, w: pw - 12, h: 18 };
+
+    ctx.textAlign = 'start';
+  }
+
+  // === Render helpers (z-order spec §3.5, layers 1–13) ===
+  // render() is the single entry point and walks back-to-front through the
+  // canonical layer list. Each helper below owns one layer (or one z-slot).
+
+  // Layer 1: blanket + grass tiles + cake plate background.
+  function drawBackground() {
     ctx.fillStyle = '#193c3e';
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-    // Grass border (whole canvas is grass-colored already; blanket sits on top)
-    var blanketX = 32;
-    var blanketY = 32;
-    var blanketW = 256;
-    var blanketH = 200;
-
-    // Picnic blanket — alternating red/white check
+    // Picnic blanket — alternating red/white check on top of the grass field.
+    var blanketX = 48;
+    var blanketY = 48;
+    var blanketW = 384;
+    var blanketH = 272;
     var checkSize = 16;
     for (var by = 0; by < blanketH; by += checkSize) {
       for (var bx = 0; bx < blanketW; bx += checkSize) {
@@ -252,39 +689,88 @@ body.has-ant-buster-page {
       }
     }
 
-    // Anthill
-    ctx.drawImage(game.sprites.anthill, game.anthill.x - 16, game.anthill.y - 16);
-
-    // Cake (regenerated each frame since it depends on slice count)
-    var cakeSprite = makeCake(game.cake.slices);
-    ctx.drawImage(cakeSprite, game.cake.x - 16, game.cake.y - 16);
-
-    // HUD bar
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
-    ctx.fillRect(0, 0, PLAYFIELD_W, HUD_H);
-    ctx.font = '10px monospace';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#fee761';
-    ctx.fillText('Gold: ' + game.gold, 6, 12);
-    ctx.fillStyle = '#e43b44';
-    ctx.fillText('Cake: ' + game.cake.slices + '/8', 76, 12);
-    ctx.fillStyle = '#ff8888';
-    ctx.fillText('Lost: ' + game.cake.lost + '/8', 156, 12);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText('Wave: ' + game.wave, 240, 12);
-    ctx.textBaseline = 'alphabetic';
-
-    // Shop panel (right)
+    // Shop panel background (right column). Drawn early so HUD/shop content
+    // composites over it later in the layer list.
     ctx.fillStyle = '#1a1c2c';
     ctx.fillRect(PLAYFIELD_W, 0, SHOP_W, HEIGHT);
+  }
 
-    // Ants
-    for (var i = 0; i < game.ants.length; i++) {
-      var a = game.ants[i];
-      var sprite = a.dead ? game.sprites.splat : game.sprites.worker;
-      ctx.drawImage(sprite, Math.round(a.x - 8), Math.round(a.y - 8));
+  // Layer 2: cake (regenerated each frame because it depends on slice count).
+  function drawCake() {
+    var cakeSprite = makeCake(game.cake.slices);
+    ctx.drawImage(cakeSprite, game.cake.x - 16, game.cake.y - 16);
+  }
+
+  // Layer 3: anthill.
+  function drawAnthill() {
+    ctx.drawImage(game.sprites.anthill, game.anthill.x - 16, game.anthill.y - 16);
+  }
+
+  // Layer 4: fallen slices on the ground. Inline 6x4 frosted-orange block with a
+  // tiny shadow strip and a yellow highlight pixel — they read as on the ground
+  // because cannons and ants render over them.
+  function drawSlices() {
+    for (var si = 0; si < game.slices.length; si++) {
+      var sl = game.slices[si];
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.fillRect(sl.x - 3, sl.y + 1, 6, 2);
+      ctx.fillStyle = '#ff9c40';
+      ctx.fillRect(sl.x - 3, sl.y - 2, 6, 4);
+      ctx.fillStyle = '#fee761';
+      ctx.fillRect(sl.x - 2, sl.y - 1, 2, 1);
+    }
+  }
+
+  // Layer 5: range circle for the selected cannon. Drawn under ants and cannons
+  // so it never obscures moving entities.
+  function drawRangeCircle(c) {
+    var selKind = CANNON_KINDS[c.kind];
+    ctx.strokeStyle = 'rgba(255, 231, 97, 0.5)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, selKind.range, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Layer 6: static cannon bases. Split from the turret pass so the round bases
+  // sit under ants while the turrets read on top.
+  function drawCannonBases() {
+    for (var ci = 0; ci < game.cannons.length; ci++) {
+      var c = game.cannons[ci];
+      ctx.drawImage(game.sprites.cannonBase, Math.round(c.x - 16), Math.round(c.y - 16));
+    }
+  }
+
+  // Layer 7: ants, sorted top-down by y so a lower ant draws over a higher one.
+  // The slice() copy keeps game.ants stable for indices/refs used elsewhere.
+  function drawAnts() {
+    var sorted = game.ants.slice().sort(function(a, b) { return a.y - b.y; });
+    for (var i = 0; i < sorted.length; i++) {
+      var a = sorted[i];
+      var k = ANT_KINDS[a.kind];
+      var sprite;
+      if (a.dead) {
+        // Delivered ants vanish silently. Only killed ants splat. Nested ifs avoid
+        // the AND operator (gets HTML-encoded inside inline scripts in this theme).
+        if (a.deliveredAt === 0) {
+          sprite = game.sprites.splat;
+        } else {
+          continue;
+        }
+      } else {
+        sprite = game.sprites[k.spriteKey];
+      }
+      if (a.intangible) {
+        ctx.save();
+        ctx.globalAlpha = 0.3;
+        ctx.drawImage(sprite, Math.round(a.x - k.spriteW / 2), Math.round(a.y - k.spriteH / 2));
+        ctx.restore();
+      } else {
+        ctx.drawImage(sprite, Math.round(a.x - k.spriteW / 2), Math.round(a.y - k.spriteH / 2));
+      }
       if (!a.dead) {
         if (a.carrying) {
+          // Crumb sub-step: tiny orange dot above the ant body.
           ctx.fillStyle = '#feae34';
           ctx.fillRect(Math.round(a.x - 3), Math.round(a.y - 12), 6, 4);
           ctx.fillStyle = '#fee761';
@@ -292,127 +778,586 @@ body.has-ant-buster-page {
         }
       }
     }
+  }
 
-    // Shop card for Howitzer
-    var cardX = PLAYFIELD_W + 8;
-    var cardY = 32;
-    ctx.fillStyle = '#2a2f3e';
-    ctx.fillRect(cardX, cardY, 56, 64);
-    ctx.drawImage(game.sprites.cannonBase, cardX + 12, cardY + 4);
-    ctx.drawImage(game.sprites.cannonTurret, cardX + 18, cardY + 10);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '8px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('Howitzer', cardX + 28, cardY + 50);
-    ctx.fillStyle = (game.gold >= CANNON_DEFS.howitzer.cost) ? '#fee761' : '#888';
-    ctx.fillText('50g', cardX + 28, cardY + 60);
-    ctx.textAlign = 'start';
-
-    // Placed cannons
+  // Layer 8: cannon turrets + disabled-spark indicators (the muzzle-flash slot
+  // for future tasks). Bases are drawn earlier; this pass covers the rotating
+  // turret sprite.
+  function drawCannonTurrets() {
     for (var ci = 0; ci < game.cannons.length; ci++) {
       var c = game.cannons[ci];
-      ctx.drawImage(game.sprites.cannonBase, Math.round(c.x - 16), Math.round(c.y - 16));
       ctx.save();
       ctx.translate(Math.round(c.x), Math.round(c.y));
       ctx.rotate(c.heading + Math.PI / 2);
-      ctx.drawImage(game.sprites.cannonTurret, -10, -16);
+      var turretSprite = game.sprites.turrets[c.kind];
+      if (!turretSprite) { turretSprite = game.sprites.turrets.howitzer; }
+      ctx.drawImage(turretSprite, -10, -16);
       ctx.restore();
+      if (c.disabled) {
+        if (Math.floor(game.time * 6) % 2 === 0) {
+          ctx.fillStyle = '#ff5040';
+          ctx.fillRect(c.x - 1, c.y - 16, 2, 2);
+          ctx.fillRect(c.x + 3, c.y - 14, 2, 2);
+        }
+      }
     }
+  }
 
-    // Projectiles
+  // Layer 9a: projectiles.
+  function drawProjectiles() {
     for (var pi = 0; pi < game.projectiles.length; pi++) {
       var p = game.projectiles[pi];
       ctx.drawImage(game.sprites.projectile, Math.round(p.x - 2), Math.round(p.y - 2));
     }
+  }
 
-    // Drag preview
-    if (ui.dragging) {
-      var ok = canPlaceCannon(ui.mouseX, ui.mouseY);
-      ctx.globalAlpha = 0.6;
-      ctx.drawImage(game.sprites.cannonBase, Math.round(ui.mouseX - 16), Math.round(ui.mouseY - 16));
-      ctx.drawImage(game.sprites.cannonTurret, Math.round(ui.mouseX - 10), Math.round(ui.mouseY - 16));
-      ctx.globalAlpha = 1;
-      ctx.strokeStyle = ok ? 'rgba(255, 255, 255, 0.5)' : 'rgba(228, 59, 68, 0.7)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.arc(ui.mouseX, ui.mouseY, CANNON_DEFS.howitzer.range, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-
-    if (game.state === 'idle') {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-      ctx.fillRect(0, 0, WIDTH, HEIGHT);
-      ctx.fillStyle = '#fee761';
-      ctx.font = '16px monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText('ANT BUSTER', WIDTH / 2, HEIGHT / 2 - 16);
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '10px monospace';
-      ctx.fillText('Defend the cake from the ants', WIDTH / 2, HEIGHT / 2 + 4);
-      ctx.fillText('Click to start', WIDTH / 2, HEIGHT / 2 + 22);
-      ctx.textAlign = 'start';
-    }
-
-    if (game.state === 'playing') {
-      if (game.time < 4) {
-        if (game.cannons.length === 0) {
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-          ctx.fillRect(60, 100, 200, 70);
-          ctx.fillStyle = '#fee761';
-          ctx.font = '10px monospace';
-          ctx.textAlign = 'center';
-          ctx.fillText('Drag a cannon from the shop', 160, 130);
-          ctx.fillText('onto the picnic blanket to start!', 160, 145);
-          ctx.textAlign = 'start';
+  // Layer 9b: beam lines (Glacier). Thin icy line from a beam cannon to its
+  // current live target. Only drawn while the target is alive.
+  function drawBeams() {
+    for (var bi = 0; bi < game.cannons.length; bi++) {
+      var bc = game.cannons[bi];
+      var bdef = CANNON_KINDS[bc.kind];
+      if (bdef.beam) {
+        if (bc.beamTarget) {
+          if (!bc.beamTarget.dead) {
+            ctx.strokeStyle = '#a4d4ff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(bc.x, bc.y);
+            ctx.lineTo(bc.beamTarget.x, bc.beamTarget.y);
+            ctx.stroke();
+          }
         }
       }
     }
+  }
 
-    if (game.state === 'lost') {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-      ctx.fillRect(0, 0, WIDTH, HEIGHT);
-      ctx.fillStyle = '#e43b44';
-      ctx.font = '16px monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText('THE ANTS WIN', WIDTH / 2, HEIGHT / 2 - 12);
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '10px monospace';
-      ctx.fillText('Click to restart', WIDTH / 2, HEIGHT / 2 + 8);
-      ctx.textAlign = 'start';
-    }
-
-    if (game.state === 'won') {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-      ctx.fillRect(0, 0, WIDTH, HEIGHT);
-      ctx.fillStyle = '#fee761';
-      ctx.font = '16px monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText('CAKE SAVED', WIDTH / 2, HEIGHT / 2 - 12);
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '10px monospace';
-      ctx.fillText('Click to restart', WIDTH / 2, HEIGHT / 2 + 8);
-      ctx.textAlign = 'start';
+  // Layer 10: transient effects — AoE rings today, hit sparks/splat fades/
+  // phase shimmer/status indicators slot in here as later tasks add them.
+  // Each entry advances its own `t` in updateEffects; render uses p = t/life
+  // as an animation parameter (0 to 1) for ring expansion + fade.
+  function drawEffects() {
+    for (var ei = 0; ei < game.effects.length; ei++) {
+      var ef = game.effects[ei];
+      if (ef.kind === 'bomber_aoe') {
+        var p = ef.t / ef.life;
+        ctx.strokeStyle = 'rgba(255,80,40,' + (1 - p) + ')';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(ef.x, ef.y, 60 * p, 0, Math.PI * 2);
+        ctx.stroke();
+      }
     }
   }
 
+  // Layer 11: HUD strip across the top of the playfield. Gold, cake, lost,
+  // wave index, prep timer, send-next button, pause + speed widgets.
+  function drawHud() {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+    ctx.fillRect(0, 0, PLAYFIELD_W, HUD_H);
+    ctx.font = '10px monospace';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#fee761';
+    ctx.fillText('Gold: ' + game.gold, 54, 12);
+    ctx.fillStyle = '#e43b44';
+    ctx.fillText('Cake: ' + game.cake.slices + '/8', 124, 12);
+    ctx.fillStyle = '#ff8888';
+    ctx.fillText('Lost: ' + game.cake.lost + '/8', 200, 12);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('W: ' + (game.waveIndex + 1) + '/' + WAVES.length, 276, 12);
+    if (game.waveState === 'prep') {
+      ctx.fillStyle = '#aef0a0';
+      ctx.fillText('Prep: ' + Math.ceil(game.prepRemaining) + 's', 320, 12);
+      var btnX = PLAYFIELD_W - 80;
+      var btnY = 4;
+      var btnW = 76;
+      var btnH = 16;
+      ui.sendNextRect = { x: btnX, y: btnY, w: btnW, h: btnH };
+      ctx.fillStyle = '#5a7d4a';
+      ctx.fillRect(btnX, btnY, btnW, btnH);
+      ctx.fillStyle = '#fee761';
+      ctx.textAlign = 'center';
+      ctx.fillText('Send Next', btnX + btnW / 2, btnY + btnH / 2);
+      ctx.textAlign = 'start';
+    } else {
+      ui.sendNextRect = null;
+    }
+    // Pause widget: two vertical bars when running, right-pointing triangle
+    // when paused.
+    ctx.fillStyle = '#2a2f3e';
+    ctx.fillRect(ui.pauseRect.x, ui.pauseRect.y, ui.pauseRect.w, ui.pauseRect.h);
+    ctx.fillStyle = '#fee761';
+    if (game.paused) {
+      ctx.beginPath();
+      ctx.moveTo(ui.pauseRect.x + 5, ui.pauseRect.y + 4);
+      ctx.lineTo(ui.pauseRect.x + 12, ui.pauseRect.y + 8);
+      ctx.lineTo(ui.pauseRect.x + 5, ui.pauseRect.y + 12);
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      ctx.fillRect(ui.pauseRect.x + 5, ui.pauseRect.y + 4, 2, 8);
+      ctx.fillRect(ui.pauseRect.x + 9, ui.pauseRect.y + 4, 2, 8);
+    }
+    // Speed widget — 1x or 2x label.
+    ctx.fillStyle = '#2a2f3e';
+    ctx.fillRect(ui.speedRect.x, ui.speedRect.y, ui.speedRect.w, ui.speedRect.h);
+    ctx.fillStyle = '#fee761';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    var speedLabel;
+    if (game.speed === 2) { speedLabel = '2x'; } else { speedLabel = '1x'; }
+    ctx.fillText(speedLabel, ui.speedRect.x + ui.speedRect.w / 2, ui.speedRect.y + ui.speedRect.h / 2);
+    ctx.textAlign = 'start';
+    ctx.textBaseline = 'alphabetic';
+  }
+
+  // Layer 13a: drag preview (ghost cannon under the cursor while dragging from
+  // the shop). Sits inside the overlays bucket because it is UI feedback drawn
+  // above gameplay, but below pause/win/lose modals.
+  function drawDragPreview() {
+    if (!ui.dragging) { return; }
+    var ok = canPlaceCannon(ui.mouseX, ui.mouseY);
+    var dragDef = CANNON_KINDS[ui.dragging.kind];
+    var dragTurret = game.sprites.turrets[ui.dragging.kind];
+    if (!dragTurret) { dragTurret = game.sprites.turrets.howitzer; }
+    ctx.globalAlpha = 0.6;
+    ctx.drawImage(game.sprites.cannonBase, Math.round(ui.mouseX - 16), Math.round(ui.mouseY - 16));
+    ctx.drawImage(dragTurret, Math.round(ui.mouseX - 10), Math.round(ui.mouseY - 16));
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = ok ? 'rgba(255, 255, 255, 0.5)' : 'rgba(228, 59, 68, 0.7)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(ui.mouseX, ui.mouseY, dragDef.range, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Wave-intro banner — slides in (alpha ramp), dwells, fades out over the
+  // last 0.5s. Lives in the overlay layer so it can ride above gameplay.
+  function drawBanner() {
+    if (!game.banner.active) { return; }
+    var bt = game.time - game.banner.startedAt;
+    if (bt > game.banner.duration) {
+      game.banner.active = false;
+      return;
+    }
+    var alpha = 1;
+    if (bt < 0.4) { alpha = bt / 0.4; }
+    if (bt > game.banner.duration - 0.5) { alpha = (game.banner.duration - bt) / 0.5; }
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = game.banner.isBoss ? '#a44' : '#3a4466';
+    ctx.fillRect(WIDTH / 2 - 48, 36, 96, 16);
+    ctx.fillStyle = '#fee761';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(game.banner.text, WIDTH / 2, 44);
+    ctx.restore();
+  }
+
+  function drawIdleOverlay() {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    ctx.fillStyle = '#fee761';
+    ctx.font = '16px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('ANT BUSTER', WIDTH / 2, HEIGHT / 2 - 16);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '10px monospace';
+    ctx.fillText('Defend the cake from the ants', WIDTH / 2, HEIGHT / 2 + 4);
+    ctx.fillText('Click to start', WIDTH / 2, HEIGHT / 2 + 22);
+    ctx.textAlign = 'start';
+  }
+
+  function drawTutorialHint() {
+    if (game.state !== 'playing') { return; }
+    if (game.time >= 4) { return; }
+    if (game.cannons.length !== 0) { return; }
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.fillRect(60, 100, 200, 70);
+    ctx.fillStyle = '#fee761';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('Drag a cannon from the shop', 160, 130);
+    ctx.fillText('onto the picnic blanket to start!', 160, 145);
+    ctx.textAlign = 'start';
+  }
+
+  function drawPauseOverlay() {
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    ctx.fillStyle = '#fee761';
+    ctx.font = '20px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('PAUSED', WIDTH / 2, HEIGHT / 2 - 12);
+    ctx.font = '10px monospace';
+    ctx.fillText('Space to resume', WIDTH / 2, HEIGHT / 2 + 8);
+    var rrx = WIDTH / 2 - 36;
+    var rry = HEIGHT / 2 + 22;
+    ctx.fillStyle = '#a44';
+    ctx.fillRect(rrx, rry, 72, 14);
+    ctx.fillStyle = '#fee761';
+    ctx.fillText('Restart Run', WIDTH / 2, rry + 11);
+    ctx.textAlign = 'start';
+    ui.restartRunRect = { x: rrx, y: rry, w: 72, h: 14 };
+  }
+
+  function drawLoseOverlay() {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    ctx.fillStyle = '#e43b44';
+    ctx.font = '16px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('THE ANTS WIN', WIDTH / 2, HEIGHT / 2 - 12);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '10px monospace';
+    ctx.fillText('Click to restart', WIDTH / 2, HEIGHT / 2 + 8);
+    ctx.textAlign = 'start';
+  }
+
+  function drawWinOverlay() {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    ctx.fillStyle = '#fee761';
+    ctx.font = '16px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('CAKE SAVED', WIDTH / 2, HEIGHT / 2 - 12);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '10px monospace';
+    ctx.fillText('Click to restart', WIDTH / 2, HEIGHT / 2 + 8);
+    ctx.textAlign = 'start';
+  }
+
+  // Layer 13: overlays — drag preview, wave banner, then full-screen modals.
+  // Modal order: pause first, then win/lose so terminal-state screens still
+  // win the z-order if both are somehow active in the same frame.
+  function drawOverlays() {
+    drawDragPreview();
+    drawBanner();
+    drawTutorialHint();
+    if (game.paused) {
+      drawPauseOverlay();
+    } else {
+      ui.restartRunRect = null;
+    }
+    if (game.state === 'idle') { drawIdleOverlay(); }
+    if (game.waveState === 'won') { drawWinOverlay(); }
+    if (game.waveState === 'lost') { drawLoseOverlay(); }
+  }
+
+  // Single render() entry point. Walks the canonical 13-layer z-order from
+  // the spec §3.5, back to front. Each step is its own helper so additions
+  // land in a clearly-named slot rather than accreting inline.
+  function render() {
+    drawBackground();          // 1. blanket + grass + shop bg
+    drawCake();                // 2. cake (current damage state)
+    drawAnthill();             // 3. anthill
+    drawSlices();              // 4. fallen slices on the ground
+    if (ui.selectedCannon) { drawRangeCircle(ui.selectedCannon); } // 5. range circle
+    drawCannonBases();         // 6. static cannon bases (under turrets/ants)
+    drawAnts();                // 7. ants, sorted top-down by y
+    drawCannonTurrets();       // 8. cannon turrets + muzzle/disable indicators
+    drawProjectiles();         // 9a. projectiles
+    drawBeams();               // 9b. beam lines (Glacier)
+    drawEffects();             // 10. AoE flashes + future hit/splat fx
+    drawHud();                 // 11. HUD strip
+    if (ui.selectedCannon) {   // 12. shop / tower-detail panel
+      drawTowerPanel(ui.selectedCannon);
+    } else {
+      drawShop();
+      ui.upgradeRects[0] = null;
+      ui.upgradeRects[1] = null;
+      ui.sellRect = null;
+    }
+    drawOverlays();            // 13. drag preview, banner, modals (paused/win/lose/idle)
+  }
+
   // === ANTS ===
-  function spawnAnt(type) {
-    var ant = {
-      type: type,
-      x: game.anthill.x,
-      y: game.anthill.y + (Math.random() * 60 - 30),
+  // Per-kind ant stats. Plan 2 introduces this table; Plan 1's literals are migrated here.
+  // Worker and Carrier share most numbers in Plan 2; the table is structured for the
+  // 8 remaining kinds (Brood, Soldier, Scout, etc.) added in later tasks. Effects slot
+  // (per-ant `effects` map) is wired in Task 4 — for now it just exists, empty.
+  var ANT_KINDS = {
+    worker: {
+      name: 'Worker',
       hp: 10,
-      maxHp: 10,
       speed: 30,
+      carryingSpeedMult: 0.7,    // Plan 1: carrying ants slow to 70% on the way home
+      gold: 2,
+      alignment: 0.2,
+      jitterRate: 4.0,
+      wanderFreqMin: 0.3, wanderFreqMax: 0.7,
+      wanderAmpMin: 0.9, wanderAmpMax: 1.5,
+      spriteKey: 'worker',
+      spriteW: 16, spriteH: 16,
+      slowResist: 0,
+      damageMult: 1,
+      pierceMult: 1,
+      canPickup: true,
+      onDeath: null,
+      armor: 0
+    },
+    carrier: {
+      name: 'Carrier',
+      hp: 15,
+      speed: 30,
+      carryingSpeedMult: 0.7,
+      gold: 4,
+      alignment: 0.2,
+      jitterRate: 4.0,
+      wanderFreqMin: 0.3, wanderFreqMax: 0.7,
+      wanderAmpMin: 0.9, wanderAmpMax: 1.5,
+      spriteKey: 'worker',
+      spriteW: 16, spriteH: 16,
+      slowResist: 0,
+      damageMult: 1,
+      pierceMult: 1,
+      canPickup: true,
+      onDeath: null,
+      armor: 0
+    },
+    scout: {
+      name: 'Scout',
+      hp: 6,
+      speed: 60,
+      carryingSpeedMult: 0.7,
+      gold: 3,
+      alignment: 0.4,
+      jitterRate: 5.0,
+      wanderFreqMin: 0.4, wanderFreqMax: 0.9,
+      wanderAmpMin: 1.0, wanderAmpMax: 1.7,
+      spriteKey: 'scout',
+      spriteW: 12, spriteH: 12,
+      slowResist: 0,
+      damageMult: 1,
+      pierceMult: 1,
+      canPickup: true,
+      onDeath: null,
+      armor: 0
+    },
+    soldier: {
+      name: 'Soldier',
+      hp: 40,
+      speed: 20,
+      gold: 5,
+      alignment: 0.2,
+      jitterRate: 3.0,
+      wanderFreqMin: 0.2, wanderFreqMax: 0.5,
+      wanderAmpMin: 0.6, wanderAmpMax: 1.0,
+      spriteKey: 'soldier',
+      spriteW: 16, spriteH: 16,
+      carryingSpeedMult: 0.7,
+      slowResist: 0.5,
+      damageMult: 1,
+      pierceMult: 1,
+      canPickup: true,
+      onDeath: null,
+      armor: 0.5
+    },
+    tank: {
+      name: 'Tank',
+      hp: 150,
+      speed: 12,
+      gold: 10,
+      alignment: 0.15,
+      jitterRate: 2.0,
+      wanderFreqMin: 0.15, wanderFreqMax: 0.35,
+      wanderAmpMin: 0.4, wanderAmpMax: 0.7,
+      spriteKey: 'tank',
+      spriteW: 24, spriteH: 24,
+      carryingSpeedMult: 0.7,
+      slowResist: 0,
+      damageMult: 1,
+      pierceMult: 1,
+      canPickup: false,
+      onDeath: null,
+      armor: 0.5
+    },
+    splitter: {
+      name: 'Splitter',
+      hp: 25,
+      speed: 25,
+      gold: 4,
+      alignment: 0.25,
+      jitterRate: 4.0,
+      wanderFreqMin: 0.3, wanderFreqMax: 0.6,
+      wanderAmpMin: 0.8, wanderAmpMax: 1.3,
+      spriteKey: 'splitter',
+      spriteW: 16, spriteH: 16,
+      carryingSpeedMult: 0.7,
+      slowResist: 0,
+      damageMult: 1,
+      pierceMult: 1,
+      canPickup: true,
+      onDeath: function(ant) {
+        for (var i = 0; i < 2; i++) {
+          var ang = Math.random() * Math.PI * 2;
+          spawnAntAt('mini_splitter', ant.x + Math.cos(ang) * 6, ant.y + Math.sin(ang) * 6);
+        }
+      },
+      armor: 0
+    },
+    mini_splitter: {
+      name: 'Mini-Splitter',
+      hp: 8,
+      speed: 35,
+      gold: 1,
+      alignment: 0.35,
+      jitterRate: 5.0,
+      wanderFreqMin: 0.4, wanderFreqMax: 0.8,
+      wanderAmpMin: 1.0, wanderAmpMax: 1.5,
+      spriteKey: 'mini_splitter',
+      spriteW: 8, spriteH: 8,
+      carryingSpeedMult: 0.7,
+      slowResist: 0,
+      damageMult: 1,
+      pierceMult: 1,
+      canPickup: true,
+      onDeath: null,
+      armor: 0
+    },
+    phase: {
+      name: 'Phase',
+      hp: 20,
+      speed: 35,
+      gold: 6,
+      alignment: 0.3,
+      jitterRate: 4.0,
+      wanderFreqMin: 0.3, wanderFreqMax: 0.7,
+      wanderAmpMin: 0.9, wanderAmpMax: 1.4,
+      spriteKey: 'phase',
+      spriteW: 16, spriteH: 16,
+      carryingSpeedMult: 0.7,
+      slowResist: 0,
+      damageMult: 1,
+      pierceMult: 1,
+      canPickup: true,
+      onDeath: null,
+      armor: 0,
+      phaseInterval: 3,
+      phaseDuration: 1
+    },
+    bomber: {
+      name: 'Bomber',
+      hp: 30,
+      speed: 40,
+      gold: 7,
+      alignment: 0.3,
+      jitterRate: 4.5,
+      wanderFreqMin: 0.4, wanderFreqMax: 0.8,
+      wanderAmpMin: 1.0, wanderAmpMax: 1.5,
+      spriteKey: 'bomber',
+      spriteW: 16, spriteH: 16,
+      carryingSpeedMult: 0.7,
+      slowResist: 0,
+      damageMult: 1,
+      pierceMult: 1,
+      canPickup: true,
+      armor: 0,
+      // On death, disable every cannon within 60px for 5 seconds and push a flash
+      // effect onto game.effects. updateCannons skips disabled cannons (Task 12 gate).
+      onDeath: function(ant) {
+        var radius = 60;
+        for (var i = 0; i < game.cannons.length; i++) {
+          var c = game.cannons[i];
+          var dx = c.x - ant.x;
+          var dy = c.y - ant.y;
+          if (dx * dx + dy * dy <= radius * radius) {
+            c.disabled = true;
+            c.disabledUntil = game.time + 5;
+          }
+        }
+        game.effects.push({ kind: 'bomber_aoe', x: ant.x, y: ant.y, t: 0, life: 0.6 });
+      }
+    },
+    queen: {
+      name: 'Queen',
+      hp: 400,
+      speed: 15,
+      gold: 50,
+      alignment: 0.15,
+      jitterRate: 1.5,
+      wanderFreqMin: 0.1, wanderFreqMax: 0.3,
+      wanderAmpMin: 0.3, wanderAmpMax: 0.5,
+      spriteKey: 'queen',
+      spriteW: 24, spriteH: 24,
+      carryingSpeedMult: 0.7,
+      slowResist: 0.25,
+      damageMult: 1,
+      pierceMult: 1,
+      canPickup: true,
+      armor: 0.3,
+      onDeath: function(ant) {
+        for (var i = 0; i < 6; i++) {
+          var ang = (Math.PI * 2 / 6) * i;
+          spawnAntAt('worker', ant.x + Math.cos(ang) * 12, ant.y + Math.sin(ang) * 12);
+        }
+      }
+    }
+  };
+
+  // === STATUS EFFECTS ===
+  // Six-kind framework. Slow/freeze/stun scale movement; burn/poison tick HP damage; knockback
+  // is a one-shot positional impulse on apply. Cannons emit these starting in Task 13 (Frost
+  // emits 'slow'). Worker/Carrier carry slowResist=0 today; Soldier (Task 16) will use it.
+  var STATUS_KINDS = {
+    slow:      { name: 'Slow',      onApply: null, perTick: null, speedMult: function(m) { return 1 - m; } },
+    freeze:    { name: 'Freeze',    onApply: null, perTick: null, speedMult: function(m) { return 0; } },
+    burn:      { name: 'Burn',      onApply: null, perTick: function(ant, eff, dt) { ant.hp = ant.hp - eff.magnitude * dt; }, speedMult: null },
+    poison:    { name: 'Poison',    onApply: null, perTick: function(ant, eff, dt) { ant.hp = ant.hp - eff.magnitude * dt; }, speedMult: null },
+    stun:      { name: 'Stun',      onApply: null, perTick: null, speedMult: function(m) { return 0; } },
+    knockback: { name: 'Knockback', onApply: function(ant, m) { ant.x = ant.x + Math.cos(ant.heading + Math.PI) * m; ant.y = ant.y + Math.sin(ant.heading + Math.PI) * m; }, perTick: null, speedMult: null }
+  };
+
+  // Apply a status effect to an ant. Refresh rule: if the ant already has this kind active,
+  // the resulting entry takes the LONGER expiry and the HIGHER magnitude (nested ifs only).
+  function applyStatus(ant, kindKey, magnitude, duration, source) {
+    var k = ANT_KINDS[ant.kind];
+    if (kindKey === 'slow') {
+      magnitude = magnitude * (1 - (k.slowResist || 0));
+    }
+    var existing = ant.effects[kindKey];
+    var newExpiry = (game.time || 0) + duration;
+    if (existing) {
+      if (existing.magnitude > magnitude) { magnitude = existing.magnitude; }
+      if (existing.expiresAt > newExpiry) { newExpiry = existing.expiresAt; }
+    }
+    ant.effects[kindKey] = { magnitude: magnitude, expiresAt: newExpiry, source: source };
+    var def = STATUS_KINDS[kindKey];
+    if (def.onApply) { def.onApply(ant, magnitude); }
+  }
+
+  // Spawn an ant of `kindKey` at an explicit (x, y). Used by spawnAnt for the
+  // normal anthill spawn, and by onDeath hooks (Splitter, Bomber, Queen) that
+  // need to drop new ants at a specific position.
+  function spawnAntAt(kindKey, x, y) {
+    var k = ANT_KINDS[kindKey];
+    var ant = {
+      kind: kindKey,
+      x: x,
+      y: y,
+      hp: k.hp,
+      maxHp: k.hp,
+      speed: k.speed,
       heading: (Math.random() * 2 - 1) * 0.5,   // radians; small random offset from east
       dead: false,
       deathTime: 0,
+      deliveredAt: 0,                            // future tasks read this; unused today
       carrying: false,
       wanderPhase: Math.random() * Math.PI * 2,
-      wanderFreq: 0.3 + Math.random() * 0.4,        // Hz; low-frequency sway
-      wanderAmp: 0.9 + Math.random() * 0.6          // radians of heading bias
+      wanderFreq: k.wanderFreqMin + Math.random() * (k.wanderFreqMax - k.wanderFreqMin),
+      wanderAmp: k.wanderAmpMin + Math.random() * (k.wanderAmpMax - k.wanderAmpMin),
+      effects: {},                                   // Task 4 fills this with status-effect entries
+      intangible: false,
+      phaseT: 0
     };
     game.ants.push(ant);
+    return ant;
+  }
+
+  function spawnAnt(kindKey) {
+    return spawnAntAt(kindKey, game.anthill.x, game.anthill.y + (Math.random() * 60 - 30));
   }
 
   function angleTowards(fromX, fromY, toX, toY) {
@@ -427,7 +1372,7 @@ body.has-ant-buster-page {
   }
 
   // Bias the desired heading sideways around any cannon roughly on the path ahead.
-  // Ants treat cannons as soft obstacles; the hard overlap push-out runs after movement.
+  // Ants treat cannons as soft obstacles; a clamped soft repulsion runs after movement.
   function steerAroundCannons(ant, desiredHeading) {
     var lookAhead = 28;
     var combined = 18;          // ant radius + cannon radius (rough)
@@ -479,15 +1424,22 @@ body.has-ant-buster-page {
       targetX = game.cake.x;
       targetY = game.cake.y;
     }
-    var alignment = 0.2;
-    var jitterRate = 4.0;
+    var k = ANT_KINDS[ant.kind];
+    if (k.phaseInterval) {
+      ant.phaseT = (ant.phaseT || 0) + dt;
+      var cycle = k.phaseInterval + k.phaseDuration;
+      var t = ant.phaseT % cycle;
+      ant.intangible = (t >= k.phaseInterval);
+    }
+    var alignment = k.alignment;
+    var jitterRate = k.jitterRate;
     var wanderScale = 1.0;
     var speed = ant.speed;
     if (ant.carrying) {
       alignment = 0.6;       // more determined return trip
       jitterRate = 1.5;      // less wander when going home
       wanderScale = 0.3;     // tighten the sway when loaded
-      speed = ant.speed * 0.7;
+      speed = ant.speed * k.carryingSpeedMult;
     } else {
       // Final approach: within 2 squares (32px) of the cake, lock in for the grab.
       var dxc = ant.x - game.cake.x;
@@ -496,6 +1448,30 @@ body.has-ant-buster-page {
         alignment = 0.9;
         jitterRate = 0.5;
         wanderScale = 0.0;
+      }
+    }
+    // Status-effect speed scaling: walk every active effect and apply its multiplier (slow,
+    // freeze, stun). Burn/poison/knockback have null speedMult and are skipped here.
+    var ek;
+    for (ek in ant.effects) {
+      var sdef = STATUS_KINDS[ek];
+      if (sdef.speedMult) {
+        var mag = ant.effects[ek].magnitude;
+        speed = speed * sdef.speedMult(mag);
+      }
+    }
+    // Status-effect tick damage: burn and poison drain HP each tick.
+    for (ek in ant.effects) {
+      var defT = STATUS_KINDS[ek];
+      if (defT.perTick) { defT.perTick(ant, ant.effects[ek], dt); }
+    }
+    // Expire effects whose timer has run out. Collect keys first to avoid mutating the
+    // object during iteration.
+    var keys = [];
+    for (ek in ant.effects) { keys.push(ek); }
+    for (var ki = 0; ki < keys.length; ki++) {
+      if (ant.effects[keys[ki]].expiresAt <= game.time) {
+        delete ant.effects[keys[ki]];
       }
     }
     ant.wanderPhase += ant.wanderFreq * dt * Math.PI * 2;
@@ -524,25 +1500,38 @@ body.has-ant-buster-page {
       ant.y = HEIGHT - margin;
       ant.heading = -ant.heading;
     }
-    // Hard push-out: cannons are solid, ants cannot end a frame inside one.
-    var minD = 18;
+    // Soft repulsion: accumulate unit-vector contributions from each nearby cannon, scaled by
+    // (influence - dN) / influence so contact-close towers push hardest. Magnitude is then
+    // clamped to 1.5 * speed * dt per spec SYS-5 so two adjacent towers cannot catapult an ant
+    // through a wall in one frame. The steerAroundCannons heading bias above does the wider
+    // "flow around" behavior; this displacement just keeps ants from settling inside a tower.
+    var rx = 0;
+    var ry = 0;
+    var towerRadius = 12;
+    var influence = towerRadius + 4;
     for (var ci = 0; ci < game.cannons.length; ci++) {
       var cn = game.cannons[ci];
       var dxN = ant.x - cn.x;
       var dyN = ant.y - cn.y;
       var dN = Math.sqrt(dxN * dxN + dyN * dyN);
-      if (dN < minD) {
-        if (dN < 0.0001) {
-          // Exactly on top of the cannon (e.g. cannon placed on ant): nudge perpendicular to heading.
-          ant.x = cn.x + Math.cos(ant.heading + Math.PI / 2) * minD;
-          ant.y = cn.y + Math.sin(ant.heading + Math.PI / 2) * minD;
-        } else {
-          ant.x = cn.x + (dxN / dN) * minD;
-          ant.y = cn.y + (dyN / dN) * minD;
-        }
+      if (dN < influence) {
+        if (dN < 0.001) { dN = 0.001; }
+        var force = (influence - dN) / influence;
+        rx = rx + (dxN / dN) * force;
+        ry = ry + (dyN / dN) * force;
       }
     }
-    // Final non-reflective clamp in case push-out drove us back through a wall.
+    var rmag = Math.sqrt(rx * rx + ry * ry);
+    var rclamp = 1.5 * speed * dt;
+    if (rmag > rclamp) {
+      if (rmag > 0) {
+        rx = rx * (rclamp / rmag);
+        ry = ry * (rclamp / rmag);
+      }
+    }
+    ant.x = ant.x + rx;
+    ant.y = ant.y + ry;
+    // Final non-reflective clamp in case soft repulsion pushed us past a wall.
     if (ant.x < margin) { ant.x = margin; }
     if (ant.x > PLAYFIELD_W - margin) { ant.x = PLAYFIELD_W - margin; }
     if (ant.y < HUD_H + margin) { ant.y = HUD_H + margin; }
@@ -567,12 +1556,39 @@ body.has-ant-buster-page {
         if (dxHill * dxHill + dyHill * dyHill < deliverR * deliverR) {
           game.cake.lost += 1;
           a.dead = true;
-          a.deathTime = 0.5;     // pruneAnts drops this immediately, no splat
+          a.deliveredAt = game.time;   // mark delivery so drawAnts skips the splat sprite
+          a.deathTime = 0;             // pruneAnts drops this on the next frame
           if (game.cake.lost >= 8) {
-            game.state = 'lost';
+            game.waveState = 'lost';
           }
         }
       } else {
+        var k = ANT_KINDS[a.kind];
+        if (!k.canPickup) {
+          // Tanks and similar do not pick up cake — just walk past
+          continue;
+        }
+        // Task 23: ground-slice pickup. Before checking the cake itself, see if the
+        // ant is standing on a fallen slice from a recent kill. 10 px radius (squared
+        // = 100) keeps pickup tight enough that ants do not snag a slice they are
+        // walking past. claimedBy is set defensively even though we splice on the
+        // same frame — leaves a hook for any future cross-frame claim animation.
+        var pickedFromGround = false;
+        for (var si = 0; si < game.slices.length; si++) {
+          var sl = game.slices[si];
+          if (sl.claimedBy) { continue; }
+          var dxs = a.x - sl.x;
+          var dys = a.y - sl.y;
+          if (dxs * dxs + dys * dys <= 100) {
+            a.carrying = true;
+            sl.claimedBy = a;
+            a.heading = angleTowards(a.x, a.y, game.anthill.x, game.anthill.y);
+            game.slices.splice(si, 1);
+            pickedFromGround = true;
+            break;
+          }
+        }
+        if (pickedFromGround) { continue; }
         if (game.cake.slices > 0) {
           var dxCake = a.x - game.cake.x;
           var dyCake = a.y - game.cake.y;
@@ -600,14 +1616,111 @@ body.has-ant-buster-page {
   }
 
   // === CANNONS ===
-  var CANNON_DEFS = {
+  var CANNON_KINDS = {
     howitzer: {
       name: 'Howitzer',
       cost: 50,
       damage: 5,
       fireRate: 0.6,         // shots per second
       range: 110,
-      projectileSpeed: 200
+      projectileSpeed: 200,
+      family: 'heavy',
+      tier: 1,
+      upgradesTo: ['siege']
+    },
+    siege: {
+      name: 'Siege',
+      cost: 50,
+      damage: 12,
+      fireRate: 0.6,
+      range: 110,
+      projectileSpeed: 240,
+      family: 'heavy',
+      tier: 2,
+      upgradesTo: ['railgun']
+    },
+    railgun: {
+      name: 'Railgun',
+      cost: 90,
+      damage: 25,
+      fireRate: 0.6,
+      range: 120,
+      projectileSpeed: 360,
+      family: 'heavy',
+      tier: 3,
+      pierce: true,
+      upgradesTo: []
+    },
+    repeater: {
+      name: 'Repeater',
+      cost: 50,
+      damage: 1,
+      fireRate: 4,
+      range: 130,
+      projectileSpeed: 280,
+      family: 'quick',
+      tier: 1,
+      upgradesTo: ['autocannon']
+    },
+    autocannon: {
+      name: 'Auto-Cannon',
+      cost: 50,
+      damage: 2,
+      fireRate: 6,
+      range: 130,
+      projectileSpeed: 320,
+      family: 'quick',
+      tier: 2,
+      upgradesTo: ['vulcan']
+    },
+    vulcan: {
+      name: 'Vulcan',
+      cost: 80,
+      damage: 3,
+      fireRate: 9,
+      range: 140,
+      projectileSpeed: 360,
+      family: 'quick',
+      tier: 3,
+      spoolUp: 0.5,
+      upgradesTo: []
+    },
+    twingun: {
+      name: 'Twin Gun',
+      cost: 75,
+      damage: 2,
+      fireRate: 1,
+      range: 100,
+      projectileSpeed: 240,
+      family: 'status',
+      tier: 1,
+      barrels: 2,            // multi-barrel volley logic landed in Task 13
+      upgradesTo: ['frost']
+    },
+    frost: {
+      name: 'Frost',
+      cost: 75,
+      damage: 1,
+      fireRate: 1.5,
+      range: 100,
+      projectileSpeed: 220,
+      family: 'status',
+      tier: 2,
+      statusOnHit: { kind: 'slow', magnitude: 0.3, duration: 2 },
+      upgradesTo: ['glacier']
+    },
+    glacier: {
+      name: 'Glacier',
+      cost: 90,
+      damage: 1,
+      fireRate: 0,
+      range: 130,
+      family: 'status',
+      tier: 3,
+      beam: true,
+      beamDamagePerSec: 1,
+      statusOnBeam: { kind: 'slow', magnitude: 0.5, duration: 1 },
+      upgradesTo: []
     }
   };
 
@@ -638,31 +1751,36 @@ body.has-ant-buster-page {
     return true;
   }
 
-  function placeCannon(defKey, x, y) {
-    var def = CANNON_DEFS[defKey];
+  function placeCannon(kindKey, x, y) {
+    var def = CANNON_KINDS[kindKey];
     if (!def) { return false; }
     if (game.gold < def.cost) { return false; }
     if (!canPlaceCannon(x, y)) { return false; }
     game.gold -= def.cost;
     game.cannons.push({
-      defKey: defKey,
+      kind: kindKey,
+      kindHistory: [kindKey],   // base kind included per spec SYS-2
       x: x,
       y: y,
       heading: 0,
       cooldown: 0,
-      target: null
+      target: null,
+      kills: 0,
+      disabled: false,
+      disabledUntil: 0
     });
     return true;
   }
 
   function findTarget(cannon) {
-    var def = CANNON_DEFS[cannon.defKey];
+    var def = CANNON_KINDS[cannon.kind];
     var rangeSq = def.range * def.range;
     var nearest = null;
     var nearestDistSq = rangeSq;
     for (var i = 0; i < game.ants.length; i++) {
       var a = game.ants[i];
       if (a.dead) { continue; }
+      if (a.intangible) { continue; }
       var dx = a.x - cannon.x;
       var dy = a.y - cannon.y;
       var distSq = dx * dx + dy * dy;
@@ -677,32 +1795,134 @@ body.has-ant-buster-page {
   function updateCannons(dt) {
     for (var i = 0; i < game.cannons.length; i++) {
       var c = game.cannons[i];
-      var def = CANNON_DEFS[c.defKey];
-      c.cooldown -= dt;
+      // Cannon-disabled gate (Task 20 Bomber AoE will set disabled/disabledUntil).
+      if (c.disabled) {
+        if (game.time >= c.disabledUntil) { c.disabled = false; }
+      }
+      if (c.disabled) {
+        c.beamTarget = null;
+        continue;
+      }
+      var def = CANNON_KINDS[c.kind];
+
+      // Beam cannons (Glacier and any future beam emitter): per-tick damage +
+      // status refresh, no projectile fired. Status refresh sets duration to
+      // ~1s each tick so the slow naturally lingers ~1s after disconnect.
+      if (def.beam) {
+        var btarget = findTarget(c);
+        c.target = btarget;
+        if (!btarget) {
+          c.beamTarget = null;
+          continue;
+        }
+        c.heading = angleTowards(c.x, c.y, btarget.x, btarget.y);
+        applyDamage(btarget, def.beamDamagePerSec * dt, false);
+        if (btarget.hp <= 0) {
+          killAnt(btarget, c);
+        }
+        if (def.statusOnBeam) {
+          var sb = def.statusOnBeam;
+          applyStatus(btarget, sb.kind, sb.magnitude, sb.duration, 'beam');
+        }
+        c.beamTarget = btarget;
+        continue;
+      }
+
       var target = findTarget(c);
       c.target = target;
-      if (target) {
-        c.heading = angleTowards(c.x, c.y, target.x, target.y);
-        if (c.cooldown <= 0) {
-          fireProjectile(c, target);
-          c.cooldown = 1 / def.fireRate;
+      if (!target) {
+        // Spool-down for cannons with spoolUp (Vulcan).
+        if (def.spoolUp) {
+          var st = c.spoolT;
+          if (!st) { st = 0; }
+          st = st - dt / def.spoolUp;
+          if (st < 0) { st = 0; }
+          c.spoolT = st;
         }
+        continue;
+      }
+      c.heading = angleTowards(c.x, c.y, target.x, target.y);
+      var effRate = def.fireRate;
+      if (def.spoolUp) {
+        var st2 = c.spoolT;
+        if (!st2) { st2 = 0; }
+        st2 = st2 + dt / def.spoolUp;
+        if (st2 > 1) { st2 = 1; }
+        c.spoolT = st2;
+        effRate = def.fireRate * (0.3 + 0.7 * st2);
+      }
+      c.cooldown = c.cooldown - dt;
+      if (c.cooldown <= 0) {
+        fireProjectile(c, target);
+        c.cooldown = c.cooldown + 1 / effRate;
       }
     }
   }
 
   // === PROJECTILES ===
   function fireProjectile(cannon, target) {
-    var def = CANNON_DEFS[cannon.defKey];
+    var def = CANNON_KINDS[cannon.kind];
     var heading = angleTowards(cannon.x, cannon.y, target.x, target.y);
-    game.projectiles.push({
-      x: cannon.x,
-      y: cannon.y,
-      vx: Math.cos(heading) * def.projectileSpeed,
-      vy: Math.sin(heading) * def.projectileSpeed,
-      damage: def.damage,
-      life: 1.5     // seconds
-    });
+    var n = def.barrels || 1;
+    var spread = 0.06;                          // ~3.4 deg per step
+    for (var i = 0; i < n; i++) {
+      var off;
+      if (n === 1) {
+        off = 0;
+      } else {
+        off = (i - (n - 1) / 2) * spread;
+      }
+      var h = heading + off;
+      game.projectiles.push({
+        x: cannon.x + Math.cos(h) * 12,
+        y: cannon.y + Math.sin(h) * 12,
+        vx: Math.cos(h) * def.projectileSpeed,
+        vy: Math.sin(h) * def.projectileSpeed,
+        damage: def.damage,
+        pierce: !!def.pierce,
+        statusOnHit: def.statusOnHit || null,
+        life: 1.5     // seconds
+      });
+    }
+  }
+
+  // Centralized damage application. Soldier armor (Task 16) hooks here:
+  // armored ants will reduce damage unless `pierce` is set. For now this is
+  // a thin wrapper so the hook point exists.
+  function applyDamage(ant, amount, pierce) {
+    var k = ANT_KINDS[ant.kind];
+    var dmg = amount;
+    if (pierce === false || pierce === null || !pierce) {
+      dmg = dmg * (1 - (k.armor || 0));
+    }
+    ant.hp = ant.hp - dmg;
+  }
+
+  // Centralized kill handling. Used by both projectile collision and beam tick
+  // so the gold drop and carried-slice return stay in sync. `killer` is the
+  // cannon for kill-attribution; pass null when not applicable.
+  function killAnt(ant, killer) {
+    if (ant.dead) { return; }
+    ant.dead = true;
+    ant.deathTime = 0;
+    var k = ANT_KINDS[ant.kind];
+    game.gold = game.gold + k.gold;
+    // Task 23: dropping a slice on the ground (replaces Plan 1's instant cake.slices++ snap-back).
+    // The slice sits where the ant fell. Another canPickup ant can claim it (ground pickup branch
+    // in checkPickupsAndDeliveries); after 8s of nobody claiming, it returns to the cake without
+    // a life deduction (updateSlices). Cake accounting: kill->drop is neutral on cake.slices,
+    // timeout refunds it, ground pickup just transfers ownership.
+    if (ant.carrying) {
+      game.slices.push({ x: ant.x, y: ant.y, droppedAt: game.time, claimedBy: null });
+      ant.carrying = false;
+    }
+    if (killer) {
+      killer.kills = killer.kills + 1;
+    }
+    // Fire the kind's onDeath hook (Splitter spawns Mini-Splitters; Bomber/Queen
+    // will use this in later tasks). spawnAntAt only pushes onto game.ants, so
+    // it is safe even if killAnt is called from inside an iteration over game.ants.
+    if (k.onDeath) { k.onDeath(ant); }
   }
 
   function updateProjectiles(dt) {
@@ -716,18 +1936,17 @@ body.has-ant-buster-page {
       for (var j = 0; j < game.ants.length; j++) {
         var a = game.ants[j];
         if (a.dead) { continue; }
+        if (a.intangible) { continue; }
         var dx = a.x - p.x;
         var dy = a.y - p.y;
         if (dx * dx + dy * dy < 6 * 6) {
-          a.hp -= p.damage;
+          applyDamage(a, p.damage, p.pierce);
+          if (p.statusOnHit) {
+            var s = p.statusOnHit;
+            applyStatus(a, s.kind, s.magnitude, s.duration, 'projectile');
+          }
           if (a.hp <= 0) {
-            a.dead = true;
-            a.deathTime = 0;
-            game.gold += 2;       // Worker drops 2 gold; per-type table comes in Plan 2
-            if (a.carrying) {
-              game.cake.slices += 1;
-              a.carrying = false;
-            }
+            killAnt(a, null);
           }
           hit = true;
           break;
@@ -750,43 +1969,99 @@ body.has-ant-buster-page {
     game.projectiles = kept;
   }
 
-  // === WAVE ===
-  var wave = {
-    active: true,
-    timeIntoWave: 0,
-    spawnIndex: 0,
-    schedule: [
-      // [timeSec, type] pairs — wave 1: 8 Workers spread over ~9s
-      [0,   'worker'],
-      [1.2, 'worker'],
-      [2.4, 'worker'],
-      [3.6, 'worker'],
-      [5.0, 'worker'],
-      [6.2, 'worker'],
-      [7.4, 'worker'],
-      [8.6, 'worker']
-    ]
-  };
-
-  function updateWave(dt) {
-    if (!wave.active) { return; }
-    wave.timeIntoWave += dt;
-    while (wave.spawnIndex < wave.schedule.length) {
-      var entry = wave.schedule[wave.spawnIndex];
-      if (entry[0] > wave.timeIntoWave) { break; }
-      spawnAnt(entry[1]);
-      wave.spawnIndex += 1;
+  // === WAVES ===
+  // Data-driven wave definitions. Plan 2 Task 5 ships wave 1 only; waves 2-5
+  // arrive in Task 22. Each wave has a `prep` window (seconds before spawning
+  // begins), a `bonus` (gold awarded on clear), and a list of spawn `groups`.
+  // Each group spawns `count` ants of `type`, one every `interval` seconds,
+  // starting `delay` seconds after the previous group finished.
+  var WAVES = [
+    {
+      number: 1,
+      prep: 30,
+      bonus: 21,
+      spawns: [
+        { type: 'worker', count: 8, interval: 1.0, delay: 0 }
+      ]
     }
-    // Wave complete = all spawns issued AND no live ants left
-    if (wave.spawnIndex >= wave.schedule.length) {
-      var liveAnts = 0;
-      for (var i = 0; i < game.ants.length; i++) {
-        if (!game.ants[i].dead) { liveAnts += 1; }
+  ];
+  WAVES.push({
+    number: 2, prep: 20, bonus: 30,
+    spawns: [{ type: 'worker', count: 12, interval: 0.8, delay: 0 }]
+  });
+  WAVES.push({
+    number: 3, prep: 20, bonus: 35,
+    spawns: [
+      { type: 'worker', count: 6, interval: 0.7, delay: 0 },
+      { type: 'worker', count: 6, interval: 0.7, delay: 4 }
+    ]
+  });
+  WAVES.push({
+    number: 4, prep: 20, bonus: 45,
+    spawns: [
+      { type: 'worker', count: 10, interval: 0.7, delay: 0 },
+      { type: 'scout', count: 4, interval: 1.0, delay: 1.5 }
+    ]
+  });
+  WAVES.push({
+    number: 5, prep: 30, bonus: 75, boss: true,
+    spawns: [
+      { type: 'queen', count: 1, interval: 1, delay: 0 },
+      { type: 'worker', count: 8, interval: 0.8, delay: 2 }
+    ]
+  });
+
+  // Spawner state machine: prep -> wave -> (prep | won) ; lost is set by the
+  // cake-loss path. Reads game.time for spawn scheduling.
+  function updateWaveState(dt) {
+    if (game.waveState === 'prep') {
+      game.prepRemaining = game.prepRemaining - dt;
+      if (game.prepRemaining <= 0) {
+        game.waveState = 'wave';
+        game.spawner.groupIndex = 0;
+        game.spawner.spawnedInGroup = 0;
+        game.spawner.nextSpawnAt = game.time + WAVES[game.waveIndex].spawns[0].delay;
+        game.spawner.queueDone = false;
+        var wv = WAVES[game.waveIndex];
+        showBanner('Wave ' + wv.number + '/' + WAVES.length, !!wv.boss);
       }
-      if (liveAnts === 0) {
-        wave.active = false;
-        game.state = 'won';
-        game.gold += 21;        // wave-completion bonus: 20 + wave number (wave 1)
+      return;
+    }
+    if (game.waveState === 'wave') {
+      var wv = WAVES[game.waveIndex];
+      if (!game.spawner.queueDone) {
+        var grp = wv.spawns[game.spawner.groupIndex];
+        if (game.time >= game.spawner.nextSpawnAt) {
+          spawnAnt(grp.type);
+          game.spawner.spawnedInGroup = game.spawner.spawnedInGroup + 1;
+          if (game.spawner.spawnedInGroup >= grp.count) {
+            game.spawner.groupIndex = game.spawner.groupIndex + 1;
+            game.spawner.spawnedInGroup = 0;
+            if (game.spawner.groupIndex >= wv.spawns.length) {
+              game.spawner.queueDone = true;
+            } else {
+              game.spawner.nextSpawnAt = game.time + wv.spawns[game.spawner.groupIndex].delay;
+            }
+          } else {
+            game.spawner.nextSpawnAt = game.time + grp.interval;
+          }
+        }
+      }
+      if (game.spawner.queueDone) {
+        var alive = 0;
+        for (var i = 0; i < game.ants.length; i++) {
+          if (!game.ants[i].dead) { alive = alive + 1; }
+        }
+        if (alive === 0) {
+          game.gold = game.gold + wv.bonus;
+          if (game.waveIndex + 1 >= WAVES.length) {
+            game.waveState = 'won';
+          } else {
+            game.waveIndex = game.waveIndex + 1;
+            game.waveState = 'prep';
+            game.prepRemaining = WAVES[game.waveIndex].prep;
+          }
+        }
       }
     }
   }
@@ -799,18 +2074,46 @@ body.has-ant-buster-page {
     game.ants = [];
     game.cannons = [];
     game.projectiles = [];
+    game.effects = [];
+    game.slices = [];
     game.gold = 150;
-    game.wave = 1;
-    wave.active = true;
-    wave.timeIntoWave = 0;
-    wave.spawnIndex = 0;
+    game.waveIndex = 0;
+    game.waveState = 'prep';
+    game.prepRemaining = WAVES[0].prep;
+    game.spawner.groupIndex = 0;
+    game.spawner.spawnedInGroup = 0;
+    game.spawner.nextSpawnAt = 0;
+    game.spawner.queueDone = false;
+    game.banner.active = false;
+    game.banner.text = '';
+    game.banner.startedAt = 0;
+    game.banner.duration = 2.5;
+    game.banner.isBoss = false;
+    game.paused = false;
+    game.speed = 1;
+    ui.sendNextRect = null;
+    ui.restartRunRect = null;
+    ui.dragging = null;
+    ui.selectedCannon = null;
+    ui.upgradeRects[0] = null;
+    ui.upgradeRects[1] = null;
+    ui.sellRect = null;
+    ui.shopRects = [];
   }
 
   // === INPUT ===
   var ui = {
-    dragging: null,         // { defKey } when dragging from shop
+    dragging: null,         // { kind } when dragging from shop
     mouseX: 0,
-    mouseY: 0
+    mouseY: 0,
+    sendNextRect: null,     // bounds of the Send-Next button (set when rendered in prep)
+    pauseRect: { x: 4, y: 4, w: 16, h: 16 },
+    speedRect: { x: 24, y: 4, w: 24, h: 16 },
+    restartRunRect: null,   // populated when the pause overlay is visible
+    selectedCannon: null,   // currently inspected cannon (click on a placed cannon to select)
+    upgradeRects: [null, null], // up-to-2 upgrade buttons in the tower panel
+    sellRect: null,         // sell button in the tower panel
+    shopRects: []           // populated by drawShop; one rect per shop card
   };
 
   function canvasToGame(evt) {
@@ -823,25 +2126,94 @@ body.has-ant-buster-page {
     };
   }
 
-  function shopCardAt(x, y) {
-    if (x < PLAYFIELD_W + 8) { return null; }
-    if (x > PLAYFIELD_W + 8 + 56) { return null; }
-    if (y < 32) { return null; }
-    if (y > 32 + 64) { return null; }
-    return 'howitzer';
-  }
-
   canvas.addEventListener('mousedown', function (evt) {
     var p = canvasToGame(evt);
     ui.mouseX = p.x;
     ui.mouseY = p.y;
-    if (game.state === 'won') { resetGame(); return; }
-    if (game.state === 'lost') { resetGame(); return; }
+    // Pause overlay's Restart Run button — only live while paused. Tested first so
+    // it wins over the HUD pause toggle behind it (which is in the same x range).
+    if (game.paused) {
+      if (ui.restartRunRect) {
+        if (inRect(p, ui.restartRunRect)) { resetGame(); return; }
+      }
+    }
+    // HUD pause + speed widgets — always live during 'playing' state. Tested before
+    // any other hit-test in case the playfield ever extends under them.
+    if (game.state === 'playing') {
+      if (inRect(p, ui.pauseRect)) { game.paused = !game.paused; return; }
+      if (inRect(p, ui.speedRect)) {
+        if (game.speed === 1) { game.speed = 2; } else { game.speed = 1; }
+        return;
+      }
+    }
+    if (game.waveState === 'won') { resetGame(); return; }
+    if (game.waveState === 'lost') { resetGame(); return; }
     if (game.state === 'idle') { game.state = 'playing'; return; }
-    var card = shopCardAt(p.x, p.y);
-    if (card) {
-      ui.dragging = { defKey: card };
-      canvas.classList.add('ab-dragging');
+    if (game.waveState === 'prep') {
+      if (ui.sendNextRect) {
+        var r = ui.sendNextRect;
+        if (p.x >= r.x) {
+          if (p.x <= r.x + r.w) {
+            if (p.y >= r.y) {
+              if (p.y <= r.y + r.h) {
+                var bonus = Math.floor(game.prepRemaining / 2);
+                game.gold = game.gold + bonus;
+                game.prepRemaining = 0;
+                return;
+              }
+            }
+          }
+        }
+      }
+    }
+    if (game.state === 'playing') {
+      if (p.x < PLAYFIELD_W) {
+        var hit = cannonAt(p.x, p.y);
+        if (hit) {
+          ui.selectedCannon = hit;
+          return;
+        }
+        // click in playfield but not on a cannon: deselect
+        if (ui.selectedCannon) {
+          ui.selectedCannon = null;
+          return;
+        }
+      }
+      // Click inside the right-column panel while a cannon is selected — test
+      // the upgrade buttons (up to 2) then the sell button.
+      if (ui.selectedCannon) {
+        if (p.x >= PLAYFIELD_W) {
+          for (var ri = 0; ri < 2; ri++) {
+            var ur = ui.upgradeRects[ri];
+            if (ur) {
+              if (inRect(p, ur)) {
+                upgradeCannon(ui.selectedCannon, ur.toKind);
+                return;
+              }
+            }
+          }
+          if (ui.sellRect) {
+            if (inRect(p, ui.sellRect)) {
+              sellCannon(ui.selectedCannon);
+              return;
+            }
+          }
+        }
+      }
+    }
+    if (ui.shopRects) {
+      for (var si = 0; si < ui.shopRects.length; si++) {
+        var rs = ui.shopRects[si];
+        if (inRect(p, rs)) {
+          // only start drag if affordable
+          var sk = CANNON_KINDS[rs.kind];
+          if (game.gold >= sk.cost) {
+            ui.dragging = { kind: rs.kind };
+            canvas.classList.add('ab-dragging');
+          }
+          return;
+        }
+      }
     }
   });
 
@@ -856,7 +2228,7 @@ body.has-ant-buster-page {
     ui.mouseX = p.x;
     ui.mouseY = p.y;
     if (ui.dragging) {
-      placeCannon(ui.dragging.defKey, p.x, p.y);
+      placeCannon(ui.dragging.kind, p.x, p.y);
       ui.dragging = null;
       canvas.classList.remove('ab-dragging');
     }
@@ -870,13 +2242,53 @@ body.has-ant-buster-page {
   });
 
   // === UPDATE ===
+  // Speed toggle (1×/2×) scales sim time for ants and projectiles only. game.time
+  // advances on real dt so the wave-intro banner and prep countdown animate at
+  // wall-clock speed regardless of speed setting (spec §UI-5).
+  // Tick transient visual effects (e.g. Bomber AoE flash). Each entry has its own
+  // `t` (elapsed) and `life` (total seconds); when `t` reaches `life` the entry is
+  // dropped. New entries are pushed by gameplay hooks like ANT_KINDS.bomber.onDeath.
+  function updateEffects(dt) {
+    var kept = [];
+    for (var i = 0; i < game.effects.length; i++) {
+      game.effects[i].t = game.effects[i].t + dt;
+      if (game.effects[i].t < game.effects[i].life) { kept.push(game.effects[i]); }
+    }
+    game.effects = kept;
+  }
+
+  // Task 23: tick fallen-slice timeouts. After 8s of nobody picking up a dropped
+  // slice, it snaps back to the cake without a life deduction (the player is not
+  // penalized for an enemy that died mid-carry). dt is unused — we compare against
+  // game.time which advances in update() — but kept in the signature for parity
+  // with the other update* functions.
+  function updateSlices(dt) {
+    var kept = [];
+    for (var i = 0; i < game.slices.length; i++) {
+      var s = game.slices[i];
+      var age = game.time - s.droppedAt;
+      if (age >= 8) {
+        game.cake.slices = game.cake.slices + 1;
+        continue;
+      }
+      kept.push(s);
+    }
+    game.slices = kept;
+  }
+
   function update(dt) {
+    if (game.paused) { return; }
     if (game.state !== 'playing') { return; }
+    if (game.waveState === 'won') { return; }
+    if (game.waveState === 'lost') { return; }
     game.time += dt;
-    updateWave(dt);
-    updateAnts(dt);
-    updateCannons(dt);
-    updateProjectiles(dt);
+    var simDt = dt * game.speed;
+    updateWaveState(dt);
+    updateAnts(simDt);
+    updateCannons(simDt);
+    updateProjectiles(simDt);
+    updateEffects(simDt);
+    updateSlices(simDt);
     checkPickupsAndDeliveries();
     pruneAnts();
   }
@@ -897,7 +2309,49 @@ body.has-ant-buster-page {
   }
   requestAnimationFrame(frame);
 
+  // Keybinds:
+  //   Enter — skip prep window (same as Send-Next button)
+  //   Space — toggle pause (preventDefault so the page doesn't scroll)
+  //   1 / 2 — set speed to 1× / 2×
+  window.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      if (game.waveState === 'prep') {
+        if (game.state === 'playing') {
+          var bonus = Math.floor(game.prepRemaining / 2);
+          game.gold = game.gold + bonus;
+          game.prepRemaining = 0;
+        }
+      }
+      return;
+    }
+    if (e.key === ' ') {
+      e.preventDefault();
+      game.paused = !game.paused;
+      return;
+    }
+    if (e.key === '1') { game.speed = 1; return; }
+    if (e.key === '2') { game.speed = 2; return; }
+    if (e.key === 'Escape') { ui.selectedCannon = null; return; }
+    if (DEBUG) {
+      if (e.key === 't') {
+        var dk = DEBUG_KINDS[debugCycleIdx % DEBUG_KINDS.length];
+        spawnAntAt(dk, game.anthill.x, game.anthill.y);
+        debugCycleIdx = debugCycleIdx + 1;
+        return;
+      }
+      if (e.key === 'T') {
+        var dk2 = DEBUG_KINDS[debugCycleIdx % DEBUG_KINDS.length];
+        spawnAntAt(dk2, game.anthill.x, game.anthill.y);
+        debugCycleIdx = debugCycleIdx + 1;
+        return;
+      }
+    }
+  });
+
   // Expose game for debugging from devtools console
   window.__ab = game;
+  window.__abUi = ui;
+  window.__abStatusKinds = STATUS_KINDS;
+  window.__abApplyStatus = applyStatus;
 })();
 </script>
