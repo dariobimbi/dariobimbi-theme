@@ -278,6 +278,35 @@ body.has-ant-buster-page {
     ctx.textAlign = 'start';
   }
 
+  // Sell refund = 70% of the floored sum of every kind ever owned (kindHistory
+  // includes the base from placeCannon and every kind pushed by upgradeCannon).
+  // Spec SYS-2's literal text double-counts the base, so this implements the
+  // intent: 70% of total spend across the upgrade chain.
+  function sellRefund(c) {
+    var total = 0;
+    for (var i = 0; i < c.kindHistory.length; i++) {
+      total = total + CANNON_KINDS[c.kindHistory[i]].cost;
+    }
+    return Math.floor(0.7 * total);
+  }
+
+  function upgradeCannon(c, toKind) {
+    var udef = CANNON_KINDS[toKind];
+    if (!udef) { return; }
+    if (game.gold < udef.cost) { return; }
+    game.gold = game.gold - udef.cost;
+    c.kind = toKind;
+    c.kindHistory.push(toKind);
+  }
+
+  function sellCannon(c) {
+    var refund = sellRefund(c);
+    game.gold = game.gold + refund;
+    var idx = game.cannons.indexOf(c);
+    if (idx >= 0) { game.cannons.splice(idx, 1); }
+    ui.selectedCannon = null;
+  }
+
   function drawTowerPanel(c) {
     var sk = CANNON_KINDS[c.kind];
     var px = PLAYFIELD_W + 8;
@@ -296,7 +325,32 @@ body.has-ant-buster-page {
     var killCount;
     if (c.kills) { killCount = c.kills; } else { killCount = 0; }
     ctx.fillText('KILLS ' + killCount, px + 6, py + 66);
-    // Upgrade + sell buttons land in Task 9 — leave that area blank
+
+    // Upgrade buttons (up to 2) — only present when sk.upgradesTo is non-empty.
+    var upgrades = sk.upgradesTo;
+    if (!upgrades) { upgrades = []; }
+    for (var i = 0; i < upgrades.length; i++) {
+      var uk = upgrades[i];
+      var udef = CANNON_KINDS[uk];
+      var by = py + 90 + i * 22;
+      var canAfford = (game.gold >= udef.cost);
+      ctx.fillStyle = canAfford ? '#3a8c3a' : '#444';
+      ctx.fillRect(px + 6, by, pw - 12, 18);
+      ctx.fillStyle = canAfford ? '#fee761' : '#888';
+      ctx.fillText('-> ' + udef.name + ' (' + udef.cost + 'g)', px + 10, by + 12);
+      ui.upgradeRects[i] = { x: px + 6, y: by, w: pw - 12, h: 18, toKind: uk };
+    }
+    for (var k = upgrades.length; k < 2; k++) { ui.upgradeRects[k] = null; }
+
+    // Sell button — pinned near the bottom of the panel rect.
+    var refund = sellRefund(c);
+    var sy = py + 200 - 26;
+    ctx.fillStyle = '#a44';
+    ctx.fillRect(px + 6, sy, pw - 12, 18);
+    ctx.fillStyle = '#fee761';
+    ctx.fillText('Sell (+' + refund + 'g)', px + 10, sy + 12);
+    ui.sellRect = { x: px + 6, y: sy, w: pw - 12, h: 18 };
+
     ctx.textAlign = 'start';
   }
 
@@ -429,6 +483,9 @@ body.has-ant-buster-page {
       drawTowerPanel(ui.selectedCannon);
     } else {
       drawShop();
+      ui.upgradeRects[0] = null;
+      ui.upgradeRects[1] = null;
+      ui.sellRect = null;
     }
 
     // Placed cannons
@@ -1126,6 +1183,9 @@ body.has-ant-buster-page {
     ui.sendNextRect = null;
     ui.restartRunRect = null;
     ui.selectedCannon = null;
+    ui.upgradeRects[0] = null;
+    ui.upgradeRects[1] = null;
+    ui.sellRect = null;
   }
 
   // === INPUT ===
@@ -1137,7 +1197,9 @@ body.has-ant-buster-page {
     pauseRect: { x: 4, y: 4, w: 16, h: 16 },
     speedRect: { x: 24, y: 4, w: 24, h: 16 },
     restartRunRect: null,   // populated when the pause overlay is visible
-    selectedCannon: null    // currently inspected cannon (click on a placed cannon to select)
+    selectedCannon: null,   // currently inspected cannon (click on a placed cannon to select)
+    upgradeRects: [null, null], // up-to-2 upgrade buttons in the tower panel
+    sellRect: null          // sell button in the tower panel
   };
 
   function canvasToGame(evt) {
@@ -1209,6 +1271,27 @@ body.has-ant-buster-page {
         if (ui.selectedCannon) {
           ui.selectedCannon = null;
           return;
+        }
+      }
+      // Click inside the right-column panel while a cannon is selected — test
+      // the upgrade buttons (up to 2) then the sell button.
+      if (ui.selectedCannon) {
+        if (p.x >= PLAYFIELD_W) {
+          for (var ri = 0; ri < 2; ri++) {
+            var ur = ui.upgradeRects[ri];
+            if (ur) {
+              if (inRect(p, ur)) {
+                upgradeCannon(ui.selectedCannon, ur.toKind);
+                return;
+              }
+            }
+          }
+          if (ui.sellRect) {
+            if (inRect(p, ui.sellRect)) {
+              sellCannon(ui.selectedCannon);
+              return;
+            }
+          }
         }
       }
     }
