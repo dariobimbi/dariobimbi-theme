@@ -283,6 +283,26 @@ body.has-ant-buster-page {
     return c;
   }
 
+  function makeQueen() {
+    var c = makeCanvas(24, 24);
+    var x = c.getContext('2d');
+    // Regal silhouette: deep purple/burgundy body with crown-like light yellow pixels.
+    x.fillStyle = '#682837';
+    x.beginPath();
+    x.ellipse(12, 14, 7, 6, 0, 0, Math.PI * 2);   // body
+    x.fill();
+    x.fillStyle = '#a44444';                      // lighter burgundy for head
+    x.fillRect(10, 8, 4, 4);                      // head
+    x.fillStyle = '#fee761';                      // crown color: light yellow
+    x.fillRect(9, 6, 2, 2);                       // crown left peak
+    x.fillRect(13, 6, 2, 2);                      // crown right peak
+    x.fillRect(11, 5, 2, 2);                      // crown center peak
+    x.fillStyle = '#181425';
+    x.fillRect(8, 4, 1, 1);                       // antenna L
+    x.fillRect(15, 4, 1, 1);                      // antenna R
+    return c;
+  }
+
   function makePhase() {
     var c = makeCanvas(16, 16);
     var x = c.getContext('2d');
@@ -504,6 +524,7 @@ body.has-ant-buster-page {
     mini_splitter: makeMiniSplitter(),
     phase: makePhase(),
     bomber: makeBomber(),
+    queen: makeQueen(),
     splat: makeAntSplat(),
     cannonBase: makeCannonBase(),
     cannonTurret: makeCannonTurret(),         // kept for backward refs; lookups now go through turrets[kind]
@@ -1154,6 +1175,30 @@ body.has-ant-buster-page {
           }
         }
         game.effects.push({ kind: 'bomber_aoe', x: ant.x, y: ant.y, t: 0, life: 0.6 });
+      }
+    },
+    queen: {
+      name: 'Queen',
+      hp: 400,
+      speed: 15,
+      gold: 50,
+      alignment: 0.15,
+      jitterRate: 1.5,
+      wanderFreqMin: 0.1, wanderFreqMax: 0.3,
+      wanderAmpMin: 0.3, wanderAmpMax: 0.5,
+      spriteKey: 'queen',
+      spriteW: 24, spriteH: 24,
+      carryingSpeedMult: 0.7,
+      slowResist: 0.25,
+      damageMult: 1,
+      pierceMult: 1,
+      canPickup: true,
+      armor: 0.3,
+      onDeath: function(ant) {
+        for (var i = 0; i < 6; i++) {
+          var ang = (Math.PI * 2 / 6) * i;
+          spawnAntAt('worker', ant.x + Math.cos(ang) * 12, ant.y + Math.sin(ang) * 12);
+        }
       }
     }
   };
