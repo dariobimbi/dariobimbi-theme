@@ -272,6 +272,16 @@ body.has-ant-buster-page {
       var sprite = a.dead ? game.sprites.splat : game.sprites.worker;
       ctx.drawImage(sprite, Math.round(a.x - 8), Math.round(a.y - 8));
     }
+
+    if (game.state === 'lost') {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+      ctx.fillStyle = '#e43b44';
+      ctx.font = '16px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('THE ANTS WIN', WIDTH / 2, HEIGHT / 2);
+      ctx.textAlign = 'start';
+    }
   }
 
   // === ANTS ===
@@ -323,6 +333,38 @@ body.has-ant-buster-page {
     }
   }
 
+  function checkCakeCollision() {
+    var cakeR = 14;
+    for (var i = 0; i < game.ants.length; i++) {
+      var a = game.ants[i];
+      if (a.dead) { continue; }
+      var dx = a.x - game.cake.x;
+      var dy = a.y - game.cake.y;
+      if (dx * dx + dy * dy < cakeR * cakeR) {
+        game.cake.slices -= 1;
+        a.dead = true;
+        a.deathTime = 0.5;       // mark for cleanup
+        if (game.cake.slices <= 0) {
+          game.cake.slices = 0;
+          game.state = 'lost';
+        }
+      }
+    }
+  }
+
+  function pruneAnts() {
+    var kept = [];
+    for (var i = 0; i < game.ants.length; i++) {
+      var a = game.ants[i];
+      if (!a.dead) {
+        kept.push(a);
+      } else if (a.deathTime < 0.5) {
+        kept.push(a);
+      }
+    }
+    game.ants = kept;
+  }
+
   // Bootstrap ants for early-task verification (removed in Task 13)
   for (var ai = 0; ai < 5; ai++) {
     spawnAnt('worker');
@@ -333,6 +375,8 @@ body.has-ant-buster-page {
     game.time += dt;
     if (game.state !== 'playing') { return; }
     updateAnts(dt);
+    checkCakeCollision();
+    pruneAnts();
   }
 
   // === MAIN LOOP ===
