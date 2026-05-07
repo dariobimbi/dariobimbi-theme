@@ -220,6 +220,45 @@ body.has-ant-buster-page {
     return c;
   }
 
+  function makeSplitter() {
+    var c = makeCanvas(16, 16);
+    var x = c.getContext('2d');
+    // Two halves of a splittable body, slightly offset, with a fissure line down the middle.
+    x.fillStyle = '#5a9c7d';                    // green-blue base
+    x.beginPath();
+    x.ellipse(5, 8, 4, 4, 0, 0, Math.PI * 2);   // left half body
+    x.fill();
+    x.fillStyle = '#4a8c6d';                    // slightly darker right half
+    x.beginPath();
+    x.ellipse(11, 8, 4, 4, 0, 0, Math.PI * 2);  // right half body
+    x.fill();
+    x.fillStyle = '#262b44';
+    x.fillRect(7, 7, 2, 4);                     // fissure line down middle
+    x.fillStyle = '#3a4466';
+    x.fillRect(4, 3, 2, 2);                     // left head bump
+    x.fillRect(10, 3, 2, 2);                    // right head bump
+    x.fillStyle = '#181425';
+    x.fillRect(4, 1, 1, 2);                     // antenna L
+    x.fillRect(11, 1, 1, 2);                    // antenna R
+    return c;
+  }
+
+  function makeMiniSplitter() {
+    var c = makeCanvas(8, 8);
+    var x = c.getContext('2d');
+    // Crude small version: two pixel halves with a fissure.
+    x.fillStyle = '#5a9c7d';
+    x.fillRect(1, 2, 3, 4);                     // left half
+    x.fillStyle = '#4a8c6d';
+    x.fillRect(4, 2, 3, 4);                     // right half
+    x.fillStyle = '#262b44';
+    x.fillRect(3, 2, 2, 4);                     // fissure
+    x.fillStyle = '#181425';
+    x.fillRect(1, 0, 1, 1);                     // antenna L
+    x.fillRect(6, 0, 1, 1);                     // antenna R
+    return c;
+  }
+
   function makeAntSplat() {
     var c = makeCanvas(16, 16);
     var x = c.getContext('2d');
@@ -419,6 +458,8 @@ body.has-ant-buster-page {
     soldier: makeSoldierSprite(),
     scout: makeScout(),
     tank: makeTank(),
+    splitter: makeSplitter(),
+    mini_splitter: makeMiniSplitter(),
     splat: makeAntSplat(),
     cannonBase: makeCannonBase(),
     cannonTurret: makeCannonTurret(),         // kept for backward refs; lookups now go through turrets[kind]
@@ -942,6 +983,49 @@ body.has-ant-buster-page {
       canPickup: false,
       onDeath: null,
       armor: 0.5
+    },
+    splitter: {
+      name: 'Splitter',
+      hp: 25,
+      speed: 25,
+      gold: 4,
+      alignment: 0.25,
+      jitterRate: 4.0,
+      wanderFreqMin: 0.3, wanderFreqMax: 0.6,
+      wanderAmpMin: 0.8, wanderAmpMax: 1.3,
+      spriteKey: 'splitter',
+      spriteW: 16, spriteH: 16,
+      carryingSpeedMult: 0.7,
+      slowResist: 0,
+      damageMult: 1,
+      pierceMult: 1,
+      canPickup: true,
+      onDeath: function(ant) {
+        for (var i = 0; i < 2; i++) {
+          var ang = Math.random() * Math.PI * 2;
+          spawnAntAt('mini_splitter', ant.x + Math.cos(ang) * 6, ant.y + Math.sin(ang) * 6);
+        }
+      },
+      armor: 0
+    },
+    mini_splitter: {
+      name: 'Mini-Splitter',
+      hp: 8,
+      speed: 35,
+      gold: 1,
+      alignment: 0.35,
+      jitterRate: 5.0,
+      wanderFreqMin: 0.4, wanderFreqMax: 0.8,
+      wanderAmpMin: 1.0, wanderAmpMax: 1.5,
+      spriteKey: 'mini_splitter',
+      spriteW: 8, spriteH: 8,
+      carryingSpeedMult: 0.7,
+      slowResist: 0,
+      damageMult: 1,
+      pierceMult: 1,
+      canPickup: true,
+      onDeath: null,
+      armor: 0
     }
   };
 
@@ -976,18 +1060,22 @@ body.has-ant-buster-page {
     if (def.onApply) { def.onApply(ant, magnitude); }
   }
 
-  function spawnAnt(kindKey) {
+  // Spawn an ant of `kindKey` at an explicit (x, y). Used by spawnAnt for the
+  // normal anthill spawn, and by onDeath hooks (Splitter, Bomber, Queen) that
+  // need to drop new ants at a specific position.
+  function spawnAntAt(kindKey, x, y) {
     var k = ANT_KINDS[kindKey];
     var ant = {
       kind: kindKey,
-      x: game.anthill.x,
-      y: game.anthill.y + (Math.random() * 60 - 30),
+      x: x,
+      y: y,
       hp: k.hp,
       maxHp: k.hp,
       speed: k.speed,
       heading: (Math.random() * 2 - 1) * 0.5,   // radians; small random offset from east
       dead: false,
       deathTime: 0,
+      deliveredAt: 0,                            // future tasks read this; unused today
       carrying: false,
       wanderPhase: Math.random() * Math.PI * 2,
       wanderFreq: k.wanderFreqMin + Math.random() * (k.wanderFreqMax - k.wanderFreqMin),
@@ -995,6 +1083,11 @@ body.has-ant-buster-page {
       effects: {}                                   // Task 4 fills this with status-effect entries
     };
     game.ants.push(ant);
+    return ant;
+  }
+
+  function spawnAnt(kindKey) {
+    return spawnAntAt(kindKey, game.anthill.x, game.anthill.y + (Math.random() * 60 - 30));
   }
 
   function angleTowards(fromX, fromY, toX, toY) {
@@ -1500,7 +1593,8 @@ body.has-ant-buster-page {
     if (ant.dead) { return; }
     ant.dead = true;
     ant.deathTime = 0;
-    game.gold = game.gold + ANT_KINDS[ant.kind].gold;
+    var k = ANT_KINDS[ant.kind];
+    game.gold = game.gold + k.gold;
     if (ant.carrying) {
       game.cake.slices = game.cake.slices + 1;
       ant.carrying = false;
@@ -1508,6 +1602,10 @@ body.has-ant-buster-page {
     if (killer) {
       killer.kills = killer.kills + 1;
     }
+    // Fire the kind's onDeath hook (Splitter spawns Mini-Splitters; Bomber/Queen
+    // will use this in later tasks). spawnAntAt only pushes onto game.ants, so
+    // it is safe even if killAnt is called from inside an iteration over game.ants.
+    if (k.onDeath) { k.onDeath(ant); }
   }
 
   function updateProjectiles(dt) {
