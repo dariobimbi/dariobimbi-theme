@@ -6,8 +6,8 @@
  * Inserter: no
  */
 ?>
-<!-- wp:group {"align":"full","className":"content-page ant-buster-page","style":{"spacing":{"padding":{"top":"var:preset|spacing|70","bottom":"var:preset|spacing|70","left":"var:preset|spacing|30","right":"var:preset|spacing|30"}}},"layout":{"type":"constrained"}} -->
-<div class="wp-block-group alignfull content-page ant-buster-page" style="padding-top:var(--wp--preset--spacing--70);padding-right:var(--wp--preset--spacing--30);padding-bottom:var(--wp--preset--spacing--70);padding-left:var(--wp--preset--spacing--30)">
+<!-- wp:group {"align":"full","className":"content-page demo-ant-buster","style":{"spacing":{"padding":{"top":"var:preset|spacing|70","bottom":"var:preset|spacing|70","left":"var:preset|spacing|30","right":"var:preset|spacing|30"}}},"layout":{"type":"constrained"}} -->
+<div class="wp-block-group alignfull content-page demo-ant-buster" style="padding-top:var(--wp--preset--spacing--70);padding-right:var(--wp--preset--spacing--30);padding-bottom:var(--wp--preset--spacing--70);padding-left:var(--wp--preset--spacing--30)">
 
   <!-- wp:paragraph {"className":"eyebrow"} -->
   <p class="eyebrow">demo</p>
@@ -22,8 +22,8 @@
   <!-- /wp:paragraph -->
 
   <!-- wp:html -->
-  <div class="ab-stage" id="ab-stage">
-    <canvas id="ab-canvas" width="480" height="270"></canvas>
+  <div class="ab-stage">
+    <canvas id="ab-canvas" data-role="canvas" aria-label="Ant Buster game canvas" width="480" height="270"></canvas>
   </div>
   <!-- /wp:html -->
 
