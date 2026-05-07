@@ -265,6 +265,34 @@ body.has-ant-buster-page {
     // Shop panel (right)
     ctx.fillStyle = '#1a1c2c';
     ctx.fillRect(PLAYFIELD_W, 0, SHOP_W, HEIGHT);
+
+    // Ants
+    for (var i = 0; i < game.ants.length; i++) {
+      var a = game.ants[i];
+      var sprite = a.dead ? game.sprites.splat : game.sprites.worker;
+      ctx.drawImage(sprite, Math.round(a.x - 8), Math.round(a.y - 8));
+    }
+  }
+
+  // === ANTS ===
+  function spawnAnt(type) {
+    var ant = {
+      type: type,
+      x: game.anthill.x,
+      y: game.anthill.y + (Math.random() * 6 - 3),
+      hp: 10,
+      maxHp: 10,
+      speed: 30,
+      heading: 0,         // radians; 0 = east
+      dead: false,
+      deathTime: 0
+    };
+    game.ants.push(ant);
+  }
+
+  // Bootstrap ants for early-task verification (removed in Task 13)
+  for (var ai = 0; ai < 5; ai++) {
+    spawnAnt('worker');
   }
 
   // === UPDATE === (Task 6+)
