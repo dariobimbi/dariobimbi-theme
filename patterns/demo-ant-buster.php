@@ -23,7 +23,7 @@
 
   <!-- wp:html -->
   <div class="ab-stage">
-    <canvas id="ab-canvas" data-role="canvas" aria-label="Ant Buster game canvas" width="480" height="270"></canvas>
+    <canvas id="ab-canvas" data-role="canvas" aria-label="Ant Buster game canvas" width="960" height="540"></canvas>
   </div>
   <!-- /wp:html -->
 
@@ -95,7 +95,7 @@ body.has-ant-buster-page {
 
   // === GAME STATE ===
   var game = {
-    state: 'playing',         // 'playing' | 'won' | 'lost'
+    state: 'idle',            // 'idle' | 'playing' | 'won' | 'lost'
     time: 0,                  // seconds since game start
     accumulator: 0,           // for fixed-timestep
     cake: { x: 200, y: 135, slices: 8 },
@@ -112,6 +112,7 @@ body.has-ant-buster-page {
   var canvas = document.getElementById('ab-canvas');
   if (!canvas) { return; }
   var ctx = canvas.getContext('2d');
+  ctx.scale(2, 2);
   ctx.imageSmoothingEnabled = false;
 
   // === SPRITES ===
@@ -328,6 +329,20 @@ body.has-ant-buster-page {
       ctx.stroke();
     }
 
+    if (game.state === 'idle') {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+      ctx.fillStyle = '#fee761';
+      ctx.font = '16px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('ANT BUSTER', WIDTH / 2, HEIGHT / 2 - 16);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '10px monospace';
+      ctx.fillText('Defend the cake from the ants', WIDTH / 2, HEIGHT / 2 + 4);
+      ctx.fillText('Click to start', WIDTH / 2, HEIGHT / 2 + 22);
+      ctx.textAlign = 'start';
+    }
+
     if (game.time < 4) {
       if (game.cannons.length === 0) {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
@@ -373,11 +388,11 @@ body.has-ant-buster-page {
     var ant = {
       type: type,
       x: game.anthill.x,
-      y: game.anthill.y + (Math.random() * 6 - 3),
+      y: game.anthill.y + (Math.random() * 60 - 30),
       hp: 10,
       maxHp: 10,
       speed: 30,
-      heading: 0,         // radians; 0 = east
+      heading: (Math.random() * 2 - 1) * 0.5,   // radians; small random offset from east
       dead: false,
       deathTime: 0
     };
@@ -403,8 +418,8 @@ body.has-ant-buster-page {
     var targetX = game.cake.x;
     var targetY = game.cake.y;
     var desiredHeading = angleTowards(ant.x, ant.y, targetX, targetY);
-    var alignment = 0.6;       // Worker default; per-type table comes in Plan 2
-    var jitterRate = 0.5;      // radians/sec of low-freq noise
+    var alignment = 0.3;       // Worker default; per-type table comes in Plan 2
+    var jitterRate = 3.0;      // radians/sec of low-freq noise
     ant.heading += angleDelta(ant.heading, desiredHeading) * alignment * dt;
     ant.heading += (Math.random() * 2 - 1) * jitterRate * dt;
     ant.x += Math.cos(ant.heading) * ant.speed * dt;
@@ -682,6 +697,7 @@ body.has-ant-buster-page {
     ui.mouseY = p.y;
     if (game.state === 'won') { resetGame(); return; }
     if (game.state === 'lost') { resetGame(); return; }
+    if (game.state === 'idle') { game.state = 'playing'; return; }
     var card = shopCardAt(p.x, p.y);
     if (card) {
       ui.dragging = { defKey: card };
@@ -715,8 +731,8 @@ body.has-ant-buster-page {
 
   // === UPDATE ===
   function update(dt) {
-    game.time += dt;
     if (game.state !== 'playing') { return; }
+    game.time += dt;
     updateWave(dt);
     updateAnts(dt);
     updateCannons(dt);
