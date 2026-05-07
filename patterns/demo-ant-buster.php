@@ -334,7 +334,23 @@ body.has-ant-buster-page {
       ctx.fillStyle = '#e43b44';
       ctx.font = '16px monospace';
       ctx.textAlign = 'center';
-      ctx.fillText('THE ANTS WIN', WIDTH / 2, HEIGHT / 2);
+      ctx.fillText('THE ANTS WIN', WIDTH / 2, HEIGHT / 2 - 12);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '10px monospace';
+      ctx.fillText('Click to restart', WIDTH / 2, HEIGHT / 2 + 8);
+      ctx.textAlign = 'start';
+    }
+
+    if (game.state === 'won') {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+      ctx.fillStyle = '#fee761';
+      ctx.font = '16px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('CAKE SAVED', WIDTH / 2, HEIGHT / 2 - 12);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '10px monospace';
+      ctx.fillText('Click to restart', WIDTH / 2, HEIGHT / 2 + 8);
       ctx.textAlign = 'start';
     }
   }
@@ -608,6 +624,20 @@ body.has-ant-buster-page {
     }
   }
 
+  function resetGame() {
+    game.state = 'playing';
+    game.time = 0;
+    game.cake.slices = 8;
+    game.ants = [];
+    game.cannons = [];
+    game.projectiles = [];
+    game.gold = 150;
+    game.wave = 1;
+    wave.active = true;
+    wave.timeIntoWave = 0;
+    wave.spawnIndex = 0;
+  }
+
   // === INPUT ===
   var ui = {
     dragging: null,         // { defKey } when dragging from shop
@@ -637,6 +667,8 @@ body.has-ant-buster-page {
     var p = canvasToGame(evt);
     ui.mouseX = p.x;
     ui.mouseY = p.y;
+    if (game.state === 'won') { resetGame(); return; }
+    if (game.state === 'lost') { resetGame(); return; }
     var card = shopCardAt(p.x, p.y);
     if (card) {
       ui.dragging = { defKey: card };
