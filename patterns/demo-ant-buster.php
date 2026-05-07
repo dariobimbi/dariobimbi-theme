@@ -98,7 +98,7 @@ body.has-ant-buster-page {
     state: 'idle',            // 'idle' | 'playing' | 'won' | 'lost'
     time: 0,                  // seconds since game start
     accumulator: 0,           // for fixed-timestep
-    cake: { x: 200, y: 135, slices: 8 },
+    cake: { x: 200, y: 135, slices: 8, lost: 0 },
     anthill: { x: 16, y: 135 },
     ants: [],
     cannons: [],
@@ -267,9 +267,11 @@ body.has-ant-buster-page {
     ctx.fillStyle = '#fee761';
     ctx.fillText('Gold: ' + game.gold, 6, 12);
     ctx.fillStyle = '#e43b44';
-    ctx.fillText('Cake: ' + game.cake.slices + '/8', 80, 12);
+    ctx.fillText('Cake: ' + game.cake.slices + '/8', 76, 12);
+    ctx.fillStyle = '#ff8888';
+    ctx.fillText('Lost: ' + game.cake.lost + '/8', 156, 12);
     ctx.fillStyle = '#ffffff';
-    ctx.fillText('Wave: ' + game.wave, 160, 12);
+    ctx.fillText('Wave: ' + game.wave, 240, 12);
     ctx.textBaseline = 'alphabetic';
 
     // Shop panel (right)
@@ -281,6 +283,14 @@ body.has-ant-buster-page {
       var a = game.ants[i];
       var sprite = a.dead ? game.sprites.splat : game.sprites.worker;
       ctx.drawImage(sprite, Math.round(a.x - 8), Math.round(a.y - 8));
+      if (!a.dead) {
+        if (a.carrying) {
+          ctx.fillStyle = '#feae34';
+          ctx.fillRect(Math.round(a.x - 3), Math.round(a.y - 12), 6, 4);
+          ctx.fillStyle = '#fee761';
+          ctx.fillRect(Math.round(a.x - 2), Math.round(a.y - 11), 4, 2);
+        }
+      }
     }
 
     // Shop card for Howitzer
@@ -394,7 +404,8 @@ body.has-ant-buster-page {
       speed: 30,
       heading: (Math.random() * 2 - 1) * 0.5,   // radians; small random offset from east
       dead: false,
-      deathTime: 0
+      deathTime: 0,
+      carrying: false
     };
     game.ants.push(ant);
   }
@@ -415,15 +426,28 @@ body.has-ant-buster-page {
       ant.deathTime += dt;
       return;
     }
-    var targetX = game.cake.x;
-    var targetY = game.cake.y;
+    var targetX;
+    var targetY;
+    if (ant.carrying) {
+      targetX = game.anthill.x;
+      targetY = game.anthill.y;
+    } else {
+      targetX = game.cake.x;
+      targetY = game.cake.y;
+    }
+    var alignment = 0.3;
+    var jitterRate = 3.0;
+    var speed = ant.speed;
+    if (ant.carrying) {
+      alignment = 0.6;       // more determined return trip
+      jitterRate = 1.5;      // less wander when going home
+      speed = ant.speed * 0.7;   // slower while loaded
+    }
     var desiredHeading = angleTowards(ant.x, ant.y, targetX, targetY);
-    var alignment = 0.3;       // Worker default; per-type table comes in Plan 2
-    var jitterRate = 3.0;      // radians/sec of low-freq noise
     ant.heading += angleDelta(ant.heading, desiredHeading) * alignment * dt;
     ant.heading += (Math.random() * 2 - 1) * jitterRate * dt;
-    ant.x += Math.cos(ant.heading) * ant.speed * dt;
-    ant.y += Math.sin(ant.heading) * ant.speed * dt;
+    ant.x += Math.cos(ant.heading) * speed * dt;
+    ant.y += Math.sin(ant.heading) * speed * dt;
   }
 
   function updateAnts(dt) {
@@ -432,20 +456,32 @@ body.has-ant-buster-page {
     }
   }
 
-  function checkCakeCollision() {
-    var cakeR = 14;
+  function checkPickupsAndDeliveries() {
+    var pickupR = 14;
+    var deliverR = 14;
     for (var i = 0; i < game.ants.length; i++) {
       var a = game.ants[i];
       if (a.dead) { continue; }
-      var dx = a.x - game.cake.x;
-      var dy = a.y - game.cake.y;
-      if (dx * dx + dy * dy < cakeR * cakeR) {
-        game.cake.slices -= 1;
-        a.dead = true;
-        a.deathTime = 0.5;       // mark for cleanup
-        if (game.cake.slices <= 0) {
-          game.cake.slices = 0;
-          game.state = 'lost';
+      if (a.carrying) {
+        var dxHill = a.x - game.anthill.x;
+        var dyHill = a.y - game.anthill.y;
+        if (dxHill * dxHill + dyHill * dyHill < deliverR * deliverR) {
+          game.cake.lost += 1;
+          a.dead = true;
+          a.deathTime = 0.5;     // pruneAnts drops this immediately, no splat
+          if (game.cake.lost >= 8) {
+            game.state = 'lost';
+          }
+        }
+      } else {
+        if (game.cake.slices > 0) {
+          var dxCake = a.x - game.cake.x;
+          var dyCake = a.y - game.cake.y;
+          if (dxCake * dxCake + dyCake * dyCake < pickupR * pickupR) {
+            game.cake.slices -= 1;
+            a.carrying = true;
+            a.heading = angleTowards(a.x, a.y, game.anthill.x, game.anthill.y);
+          }
         }
       }
     }
@@ -589,6 +625,10 @@ body.has-ant-buster-page {
             a.dead = true;
             a.deathTime = 0;
             game.gold += 2;       // Worker drops 2 gold; per-type table comes in Plan 2
+            if (a.carrying) {
+              game.cake.slices += 1;
+              a.carrying = false;
+            }
           }
           hit = true;
           break;
@@ -656,6 +696,7 @@ body.has-ant-buster-page {
     game.state = 'playing';
     game.time = 0;
     game.cake.slices = 8;
+    game.cake.lost = 0;
     game.ants = [];
     game.cannons = [];
     game.projectiles = [];
@@ -737,7 +778,7 @@ body.has-ant-buster-page {
     updateAnts(dt);
     updateCannons(dt);
     updateProjectiles(dt);
-    checkCakeCollision();
+    checkPickupsAndDeliveries();
     pruneAnts();
   }
 
