@@ -89,6 +89,7 @@ Plan 2 was scoped as "systems + minimum content"; everything below was deliberat
 - **Carrier flee-speed boost vs. carryingSpeedMult.** If Plan 3 wants the spec's "carriers are noticeably faster while fleeing" feel, swap the multiplier sign on carrier specifically.
 - **Bomber AoE-disable visualization.** The `disabled` cannon state is implemented (cannons skip firing while `disabled > 0`); the visual treatment (greyscale, sparks, countdown ring) is minimal in Plan 2.
 - **Phase ant intangibility cue.** Implemented as `ant.intangible` toggling on a 3s/1s cycle; the visual treatment (alpha pulse, outline shimmer) is minimal.
+- **Six remaining `||` operators in inline JS.** Final review flagged this as Important. The `||` short-circuit is currently working (curl-grep for `&#038;&#038;` and the parallel `&#124;&#124;` check both pass), but CLAUDE.md treats `||` as "probably suspect" alongside `&&` because WP's content filter encoding behavior is inconsistent. A future content edit upstream could shift the filter and start mangling one of these. Plan 3 should sweep them to the verbose `var x = a; if (!x) { x = b; }` form. Locations called out by the reviewer: lines 1318, 1321, 1429, 1866, 1883, 1895-1896 of `patterns/demo-ant-buster.php` at commit `b5cafbe`.
 
 ## Workflow notes for Plan 3
 
