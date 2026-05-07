@@ -489,6 +489,18 @@ body.has-ant-buster-page {
     return c;
   }
 
+  function makeCannonTurretDiscus() {
+    var c = makeCanvas(24, 24);
+    var x = c.getContext('2d');
+    // Wide horizontal launcher with a square base; the projectile's silhouette
+    // is round but the launcher just suggests a flat throw.
+    x.fillStyle = '#9b5a2a';
+    x.fillRect(4, 12, 16, 4);                   // wide horizontal launcher
+    x.fillStyle = '#3a2a0a';
+    x.fillRect(8, 8, 8, 8);                     // base
+    return c;
+  }
+
   function makeCake(slices) {
     var c = makeCanvas(32, 32);
     var x = c.getContext('2d');
@@ -553,6 +565,7 @@ body.has-ant-buster-page {
       siege: makeCannonTurretSiege(),
       railgun: makeCannonTurretRailgun(),
       mortar: makeCannonTurretMortar(),
+      discus: makeCannonTurretDiscus(),
       repeater: makeCannonTurretRepeater(),
       autocannon: makeCannonTurretAutocannon(),
       vulcan: makeCannonTurretVulcan(),
@@ -1747,7 +1760,7 @@ body.has-ant-buster-page {
       projectileSpeed: 200,
       family: 'heavy',
       tier: 1,
-      upgradesTo: ['siege', 'mortar']    // Task 7 will append 'discus' (3rd mid)
+      upgradesTo: ['siege', 'mortar', 'discus']
     },
     siege: {
       name: 'Siege',
@@ -1785,6 +1798,18 @@ body.has-ant-buster-page {
       splash: { radius: 40, falloff: 0.5, splashMult: 0.5 },
       arc: { height: 24, travelTime: 0.6 },
       upgradesTo: []           // upgradesTo: ['hellfire', 'patriot'] — populated by Tasks 10/8
+    },
+    discus: {
+      name: 'Discus',
+      cost: 60,
+      damage: 4,
+      fireRate: 0.4,
+      range: 150,
+      projectileSpeed: 220,
+      family: 'heavy',
+      tier: 2,
+      returning: true,
+      upgradesTo: []           // upgradesTo: ['ricochet', 'shockwave'] — populated by Tasks 11/12
     },
     repeater: {
       name: 'Repeater',
@@ -2030,7 +2055,14 @@ body.has-ant-buster-page {
         arcing: !!def.arc,
         arcStartedAt: 0,
         arcDuration: 0,
-        arcHeight: 0
+        arcHeight: 0,
+        // Returning projectile primitive (Plan 3 — Discus, future Boomerang).
+        // After the first hit the projectile flips velocity toward originX/originY
+        // and can hit additional ants on the return leg before despawning at origin.
+        returning: !!def.returning,
+        phase: 'out',
+        originX: cannon.x,
+        originY: cannon.y
       };
       if (def.arc) {
         p.arcStartedAt = game.time;
@@ -2162,12 +2194,48 @@ body.has-ant-buster-page {
             p._sawAnts.push(a);
             // projectile keeps flying — don't set hit, don't break
           } else {
-            hit = true;
-            break;
+            // Returning projectile primitive (Plan 3 — Discus). On the first
+            // outbound hit, flip velocity toward origin so the projectile can
+            // hit more ants on the return leg. CLAUDE.md: no `&&` in inline
+            // <script>, so two nested ifs instead of `p.returning && p.phase === 'out'`.
+            var canReturn = false;
+            if (p.returning) {
+              if (p.phase === 'out') {
+                canReturn = true;
+              }
+            }
+            if (canReturn) {
+              p.phase = 'return';
+              var rdx = p.originX - p.x;
+              var rdy = p.originY - p.y;
+              var rmag = Math.sqrt(rdx * rdx + rdy * rdy);
+              var speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+              if (rmag > 0) {
+                p.vx = (rdx / rmag) * speed;
+                p.vy = (rdy / rmag) * speed;
+              }
+              if (!p._sawAnts) { p._sawAnts = []; }
+              p._sawAnts.push(a);
+              p.life = 1.5;
+              // projectile keeps flying back — don't set hit, don't break
+            } else {
+              hit = true;
+              break;
+            }
           }
         }
       }
       if (!hit) {
+        // Return-leg despawn: drop the projectile when it arrives back at origin
+        // so it doesn't fly off-map for an extra frame. Checked before the
+        // bounds/life filter so an arrived returner exits cleanly via `continue`.
+        if (p.phase === 'return') {
+          var ddx = p.originX - p.x;
+          var ddy = p.originY - p.y;
+          if (ddx * ddx + ddy * ddy < 4 * 4) {
+            continue;
+          }
+        }
         if (p.life > 0) {
           if (p.x >= 0) {
             if (p.x <= PLAYFIELD_W) {
