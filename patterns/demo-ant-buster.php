@@ -1851,6 +1851,31 @@ body.has-ant-buster-page {
       ]
     }
   ];
+  WAVES.push({
+    number: 2, prep: 20, bonus: 30,
+    spawns: [{ type: 'worker', count: 12, interval: 0.8, delay: 0 }]
+  });
+  WAVES.push({
+    number: 3, prep: 20, bonus: 35,
+    spawns: [
+      { type: 'worker', count: 6, interval: 0.7, delay: 0 },
+      { type: 'worker', count: 6, interval: 0.7, delay: 4 }
+    ]
+  });
+  WAVES.push({
+    number: 4, prep: 20, bonus: 45,
+    spawns: [
+      { type: 'worker', count: 10, interval: 0.7, delay: 0 },
+      { type: 'scout', count: 4, interval: 1.0, delay: 1.5 }
+    ]
+  });
+  WAVES.push({
+    number: 5, prep: 30, bonus: 75, boss: true,
+    spawns: [
+      { type: 'queen', count: 1, interval: 1, delay: 0 },
+      { type: 'worker', count: 8, interval: 0.8, delay: 2 }
+    ]
+  });
 
   // Spawner state machine: prep -> wave -> (prep | won) ; lost is set by the
   // cake-loss path. Reads game.time for spawn scheduling.
