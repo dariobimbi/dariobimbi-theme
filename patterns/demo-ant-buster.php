@@ -77,5 +77,73 @@ body.has-ant-buster-page {
 </style>
 
 <script>
-/* Inline script added in Task 3 */
+(function () {
+  'use strict';
+
+  // === BODY CLASS (full-bleed paint workaround) ===
+  document.body.classList.add('has-ant-buster-page');
+
+  // === CONSTANTS ===
+  var WIDTH = 480;
+  var HEIGHT = 270;
+  var PLAYFIELD_W = 320;
+  var PLAYFIELD_H = 246;
+  var HUD_H = 24;
+  var SHOP_W = 160;
+  var TARGET_FPS = 60;
+  var FIXED_DT = 1 / TARGET_FPS;
+
+  // === GAME STATE ===
+  var game = {
+    state: 'playing',         // 'playing' | 'won' | 'lost'
+    time: 0,                  // seconds since game start
+    accumulator: 0,           // for fixed-timestep
+    cake: { x: 200, y: 135, slices: 8 },
+    anthill: { x: 16, y: 135 },
+    ants: [],
+    cannons: [],
+    projectiles: [],
+    sprites: {},              // populated in Task 4
+    gold: 150,
+    wave: 1
+  };
+
+  // === CANVAS SETUP ===
+  var canvas = document.getElementById('ab-canvas');
+  if (!canvas) { return; }
+  var ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+
+  // === SPRITES === (Task 4)
+
+  // === RENDERING === (Task 5)
+  function render() {
+    ctx.fillStyle = '#1a1c2c';
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+  }
+
+  // === UPDATE === (Task 6+)
+  function update(dt) {
+    game.time += dt;
+  }
+
+  // === MAIN LOOP ===
+  var lastTime = performance.now();
+  function frame(now) {
+    var elapsed = (now - lastTime) / 1000;
+    lastTime = now;
+    if (elapsed > 0.25) { elapsed = 0.25; }   // clamp to avoid spiral-of-death
+    game.accumulator += elapsed;
+    while (game.accumulator >= FIXED_DT) {
+      update(FIXED_DT);
+      game.accumulator -= FIXED_DT;
+    }
+    render();
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // Expose game for debugging from devtools console
+  window.__ab = game;
+})();
 </script>
