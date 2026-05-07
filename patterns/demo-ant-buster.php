@@ -299,6 +299,12 @@ body.has-ant-buster-page {
       ctx.restore();
     }
 
+    // Projectiles
+    for (var pi = 0; pi < game.projectiles.length; pi++) {
+      var p = game.projectiles[pi];
+      ctx.drawImage(game.sprites.projectile, Math.round(p.x - 2), Math.round(p.y - 2));
+    }
+
     // Drag preview
     if (ui.dragging) {
       var ok = canPlaceCannon(ui.mouseX, ui.mouseY);
@@ -435,10 +441,10 @@ body.has-ant-buster-page {
   }
 
   function canPlaceCannon(x, y) {
-    if (x < 0) { return false; }
-    if (x > PLAYFIELD_W) { return false; }
-    if (y < HUD_H) { return false; }
-    if (y > HEIGHT) { return false; }
+    if (x < 16) { return false; }
+    if (x > PLAYFIELD_W - 16) { return false; }
+    if (y < HUD_H + 16) { return false; }
+    if (y > HEIGHT - 16) { return false; }
     var dxCake = x - game.cake.x;
     var dyCake = y - game.cake.y;
     if (dxCake * dxCake + dyCake * dyCake < 24 * 24) { return false; }
@@ -464,6 +470,96 @@ body.has-ant-buster-page {
       target: null
     });
     return true;
+  }
+
+  function findTarget(cannon) {
+    var def = CANNON_DEFS[cannon.defKey];
+    var rangeSq = def.range * def.range;
+    var nearest = null;
+    var nearestDistSq = rangeSq;
+    for (var i = 0; i < game.ants.length; i++) {
+      var a = game.ants[i];
+      if (a.dead) { continue; }
+      var dx = a.x - cannon.x;
+      var dy = a.y - cannon.y;
+      var distSq = dx * dx + dy * dy;
+      if (distSq < nearestDistSq) {
+        nearest = a;
+        nearestDistSq = distSq;
+      }
+    }
+    return nearest;
+  }
+
+  function updateCannons(dt) {
+    for (var i = 0; i < game.cannons.length; i++) {
+      var c = game.cannons[i];
+      var def = CANNON_DEFS[c.defKey];
+      c.cooldown -= dt;
+      var target = findTarget(c);
+      c.target = target;
+      if (target) {
+        c.heading = angleTowards(c.x, c.y, target.x, target.y);
+        if (c.cooldown <= 0) {
+          fireProjectile(c, target);
+          c.cooldown = 1 / def.fireRate;
+        }
+      }
+    }
+  }
+
+  // === PROJECTILES ===
+  function fireProjectile(cannon, target) {
+    var def = CANNON_DEFS[cannon.defKey];
+    var heading = angleTowards(cannon.x, cannon.y, target.x, target.y);
+    game.projectiles.push({
+      x: cannon.x,
+      y: cannon.y,
+      vx: Math.cos(heading) * def.projectileSpeed,
+      vy: Math.sin(heading) * def.projectileSpeed,
+      damage: def.damage,
+      life: 1.5     // seconds
+    });
+  }
+
+  function updateProjectiles(dt) {
+    var kept = [];
+    for (var i = 0; i < game.projectiles.length; i++) {
+      var p = game.projectiles[i];
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.life -= dt;
+      var hit = false;
+      for (var j = 0; j < game.ants.length; j++) {
+        var a = game.ants[j];
+        if (a.dead) { continue; }
+        var dx = a.x - p.x;
+        var dy = a.y - p.y;
+        if (dx * dx + dy * dy < 6 * 6) {
+          a.hp -= p.damage;
+          if (a.hp <= 0) {
+            a.dead = true;
+            a.deathTime = 0;
+          }
+          hit = true;
+          break;
+        }
+      }
+      if (!hit) {
+        if (p.life > 0) {
+          if (p.x >= 0) {
+            if (p.x <= PLAYFIELD_W) {
+              if (p.y >= 0) {
+                if (p.y <= HEIGHT) {
+                  kept.push(p);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    game.projectiles = kept;
   }
 
   // === INPUT ===
@@ -526,11 +622,13 @@ body.has-ant-buster-page {
     }
   });
 
-  // === UPDATE === (Task 6+)
+  // === UPDATE ===
   function update(dt) {
     game.time += dt;
     if (game.state !== 'playing') { return; }
     updateAnts(dt);
+    updateCannons(dt);
+    updateProjectiles(dt);
     checkCakeCollision();
     pruneAnts();
   }
