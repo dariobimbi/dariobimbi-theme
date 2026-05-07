@@ -98,7 +98,7 @@ body.has-ant-buster-page {
     state: 'idle',            // 'idle' | 'playing' | 'won' | 'lost'
     time: 0,                  // seconds since game start
     accumulator: 0,           // for fixed-timestep
-    cake: { x: 200, y: 135, slices: 8, lost: 0 },
+    cake: { x: 264, y: 56, slices: 8, lost: 0 },
     anthill: { x: 16, y: 135 },
     ants: [],
     cannons: [],
@@ -407,7 +407,10 @@ body.has-ant-buster-page {
       heading: (Math.random() * 2 - 1) * 0.5,   // radians; small random offset from east
       dead: false,
       deathTime: 0,
-      carrying: false
+      carrying: false,
+      wanderPhase: Math.random() * Math.PI * 2,
+      wanderFreq: 0.3 + Math.random() * 0.4,        // Hz; low-frequency sway
+      wanderAmp: 0.9 + Math.random() * 0.6          // radians of heading bias
     };
     game.ants.push(ant);
   }
@@ -437,15 +440,19 @@ body.has-ant-buster-page {
       targetX = game.cake.x;
       targetY = game.cake.y;
     }
-    var alignment = 0.3;
-    var jitterRate = 3.0;
+    var alignment = 0.2;
+    var jitterRate = 4.0;
+    var wanderScale = 1.0;
     var speed = ant.speed;
     if (ant.carrying) {
       alignment = 0.6;       // more determined return trip
       jitterRate = 1.5;      // less wander when going home
-      speed = ant.speed * 0.7;   // slower while loaded
+      wanderScale = 0.3;     // tighten the sway when loaded
+      speed = ant.speed * 0.7;
     }
-    var desiredHeading = angleTowards(ant.x, ant.y, targetX, targetY);
+    ant.wanderPhase += ant.wanderFreq * dt * Math.PI * 2;
+    var wanderOffset = Math.sin(ant.wanderPhase) * ant.wanderAmp * wanderScale;
+    var desiredHeading = angleTowards(ant.x, ant.y, targetX, targetY) + wanderOffset;
     ant.heading += angleDelta(ant.heading, desiredHeading) * alignment * dt;
     ant.heading += (Math.random() * 2 - 1) * jitterRate * dt;
     ant.x += Math.cos(ant.heading) * speed * dt;
