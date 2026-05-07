@@ -1654,7 +1654,8 @@ body.has-ant-buster-page {
       projectileSpeed: 360,
       family: 'heavy',
       tier: 3,
-      pierce: true,
+      linePierce: 999,    // unlimited — pre-Plan-3 Railgun semantics
+      armorPierce: true,
       upgradesTo: []
     },
     repeater: {
@@ -1888,20 +1889,24 @@ body.has-ant-buster-page {
         vx: Math.cos(h) * def.projectileSpeed,
         vy: Math.sin(h) * def.projectileSpeed,
         damage: def.damage,
-        pierce: !!def.pierce,
+        linePierce: def.linePierce ? def.linePierce : 0,
+        armorPierce: !!def.armorPierce,
+        pierceLeft: def.linePierce ? def.linePierce : 0,
         statusOnHit: statusOnHit,
-        life: 1.5     // seconds
+        sourceCannon: cannon,
+        _sawAnts: [],
+        life: 1.5
       });
     }
   }
 
   // Centralized damage application. Soldier armor (Task 16) hooks here:
-  // armored ants will reduce damage unless `pierce` is set. For now this is
+  // armored ants will reduce damage unless `armorPierce` is set. For now this is
   // a thin wrapper so the hook point exists.
-  function applyDamage(ant, amount, pierce) {
+  function applyDamage(ant, amount, armorPierce) {
     var k = ANT_KINDS[ant.kind];
     var dmg = amount;
-    if (!pierce) {
+    if (!armorPierce) {
       var armor = k.armor;
       if (!armor) { armor = 0; }
       dmg = dmg * (1 - armor);
@@ -1948,19 +1953,29 @@ body.has-ant-buster-page {
         var a = game.ants[j];
         if (a.dead) { continue; }
         if (a.intangible) { continue; }
+        if (p._sawAnts) {
+          if (p._sawAnts.indexOf(a) !== -1) { continue; }
+        }
         var dx = a.x - p.x;
         var dy = a.y - p.y;
         if (dx * dx + dy * dy < 6 * 6) {
-          applyDamage(a, p.damage, p.pierce);
+          applyDamage(a, p.damage, p.armorPierce);
           if (p.statusOnHit) {
             var s = p.statusOnHit;
             applyStatus(a, s.kind, s.magnitude, s.duration, 'projectile');
           }
           if (a.hp <= 0) {
-            killAnt(a, null);
+            killAnt(a, p.sourceCannon ? p.sourceCannon : null);
           }
-          hit = true;
-          break;
+          if (p.pierceLeft > 0) {
+            p.pierceLeft = p.pierceLeft - 1;
+            if (!p._sawAnts) { p._sawAnts = []; }
+            p._sawAnts.push(a);
+            // projectile keeps flying — don't set hit, don't break
+          } else {
+            hit = true;
+            break;
+          }
         }
       }
       if (!hit) {
@@ -2361,6 +2376,7 @@ body.has-ant-buster-page {
 
   // Expose game for debugging from devtools console
   window.__ab = game;
+  window.__abCannonKinds = CANNON_KINDS;
   window.__abUi = ui;
   window.__abStatusKinds = STATUS_KINDS;
   window.__abApplyStatus = applyStatus;
