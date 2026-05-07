@@ -258,9 +258,18 @@ body.has-ant-buster-page {
     var cakeSprite = makeCake(game.cake.slices);
     ctx.drawImage(cakeSprite, game.cake.x - 16, game.cake.y - 16);
 
-    // HUD bar (top, dimmed)
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+    // HUD bar
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
     ctx.fillRect(0, 0, PLAYFIELD_W, HUD_H);
+    ctx.font = '10px monospace';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#fee761';
+    ctx.fillText('Gold: ' + game.gold, 6, 12);
+    ctx.fillStyle = '#e43b44';
+    ctx.fillText('Cake: ' + game.cake.slices + '/8', 80, 12);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('Wave: ' + game.wave, 160, 12);
+    ctx.textBaseline = 'alphabetic';
 
     // Shop panel (right)
     ctx.fillStyle = '#1a1c2c';
