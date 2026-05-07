@@ -457,6 +457,24 @@ body.has-ant-buster-page {
     ant.heading += (Math.random() * 2 - 1) * jitterRate * dt;
     ant.x += Math.cos(ant.heading) * speed * dt;
     ant.y += Math.sin(ant.heading) * speed * dt;
+    // Bounce off playfield bounds so ants stay on the picnic blanket area.
+    var margin = 8;
+    if (ant.x < margin) {
+      ant.x = margin;
+      ant.heading = Math.PI - ant.heading;
+    }
+    if (ant.x > PLAYFIELD_W - margin) {
+      ant.x = PLAYFIELD_W - margin;
+      ant.heading = Math.PI - ant.heading;
+    }
+    if (ant.y < HUD_H + margin) {
+      ant.y = HUD_H + margin;
+      ant.heading = -ant.heading;
+    }
+    if (ant.y > HEIGHT - margin) {
+      ant.y = HEIGHT - margin;
+      ant.heading = -ant.heading;
+    }
   }
 
   function updateAnts(dt) {
