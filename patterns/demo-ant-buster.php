@@ -606,6 +606,22 @@ body.has-ant-buster-page {
     return c;
   }
 
+  function makeCannonTurretSharpshooter() {
+    // Quick tier-3 (full-HP precision). Long teal barrel with a prominent
+    // yellow scope - reads as Marksman's bigger sibling, max-range pick.
+    var c = makeCanvas(28, 28);
+    var x = c.getContext('2d');
+    x.fillStyle = '#3a8a8a';
+    x.fillRect(1, 12, 26, 3);                   // extra-long barrel (range 350)
+    x.fillStyle = '#1a4a4a';
+    x.fillRect(9, 9, 10, 9);                    // base
+    x.fillStyle = '#fee761';
+    x.fillRect(20, 10, 3, 6);                   // big scope
+    x.fillStyle = '#ffffff';
+    x.fillRect(21, 11, 1, 1);                   // scope glint
+    return c;
+  }
+
   function makeCake(slices) {
     var c = makeCanvas(32, 32);
     var x = c.getContext('2d');
@@ -680,6 +696,7 @@ body.has-ant-buster-page {
       autocannon: makeCannonTurretAutocannon(),
       vulcan: makeCannonTurretVulcan(),
       plasma_torch: makeCannonTurretPlasmaTorch(),
+      sharpshooter: makeCannonTurretSharpshooter(),
       marksman: makeCannonTurretMarksman(),
       spotter: makeCannonTurretSpotter(),
       twingun: makeCannonTurretTwinGun(),
@@ -2062,8 +2079,8 @@ body.has-ant-buster-page {
         if (target.hp >= target.maxHp - 0.001) { return 1.5; }
         return 1;
       },
-      // upgradesTo: ['sharpshooter', 'lance'] — populated by Tasks 16/17
-      upgradesTo: []
+      // upgradesTo: ['sharpshooter', 'lance'] — Task 17 will append 'lance'
+      upgradesTo: ['sharpshooter']
     },
     spotter: {
       name: 'Spotter',
@@ -2104,6 +2121,25 @@ body.has-ant-buster-page {
         angleDeg: 60,
         tickDamage: 10,
         statusOnTick: { kind: 'burn', magnitude: 1, duration: 2 }
+      },
+      upgradesTo: []
+    },
+    sharpshooter: {
+      name: 'Sharpshooter',
+      cost: 100,
+      damage: 25,
+      fireRate: 0.5,
+      range: 350,
+      projectileSpeed: 360,
+      family: 'quick',
+      tier: 3,
+      damageModifier: function (target, sourceCannon) {
+        // +50% vs full-HP, same shape as Marksman. The "ignores 50% slow penalty"
+        // line in the spec describes a damage debuff that doesn't exist in Plan 2's
+        // slow status (which is movement-only), so this clause is a no-op today.
+        // Left as a documented hook for any future slow-debuffs-damage mechanic.
+        if (target.hp >= target.maxHp - 0.001) { return 1.5; }
+        return 1;
       },
       upgradesTo: []
     },
