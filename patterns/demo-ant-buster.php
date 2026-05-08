@@ -3188,7 +3188,15 @@ body.has-ant-buster-page {
           // Plan 4 — visualScale and statusOnFirstHit (Bucket G fields).
           // Pellets keep defaults (1.0 scale, no first-hit-only status).
           visualScale: def.visualScale ? def.visualScale : 1.0,
-          statusOnFirstHit: def.statusOnFirstHit ? def.statusOnFirstHit : null
+          statusOnFirstHit: def.statusOnFirstHit ? def.statusOnFirstHit : null,
+          // Plan 4 — MP-M mid-flight split. Pellets don't split; fields exist
+          // for uniform read in the per-tick split branch.
+          splitFraction: 0,
+          splitCount: 0,
+          splitOriginX: 0,
+          splitOriginY: 0,
+          splitTotalDist: 0,
+          _splitFired: false
         });
       }
       return;
@@ -3260,7 +3268,17 @@ body.has-ant-buster-page {
         // Plan 4 — statusOnFirstHit applies a status to the first impact
         // only, not bounce targets (Wrecking Ball's knockback). The general
         // statusOnHit array continues to fire on every bounce.
-        statusOnFirstHit: def.statusOnFirstHit ? def.statusOnFirstHit : null
+        statusOnFirstHit: def.statusOnFirstHit ? def.statusOnFirstHit : null,
+        // Plan 4 — MP-M mid-flight split (Cluster Strike). When the parent
+        // missile travels splitTotalDist from origin, despawn and spawn
+        // splitCount homing children. splitTotalDist is computed below from
+        // the original target distance × splitFraction.
+        splitFraction: def.splitFraction ? def.splitFraction : 0,
+        splitCount: def.splitCount ? def.splitCount : 0,
+        splitOriginX: cannon.x,
+        splitOriginY: cannon.y,
+        splitTotalDist: 0,
+        _splitFired: false
       };
       if (def.arc) {
         p.arcStartedAt = game.time;
@@ -3269,6 +3287,15 @@ body.has-ant-buster-page {
       }
       if (def.homing) {
         p.homingTurnRate = def.homing.turnRate;
+      }
+      // Plan 4 — MP-M splitTotalDist computed from current cannon position
+      // to original target. Children spawn when the parent has traveled
+      // this distance from origin.
+      if (def.splitFraction) {
+        var sdx = target.x - cannon.x;
+        var sdy = target.y - cannon.y;
+        var sd = Math.sqrt(sdx * sdx + sdy * sdy);
+        p.splitTotalDist = sd * def.splitFraction;
       }
       game.projectiles.push(p);
     }
@@ -3504,6 +3531,85 @@ body.has-ant-buster-page {
       p.x += p.vx * dt;
       p.y += p.vy * dt;
       p.life -= dt;
+      // Plan 4 — MP-M mid-flight projectile split (Cluster Strike). When the
+      // parent missile has traveled splitTotalDist from its launch origin,
+      // despawn and spawn splitCount homing children at the parent's current
+      // position. Each child re-acquires the nearest live ant via the standard
+      // MP-C homing pathway. Children inherit splash, statusOnHit, sourceCannon
+      // so on-impact effects fire normally. Visual: white-flash transient
+      // pushed onto game.effects (rendered by Task 13). One-shot per parent.
+      if (p.splitFraction > 0) {
+        if (!p._splitFired) {
+          var ddx = p.x - p.splitOriginX;
+          var ddy = p.y - p.splitOriginY;
+          var travDist = Math.sqrt(ddx * ddx + ddy * ddy);
+          if (travDist >= p.splitTotalDist) {
+            p._splitFired = true;
+            var pSpeed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+            for (var sc = 0; sc < p.splitCount; sc++) {
+              // Distribute children around a 60-degree arc centered on the
+              // parent's heading. With splitCount = 3, that's -30°, 0°, +30°.
+              var spread;
+              if (p.splitCount === 1) {
+                spread = 0;
+              } else {
+                spread = (sc / (p.splitCount - 1) - 0.5) * (Math.PI / 3);
+              }
+              var parentHeading = Math.atan2(p.vy, p.vx);
+              var childHeading = parentHeading + spread;
+              game.projectiles.push({
+                x: p.x, y: p.y,
+                vx: Math.cos(childHeading) * pSpeed,
+                vy: Math.sin(childHeading) * pSpeed,
+                damage: p.damage,
+                linePierce: 0,
+                armorPierce: !!p.armorPierce,
+                pierceLeft: 0,
+                statusOnHit: p.statusOnHit,
+                sourceCannon: p.sourceCannon,
+                _sawAnts: [],
+                life: 1.5,
+                arcing: false,
+                arcStartedAt: 0,
+                arcDuration: 0,
+                arcHeight: 0,
+                returning: false,
+                phase: 'out',
+                originX: p.splitOriginX,
+                originY: p.splitOriginY,
+                homing: true,
+                homingTurnRate: 5.0,
+                target: null,
+                bouncesRemaining: 0,
+                bounceRadius: 0,
+                damageDecay: 1,
+                initialHit: true,
+                visualScale: p.visualScale ? p.visualScale * 0.7 : 0.7,
+                statusOnFirstHit: null,
+                splitFraction: 0,
+                splitCount: 0,
+                splitOriginX: 0,
+                splitOriginY: 0,
+                splitTotalDist: 0,
+                _splitFired: true
+              });
+            }
+            // Push white-flash transient at the split point. Drawn by the
+            // 'splitFlash' branch in drawEffects (Task 13).
+            game.effects.push({
+              kind: 'splitFlash',
+              x: p.x, y: p.y,
+              t: 0,
+              life: 0.1,
+              color: '#ffffff',
+              maxRadius: 12
+            });
+            // Despawn the parent — life=-1 fails the `life > 0` check below.
+            p.life = -1;
+            continue;
+          }
+        }
+      }
       var hit = false;
       for (var j = 0; j < game.ants.length; j++) {
         var a = game.ants[j];
