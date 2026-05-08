@@ -3597,7 +3597,8 @@ body.has-ant-buster-page {
       target: null,
       kills: 0,
       disabled: false,
-      disabledUntil: 0
+      disabledUntil: 0,
+      targetingMode: 'closest'  // Plan 7 — per-cannon targeting dial
     });
     return true;
   }
