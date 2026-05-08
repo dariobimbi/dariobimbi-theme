@@ -3275,46 +3275,135 @@ body.has-ant-buster-page {
   var DEFAULT_PREP_REGULAR = 20;
   var DEFAULT_PREP_BOSS = 30;
 
+  // Wave entries (Plan 3 Task 28). Each wave has:
+  //   number       — display index, also feeds the bonus formula (20 + number).
+  //   prepTime     — optional override of DEFAULT_PREP_REGULAR/BOSS.
+  //   isBoss       — boss flag (drives banner styling and default prep).
+  //   bannerText   — exact wave-start banner string. Hardcodes /25 because
+  //                  the campaign is 25 waves long even before all are loaded.
+  //   spawns       — list of groups; each group has type, count, interval, delay,
+  //                  and an optional `hp` override (Queens at 600/800/1200).
   var WAVES = [
-    {
-      number: 1,
-      prepTime: 30,           // explicit — wave 1 keeps spec's 30s opener
-      spawns: [
-        { type: 'worker', count: 8, interval: 1.0, delay: 0 }
-      ]
-    }
-  ];
-  WAVES.push({
-    number: 2,
-    spawns: [{ type: 'worker', count: 12, interval: 0.8, delay: 0 }]
-  });
-  WAVES.push({
-    number: 3,
-    spawns: [
+    { number: 1, prepTime: 30, isBoss: false, bannerText: 'WAVE 1/25', spawns: [
+      { type: 'worker', count: 8, interval: 1.0, delay: 0 }
+    ]},
+    { number: 2, prepTime: 20, isBoss: false, bannerText: 'WAVE 2/25', spawns: [
+      { type: 'worker', count: 12, interval: 0.8, delay: 0 }
+    ]},
+    { number: 3, prepTime: 20, isBoss: false, bannerText: 'WAVE 3/25', spawns: [
       { type: 'worker', count: 6, interval: 0.7, delay: 0 },
       { type: 'worker', count: 6, interval: 0.7, delay: 4 }
-    ]
-  });
-  WAVES.push({
-    number: 4,
-    spawns: [
+    ]},
+    { number: 4, prepTime: 20, isBoss: false, bannerText: 'WAVE 4/25', spawns: [
       { type: 'worker', count: 10, interval: 0.7, delay: 0 },
-      { type: 'scout', count: 4, interval: 1.0, delay: 1.5 }
-    ]
-  });
-  WAVES.push({
-    number: 5, boss: true,
-    spawns: [
-      { type: 'queen', count: 1, interval: 1, delay: 0 },
+      { type: 'scout',  count: 4,  interval: 1.0, delay: 1.5 }
+    ]},
+    { number: 5, prepTime: 30, isBoss: true, bannerText: 'WAVE 5: QUEEN', spawns: [
+      { type: 'queen',  count: 1, interval: 1,   delay: 0 },
       { type: 'worker', count: 8, interval: 0.8, delay: 2 }
-    ]
-  });
+    ]},
+    { number: 6, prepTime: 20, isBoss: false, bannerText: 'WAVE 6/25', spawns: [
+      { type: 'worker', count: 12, interval: 0.7, delay: 0 },
+      { type: 'scout',  count: 6,  interval: 0.5, delay: 1 }
+    ]},
+    { number: 7, prepTime: 20, isBoss: false, bannerText: 'WAVE 7/25', spawns: [
+      { type: 'scout',  count: 8, interval: 0.4, delay: 0 },
+      { type: 'worker', count: 6, interval: 0.7, delay: 1.5 },
+      { type: 'scout',  count: 4, interval: 0.4, delay: 1 }
+    ]},
+    { number: 8, prepTime: 20, isBoss: false, bannerText: 'WAVE 8/25', spawns: [
+      { type: 'worker',  count: 12, interval: 0.7, delay: 0 },
+      { type: 'soldier', count: 2,  interval: 1.5, delay: 2 }
+    ]},
+    { number: 9, prepTime: 20, isBoss: false, bannerText: 'WAVE 9/25', spawns: [
+      { type: 'soldier', count: 6, interval: 1.5, delay: 0 },
+      { type: 'worker',  count: 8, interval: 0.7, delay: 1 }
+    ]},
+    { number: 10, prepTime: 30, isBoss: true, bannerText: 'WAVE 10: QUEEN', spawns: [
+      { type: 'queen',   count: 1, interval: 0,   delay: 0, hp: 600 },
+      { type: 'soldier', count: 6, interval: 1.5, delay: 1 },
+      { type: 'worker',  count: 6, interval: 0.7, delay: 1 }
+    ]},
+    { number: 11, prepTime: 20, isBoss: false, bannerText: 'WAVE 11/25', spawns: [
+      { type: 'worker',  count: 8, interval: 0.7, delay: 0 },
+      { type: 'carrier', count: 4, interval: 1.0, delay: 1 },
+      { type: 'worker',  count: 6, interval: 0.7, delay: 1 }
+    ]},
+    { number: 12, prepTime: 20, isBoss: false, bannerText: 'WAVE 12/25', spawns: [
+      { type: 'soldier', count: 4, interval: 1.5, delay: 0 },
+      { type: 'carrier', count: 6, interval: 0.8, delay: 1.5 },
+      { type: 'scout',   count: 4, interval: 0.4, delay: 1 }
+    ]},
+    { number: 13, prepTime: 20, isBoss: false, bannerText: 'WAVE 13/25', spawns: [
+      { type: 'splitter', count: 6, interval: 1.2, delay: 0 },
+      { type: 'worker',   count: 8, interval: 0.7, delay: 1.5 }
+    ]},
+    { number: 14, prepTime: 20, isBoss: false, bannerText: 'WAVE 14/25', spawns: [
+      { type: 'splitter', count: 4, interval: 1.2, delay: 0 },
+      { type: 'soldier',  count: 4, interval: 1.5, delay: 1 },
+      { type: 'carrier',  count: 6, interval: 0.8, delay: 1 },
+      { type: 'scout',    count: 8, interval: 0.4, delay: 1 }
+    ]},
+    { number: 15, prepTime: 30, isBoss: true, bannerText: 'WAVE 15: QUEEN', spawns: [
+      { type: 'queen',    count: 1, interval: 0,   delay: 0, hp: 800 },
+      { type: 'splitter', count: 8, interval: 1.0, delay: 1 },
+      { type: 'carrier',  count: 6, interval: 0.8, delay: 1 }
+    ]},
+    { number: 16, prepTime: 20, isBoss: false, bannerText: 'WAVE 16/25', spawns: [
+      { type: 'tank',   count: 2, interval: 2.5, delay: 0 },
+      { type: 'worker', count: 8, interval: 0.7, delay: 2 }
+    ]},
+    { number: 17, prepTime: 20, isBoss: false, bannerText: 'WAVE 17/25', spawns: [
+      { type: 'phase',   count: 6, interval: 1.0, delay: 0 },
+      { type: 'worker',  count: 8, interval: 0.7, delay: 1 },
+      { type: 'soldier', count: 4, interval: 1.5, delay: 1 }
+    ]},
+    { number: 18, prepTime: 20, isBoss: false, bannerText: 'WAVE 18/25', spawns: [
+      { type: 'tank',     count: 3, interval: 2.5, delay: 0 },
+      { type: 'phase',    count: 4, interval: 1.0, delay: 1 },
+      { type: 'splitter', count: 6, interval: 1.2, delay: 1 }
+    ]},
+    { number: 19, prepTime: 20, isBoss: false, bannerText: 'WAVE 19/25', spawns: [
+      { type: 'bomber',  count: 4, interval: 1.5, delay: 0 },
+      { type: 'worker',  count: 8, interval: 0.7, delay: 1 },
+      { type: 'carrier', count: 4, interval: 1.0, delay: 1 }
+    ]},
+    { number: 20, prepTime: 30, isBoss: true, bannerText: 'WAVE 20: QUEEN', spawns: [
+      { type: 'queen',  count: 1, interval: 0,   delay: 0, hp: 1200 },
+      { type: 'bomber', count: 4, interval: 1.5, delay: 1 },
+      { type: 'tank',   count: 6, interval: 2.0, delay: 1 }
+    ]},
+    { number: 21, prepTime: 20, isBoss: false, bannerText: 'WAVE 21/25', spawns: [
+      { type: 'tank',    count: 6, interval: 2.0, delay: 0 },
+      { type: 'phase',   count: 6, interval: 1.0, delay: 1 },
+      { type: 'carrier', count: 8, interval: 0.8, delay: 1 }
+    ]},
+    { number: 22, prepTime: 20, isBoss: false, bannerText: 'WAVE 22/25', spawns: [
+      { type: 'bomber',   count: 8, interval: 1.2, delay: 0 },
+      { type: 'splitter', count: 8, interval: 1.0, delay: 1 },
+      { type: 'soldier',  count: 4, interval: 1.5, delay: 1 }
+    ]},
+    { number: 23, prepTime: 20, isBoss: false, bannerText: 'WAVE 23/25', spawns: [
+      { type: 'tank',     count: 4,  interval: 2.0, delay: 0 },
+      { type: 'phase',    count: 6,  interval: 1.0, delay: 1 },
+      { type: 'bomber',   count: 6,  interval: 1.2, delay: 1 },
+      { type: 'splitter', count: 8,  interval: 1.0, delay: 1 },
+      { type: 'carrier',  count: 8,  interval: 0.8, delay: 1 },
+      { type: 'worker',   count: 12, interval: 0.5, delay: 1 }
+    ]},
+    { number: 24, prepTime: 20, isBoss: false, bannerText: 'WAVE 24/25', spawns: [
+      { type: 'tank',    count: 8,  interval: 1.8, delay: 0 },
+      { type: 'carrier', count: 12, interval: 0.7, delay: 1 },
+      { type: 'bomber',  count: 8,  interval: 1.2, delay: 1 }
+    ]}
+    // wave 25 (FINAL WAVE: THE KING) added in Task 32 once King is implemented
+  ];
 
   // Resolve a wave's prep duration: explicit prepTime wins, else default by
-  // boss flag. Used both by updateWaveState's prep transition and resetGame.
+  // isBoss flag. Used both by updateWaveState's prep transition and resetGame.
   function wavePrepDuration(wv) {
     if (wv.prepTime) { return wv.prepTime; }
-    if (wv.boss) { return DEFAULT_PREP_BOSS; }
+    if (wv.isBoss) { return DEFAULT_PREP_BOSS; }
     return DEFAULT_PREP_REGULAR;
   }
 
@@ -3330,7 +3419,7 @@ body.has-ant-buster-page {
         game.spawner.nextSpawnAt = game.time + WAVES[game.waveIndex].spawns[0].delay;
         game.spawner.queueDone = false;
         var wv = WAVES[game.waveIndex];
-        showBanner('Wave ' + wv.number + '/' + WAVES.length, !!wv.boss);
+        showBanner(wv.bannerText, !!wv.isBoss);
       }
       return;
     }
@@ -3339,7 +3428,13 @@ body.has-ant-buster-page {
       if (!game.spawner.queueDone) {
         var grp = wv.spawns[game.spawner.groupIndex];
         if (game.time >= game.spawner.nextSpawnAt) {
-          spawnAnt(grp.type);
+          var spawned = spawnAnt(grp.type);
+          // Per-spawn HP override: lets boss waves scale Queen HP (600/800/1200)
+          // without needing three separate ANT_KINDS rows for the same sprite.
+          if (grp.hp) {
+            spawned.hp = grp.hp;
+            spawned.maxHp = grp.hp;
+          }
           game.spawner.spawnedInGroup = game.spawner.spawnedInGroup + 1;
           if (game.spawner.spawnedInGroup >= grp.count) {
             game.spawner.groupIndex = game.spawner.groupIndex + 1;
@@ -3704,5 +3799,6 @@ body.has-ant-buster-page {
   window.__abUi = ui;
   window.__abStatusKinds = STATUS_KINDS;
   window.__abApplyStatus = applyStatus;
+  window.__abWaves = WAVES;
 })();
 </script>
