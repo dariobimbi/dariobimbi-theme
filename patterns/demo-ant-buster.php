@@ -4087,6 +4087,8 @@ body.has-ant-buster-page {
   // Plan 3: optional `sourceCannon` lets the per-cannon `damageModifier` hook
   // multiply damage (Marksman, Sharpshooter, Phantom). Falls through cleanly
   // when sourceCannon is omitted (existing call sites stay 3-arg compatible).
+  // Plan 6: optional `isDirectHit` (boolean) marks projectile-direct collisions.
+  // Only direct hits trigger the heavy-family Brittle predicate (3x on frozen).
   function applyDamage(ant, amount, armorPierce, sourceCannon, isDirectHit) {
     var k = ANT_KINDS[ant.kind];
     var dmg = amount;
