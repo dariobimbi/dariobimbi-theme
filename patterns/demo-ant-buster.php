@@ -2300,7 +2300,7 @@ body.has-ant-buster-page {
       range: 110,
       projectileSpeed: 200,
       family: 'heavy',
-      tier: 1,
+      tier: 'base',
       upgradesTo: ['siege', 'mortar', 'discus']
     },
     siege: {
@@ -2311,7 +2311,7 @@ body.has-ant-buster-page {
       range: 110,
       projectileSpeed: 240,
       family: 'heavy',
-      tier: 2,
+      tier: 'mid',
       upgradesTo: ['railgun', 'demolisher']
     },
     railgun: {
@@ -2322,7 +2322,7 @@ body.has-ant-buster-page {
       range: 120,
       projectileSpeed: 360,
       family: 'heavy',
-      tier: 3,
+      tier: 'final',
       linePierce: 999,    // unlimited — pre-Plan-3 Railgun semantics
       armorPierce: true,
       upgradesTo: []
@@ -2335,7 +2335,7 @@ body.has-ant-buster-page {
       range: 130,
       projectileSpeed: 200,
       family: 'heavy',
-      tier: 2,
+      tier: 'mid',
       splash: { radius: 40, falloff: 0.5, splashMult: 0.5 },
       arc: { height: 24, travelTime: 0.6 },
       upgradesTo: ['patriot', 'hellfire']
@@ -2348,7 +2348,7 @@ body.has-ant-buster-page {
       range: 200,
       projectileSpeed: 260,
       family: 'heavy',
-      tier: 3,
+      tier: 'final',
       homing: { turnRate: 4.0 },
       splash: { radius: 30, falloff: 0.4, splashMult: 0.4 },
       upgradesTo: []
@@ -2361,7 +2361,7 @@ body.has-ant-buster-page {
       range: 110,
       projectileSpeed: 260,
       family: 'heavy',
-      tier: 3,
+      tier: 'final',
       armorPierce: true,
       upgradesTo: []
     },
@@ -2373,7 +2373,7 @@ body.has-ant-buster-page {
       range: 180,
       projectileSpeed: 200,
       family: 'heavy',
-      tier: 3,
+      tier: 'final',
       splash: { radius: 60, falloff: 0.4, splashMult: 0.67 },
       arc: { height: 32, travelTime: 0.7 },
       upgradesTo: []
@@ -2386,7 +2386,7 @@ body.has-ant-buster-page {
       range: 150,
       projectileSpeed: 220,
       family: 'heavy',
-      tier: 2,
+      tier: 'mid',
       returning: true,
       upgradesTo: ['ricochet', 'shockwave']
     },
@@ -2398,7 +2398,7 @@ body.has-ant-buster-page {
       range: 180,
       projectileSpeed: 240,
       family: 'heavy',
-      tier: 3,
+      tier: 'final',
       returning: true,
       returnPierce: 1,
       upgradesTo: []
@@ -2411,7 +2411,7 @@ body.has-ant-buster-page {
       range: 130,
       projectileSpeed: 180,
       family: 'heavy',
-      tier: 3,
+      tier: 'final',
       splash: { radius: 80, falloff: 0.3, splashMult: 0.6 },
       screenshake: { magnitude: 3, decay: 12 },
       upgradesTo: []
@@ -2424,7 +2424,7 @@ body.has-ant-buster-page {
       range: 130,
       projectileSpeed: 280,
       family: 'quick',
-      tier: 1,
+      tier: 'base',
       upgradesTo: ['autocannon', 'marksman', 'spotter']
     },
     autocannon: {
@@ -2435,7 +2435,7 @@ body.has-ant-buster-page {
       range: 130,
       projectileSpeed: 320,
       family: 'quick',
-      tier: 2,
+      tier: 'mid',
       upgradesTo: ['vulcan', 'plasma_torch']
     },
     marksman: {
@@ -2446,7 +2446,7 @@ body.has-ant-buster-page {
       range: 250,
       projectileSpeed: 320,
       family: 'quick',
-      tier: 2,
+      tier: 'mid',
       damageModifier: function (target, sourceCannon) {
         if (target.hp >= target.maxHp - 0.001) { return 1.5; }
         return 1;
@@ -2461,7 +2461,7 @@ body.has-ant-buster-page {
       range: 200,
       projectileSpeed: 280,
       family: 'quick',
-      tier: 2,
+      tier: 'mid',
       reveal: true,
       upgradesTo: ['phantom', 'tesla']
     },
@@ -2473,7 +2473,7 @@ body.has-ant-buster-page {
       range: 140,
       projectileSpeed: 360,
       family: 'quick',
-      tier: 3,
+      tier: 'final',
       spoolUp: 0.5,
       upgradesTo: []
     },
@@ -2485,7 +2485,7 @@ body.has-ant-buster-page {
       range: 70,                 // mirrors coneDot.range so the panel circle preview matches
       projectileSpeed: 0,
       family: 'quick',
-      tier: 3,
+      tier: 'final',
       coneDot: {
         range: 70,
         angleDeg: 60,
@@ -2502,7 +2502,7 @@ body.has-ant-buster-page {
       range: 350,
       projectileSpeed: 360,
       family: 'quick',
-      tier: 3,
+      tier: 'final',
       damageModifier: function (target, sourceCannon) {
         // +50% vs full-HP, same shape as Marksman. The "ignores 50% slow penalty"
         // line in the spec describes a damage debuff that doesn't exist in Plan 2's
@@ -2521,7 +2521,7 @@ body.has-ant-buster-page {
       range: 250,
       projectileSpeed: 0,
       family: 'quick',
-      tier: 3,
+      tier: 'final',
       beam: {
         tickDamage: 4,           // 4 dps continuous; integrated as tickDamage * dt
         statusOnTick: null,      // direct damage only, no status
@@ -2538,7 +2538,7 @@ body.has-ant-buster-page {
       range: 450,
       projectileSpeed: 380,
       family: 'quick',
-      tier: 3,
+      tier: 'final',
       damageModifier: function (target, sourceCannon) {
         // +100% vs Queen — anti-boss specialist. King is a separate kind and
         // intentionally does not benefit from this bonus.
@@ -2555,7 +2555,7 @@ body.has-ant-buster-page {
       range: 200,
       projectileSpeed: 0,        // instant-resolve; no projectile travel
       family: 'quick',
-      tier: 3,
+      tier: 'final',
       teslaArc: { jumps: 3, range: 60, falloff: 0.5 },
       upgradesTo: []
     },
@@ -2567,7 +2567,7 @@ body.has-ant-buster-page {
       range: 100,
       projectileSpeed: 240,
       family: 'status',
-      tier: 1,
+      tier: 'base',
       barrels: 2,            // multi-barrel volley logic landed in Task 13
       upgradesTo: ['triple_threat', 'frost', 'toxin']
     },
@@ -2579,7 +2579,7 @@ body.has-ant-buster-page {
       range: 110,
       projectileSpeed: 240,
       family: 'double',
-      tier: 2,
+      tier: 'mid',
       barrels: 3,
       spread: 0.10,          // ~5.7 deg per step — wider than Twin Gun's default
       upgradesTo: ['buckshot', 'minigun']
@@ -2592,7 +2592,7 @@ body.has-ant-buster-page {
       range: 90,
       projectileSpeed: 220,
       family: 'double',
-      tier: 3,
+      tier: 'final',
       pellets: 5,
       coneDeg: 50,           // 50 deg fan, ~12.5 deg between pellets
       upgradesTo: []
@@ -2605,7 +2605,7 @@ body.has-ant-buster-page {
       range: 120,
       projectileSpeed: 320,
       family: 'double',
-      tier: 3,
+      tier: 'final',
       aimJitter: 0.05,       // ~2.9 deg max per-shot angular wobble
       upgradesTo: []
     },
@@ -2617,7 +2617,7 @@ body.has-ant-buster-page {
       range: 100,
       projectileSpeed: 200,
       family: 'double',
-      tier: 2,
+      tier: 'mid',
       statusOnHit: { kind: 'poison', magnitude: 1, duration: 5 },   // 1 dps over 5s = 5 dmg DoT
       upgradesTo: ['plague', 'sonic_pulse']
     },
@@ -2629,7 +2629,7 @@ body.has-ant-buster-page {
       range: 110,
       projectileSpeed: 220,
       family: 'double',
-      tier: 3,
+      tier: 'final',
       // damageAmp tag on the freeze effect: subsequent damage from any cannon
       // lands +50% while the 0.8s freeze is active. See Step 2 stamp pattern
       // and applyDamage's freeze.damageAmp read.
@@ -2644,7 +2644,7 @@ body.has-ant-buster-page {
       range: 110,
       projectileSpeed: 200,
       family: 'double',
-      tier: 3,
+      tier: 'final',
       // spreads tag on the poison effect: when the carrier dies, the same
       // poison (matched magnitude + remaining duration) propagates to live
       // ants within 30 px via STATUS_KINDS.poison.onTargetDeath. 2.5 dps over
@@ -2660,7 +2660,7 @@ body.has-ant-buster-page {
       range: 100,
       projectileSpeed: 240,
       family: 'double',
-      tier: 3,
+      tier: 'final',
       // statusOnHit array: knockback (one-shot 30 px backward shove) +
       // stun (0.4s zero-movement). Array form is handled by the
       // projectile-collision pathway's wrap-and-iterate.
@@ -2678,7 +2678,7 @@ body.has-ant-buster-page {
       range: 100,
       projectileSpeed: 220,
       family: 'status',
-      tier: 2,
+      tier: 'mid',
       statusOnHit: { kind: 'slow', magnitude: 0.3, duration: 2 },
       upgradesTo: ['glacier', 'cryo']
     },
@@ -2689,7 +2689,7 @@ body.has-ant-buster-page {
       fireRate: 0,
       range: 130,
       family: 'status',
-      tier: 3,
+      tier: 'final',
       beam: {
         tickDamage: 1,
         statusOnTick: { kind: 'slow', magnitude: 0.5, duration: 1 },
