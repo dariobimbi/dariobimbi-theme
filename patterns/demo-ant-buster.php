@@ -420,6 +420,24 @@ body.has-ant-buster-page {
     return c;
   }
 
+  function makeCannonTurretBuckshot() {
+    // Double tier-3 (5-pellet shotgun cone). Wide flared muzzle reads as a
+    // sawed-off blunderbuss; warm orange tones distinguish it from Triple
+    // Threat's magenta and Minigun's dark steel.
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    x.fillStyle = '#5c2a14';
+    x.fillRect(7, 6, 6, 12);                    // dark wooden stock body
+    x.fillStyle = '#cc8a3a';
+    x.fillRect(8, 4, 4, 6);                     // mid barrel
+    x.fillStyle = '#ee9a4a';
+    x.fillRect(6, 0, 8, 4);                     // wide flared muzzle
+    x.fillStyle = '#3a1a0a';
+    x.fillRect(7, 1, 2, 2);                     // muzzle bore left
+    x.fillRect(11, 1, 2, 2);                    // muzzle bore right
+    return c;
+  }
+
   function makeCannonTurretTripleThreat() {
     // Double tier-2 (3-barrel volley). Brighter magenta than Twin Gun, with a
     // third center barrel reading clearly as "Twin Gun's bigger sibling".
@@ -777,6 +795,7 @@ body.has-ant-buster-page {
       spotter: makeCannonTurretSpotter(),
       twingun: makeCannonTurretTwinGun(),
       triple_threat: makeCannonTurretTripleThreat(),
+      buckshot: makeCannonTurretBuckshot(),
       frost: makeCannonTurretFrost(),
       glacier: makeCannonTurretGlacier()
     },
@@ -2317,7 +2336,20 @@ body.has-ant-buster-page {
       tier: 2,
       barrels: 3,
       spread: 0.10,          // ~5.7 deg per step — wider than Twin Gun's default
-      // upgradesTo: ['buckshot', 'minigun'] — populated by Tasks 21/22
+      // upgradesTo: Task 22 will append 'minigun'
+      upgradesTo: ['buckshot']
+    },
+    buckshot: {
+      name: 'Buckshot',
+      cost: 90,
+      damage: 2,
+      fireRate: 0.8,
+      range: 90,
+      projectileSpeed: 220,
+      family: 'double',
+      tier: 3,
+      pellets: 5,
+      coneDeg: 50,           // 50 deg fan, ~12.5 deg between pellets
       upgradesTo: []
     },
     frost: {
@@ -2622,6 +2654,45 @@ body.has-ant-buster-page {
     if (!n) { n = 1; }
     var statusOnHit = def.statusOnHit;
     if (!statusOnHit) { statusOnHit = null; }
+
+    // Multi-pellet cone primitive (Plan 3 — MP-E, Buckshot). N independent
+    // pellets fan across def.coneDeg degrees centered on the heading; each
+    // pellet is its own projectile with the cannon's per-shot damage. Wider
+    // and more independent than Triple Threat's per-step volley spread.
+    if (def.pellets) {
+      var pellets = def.pellets;
+      var coneRad = def.coneDeg * Math.PI / 180;
+      for (var pi = 0; pi < pellets; pi++) {
+        var fanT;
+        if (pellets === 1) {
+          fanT = 0;
+        } else {
+          fanT = pi / (pellets - 1) - 0.5;        // -0.5..0.5 inclusive
+        }
+        var pAngle = heading + fanT * coneRad;
+        game.projectiles.push({
+          x: cannon.x + Math.cos(pAngle) * 12,
+          y: cannon.y + Math.sin(pAngle) * 12,
+          vx: Math.cos(pAngle) * def.projectileSpeed,
+          vy: Math.sin(pAngle) * def.projectileSpeed,
+          damage: def.damage,
+          linePierce: def.linePierce ? def.linePierce : 0,
+          armorPierce: !!def.armorPierce,
+          pierceLeft: def.linePierce ? def.linePierce : 0,
+          statusOnHit: statusOnHit,
+          sourceCannon: cannon,
+          _sawAnts: [],
+          life: 1.0,
+          arcing: false,
+          arcStartedAt: 0,
+          arcDuration: 0,
+          arcHeight: 0,
+          returning: false
+        });
+      }
+      return;
+    }
+
     var spread = def.spread ? def.spread : 0.06;   // per-step radian offset; ~3.4 deg default (Twin Gun)
     for (var i = 0; i < n; i++) {
       var off;
