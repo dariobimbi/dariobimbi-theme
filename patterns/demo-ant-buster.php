@@ -4429,7 +4429,7 @@ body.has-ant-buster-page {
         var dx = a.x - p.x;
         var dy = a.y - p.y;
         if (dx * dx + dy * dy < 6 * 6) {
-          applyDamage(a, p.damage, p.armorPierce, p.sourceCannon);
+          applyDamage(a, p.damage, p.armorPierce, p.sourceCannon, true);
           if (p.statusOnHit) {
             // statusOnHit is one effect descriptor or an array of them. Sonic
             // Pulse uses an array (knockback + stun in one volley); single-
