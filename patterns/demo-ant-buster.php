@@ -420,6 +420,27 @@ body.has-ant-buster-page {
     return c;
   }
 
+  function makeCannonTurretPlague() {
+    // Double tier-3 (poison + spread on death). Sickly bright-green barrel
+    // with a bulbous reservoir at the breech — reads as the bigger sibling
+    // of Toxin's basic sprayer, distinct via the wide canister.
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    x.fillStyle = '#2a5a2a';
+    x.fillRect(5, 11, 10, 7);                   // wide reservoir base
+    x.fillStyle = '#5acc5a';
+    x.fillRect(8, 2, 4, 11);                    // bright green barrel
+    x.fillStyle = '#1a4a1a';
+    x.fillRect(7, 0, 6, 3);                     // dark muzzle tip
+    x.fillStyle = '#88e088';
+    x.fillRect(9, 4, 2, 1);                     // barrel highlight
+    x.fillRect(7, 13, 6, 1);                    // reservoir top highlight
+    x.fillStyle = '#aaff88';
+    x.fillRect(6, 17, 1, 2);                    // venom drip left
+    x.fillRect(13, 17, 1, 2);                   // venom drip right
+    return c;
+  }
+
   function makeCannonTurretCryo() {
     // Double tier-3 (freeze + damage amp). Pale ice-blue body with sharper
     // crystalline accents than Frost's softer fins; the brighter cyan tip
@@ -856,6 +877,7 @@ body.has-ant-buster-page {
       buckshot: makeCannonTurretBuckshot(),
       minigun: makeCannonTurretMinigun(),
       toxin: makeCannonTurretToxin(),
+      plague: makeCannonTurretPlague(),
       frost: makeCannonTurretFrost(),
       glacier: makeCannonTurretGlacier(),
       cryo: makeCannonTurretCryo()
@@ -1756,7 +1778,31 @@ body.has-ant-buster-page {
     slow:      { name: 'Slow',      onApply: null, perTick: null, speedMult: function(m) { return 1 - m; } },
     freeze:    { name: 'Freeze',    onApply: null, perTick: null, speedMult: function(m) { return 0; } },
     burn:      { name: 'Burn',      onApply: null, perTick: function(ant, eff, dt) { ant.hp = ant.hp - eff.magnitude * dt; }, speedMult: null },
-    poison:    { name: 'Poison',    onApply: null, perTick: function(ant, eff, dt) { ant.hp = ant.hp - eff.magnitude * dt; }, speedMult: null },
+    poison:    { name: 'Poison',    onApply: null, perTick: function(ant, eff, dt) { ant.hp = ant.hp - eff.magnitude * dt; }, speedMult: null,
+                 // Plan 3 — Plague spread-on-death hook. When an ant dies with
+                 // a `spreads: true`-tagged poison effect (stamped after
+                 // applyStatus by the projectile-collision pathway), every
+                 // live, non-dying ant within 30 px catches the same poison
+                 // (matched magnitude + remaining duration). Toxin's poison
+                 // omits the tag so its kills don't propagate.
+                 onTargetDeath: function(deadAnt) {
+                   var radius = 30;
+                   var orig = deadAnt.effects.poison;
+                   if (!orig) { return; }
+                   var remainingDur = orig.expiresAt - game.time;
+                   if (remainingDur <= 0) { return; }
+                   for (var i = 0; i < game.ants.length; i++) {
+                     var a = game.ants[i];
+                     if (a.dead) { continue; }
+                     if (a === deadAnt) { continue; }
+                     var dx = a.x - deadAnt.x;
+                     var dy = a.y - deadAnt.y;
+                     if (dx * dx + dy * dy > radius * radius) { continue; }
+                     applyStatus(a, 'poison', orig.magnitude, remainingDur, 'plague-spread');
+                     // Spread the spread tag too so chain-deaths keep propagating.
+                     if (a.effects.poison) { a.effects.poison.spreads = true; }
+                   }
+                 } },
     stun:      { name: 'Stun',      onApply: null, perTick: null, speedMult: function(m) { return 0; } },
     knockback: { name: 'Knockback', onApply: function(ant, m) { ant.x = ant.x + Math.cos(ant.heading + Math.PI) * m; ant.y = ant.y + Math.sin(ant.heading + Math.PI) * m; }, perTick: null, speedMult: null }
   };
@@ -2433,8 +2479,8 @@ body.has-ant-buster-page {
       family: 'double',
       tier: 2,
       statusOnHit: { kind: 'poison', magnitude: 1, duration: 5 },   // 1 dps over 5s = 5 dmg DoT
-      // upgradesTo: ['plague', 'sonic_pulse'] — populated by Tasks 25/26
-      upgradesTo: []
+      // upgradesTo: Task 26 will append 'sonic_pulse'
+      upgradesTo: ['plague']
     },
     cryo: {
       name: 'Cryo',
@@ -2449,6 +2495,22 @@ body.has-ant-buster-page {
       // lands +50% while the 0.8s freeze is active. See Step 2 stamp pattern
       // and applyDamage's freeze.damageAmp read.
       statusOnHit: { kind: 'freeze', magnitude: 1, duration: 0.8, damageAmp: 1.5 },
+      upgradesTo: []
+    },
+    plague: {
+      name: 'Plague',
+      cost: 90,
+      damage: 2,
+      fireRate: 1,
+      range: 110,
+      projectileSpeed: 200,
+      family: 'double',
+      tier: 3,
+      // spreads tag on the poison effect: when the carrier dies, the same
+      // poison (matched magnitude + remaining duration) propagates to live
+      // ants within 30 px via STATUS_KINDS.poison.onTargetDeath. 2.5 dps over
+      // 6s = 15 dmg per stack.
+      statusOnHit: { kind: 'poison', magnitude: 2.5, duration: 6, spreads: true },
       upgradesTo: []
     },
     frost: {
@@ -2913,6 +2975,17 @@ body.has-ant-buster-page {
     // will use this in later tasks). spawnAntAt only pushes onto game.ants, so
     // it is safe even if killAnt is called from inside an iteration over game.ants.
     if (k.onDeath) { k.onDeath(ant); }
+    // Plague spread-on-death (Plan 3). Tagged poison effects propagate to
+    // ants within 30 px when their carrier dies. Toxin's poison omits the
+    // spreads tag so this is a no-op for Toxin kills. Nested ifs to avoid
+    // inline-script `&&` (CLAUDE.md HTML-encoding gotcha).
+    if (ant.effects) {
+      if (ant.effects.poison) {
+        if (ant.effects.poison.spreads) {
+          STATUS_KINDS.poison.onTargetDeath(ant);
+        }
+      }
+    }
   }
 
   // Splash AoE primitive (Plan 3). Iterates live ants once; applies damage
@@ -3004,14 +3077,19 @@ body.has-ant-buster-page {
           if (p.statusOnHit) {
             var s = p.statusOnHit;
             applyStatus(a, s.kind, s.magnitude, s.duration, 'projectile');
-            // Tag-after-apply pattern: extra fields like damageAmp (Cryo's
-            // +50% during freeze) live on the cannon's statusOnHit config and
+            // Tag-after-apply pattern: extra fields (Cryo's damageAmp,
+            // Plague's spreads) live on the cannon's statusOnHit config and
             // get stamped onto the just-applied effect here, so applyStatus
-            // itself stays lean. Future emitters carry their own amp without
+            // itself stays lean. Future emitters carry their own tags without
             // any framework change.
             if (s.damageAmp) {
               if (a.effects[s.kind]) {
                 a.effects[s.kind].damageAmp = s.damageAmp;
+              }
+            }
+            if (s.spreads) {
+              if (a.effects[s.kind]) {
+                a.effects[s.kind].spreads = true;
               }
             }
           }
