@@ -3099,6 +3099,17 @@ body.has-ant-buster-page {
         if (amp) { dmg = dmg * amp; }
       }
     }
+    // Plan 4: Biohazard +25% damage amp via poison.damageAmp. Mirror of the
+    // freeze.damageAmp pattern above. Stamped onto the live poison effect by
+    // the tag-after-apply path in updateProjectiles. Toxin and Plague leave
+    // damageAmp unset (default 1, no amp). Source-independent — any cannon
+    // firing on a Biohazard-infected target deals +25%.
+    if (ant.effects) {
+      if (ant.effects.poison) {
+        var pamp = ant.effects.poison.damageAmp;
+        if (pamp) { dmg = dmg * pamp; }
+      }
+    }
     if (!armorPierce) {
       var armor = k.armor;
       if (!armor) { armor = 0; }
