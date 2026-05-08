@@ -3039,6 +3039,50 @@ body.has-ant-buster-page {
         continue;
       }
 
+      // Plan 4 — MP-N persistent radial aura (Blizzard). The cannon IS the
+      // AoE: no projectile, no fire-rate cooldown, no target acquisition.
+      // Three independent timers run in parallel:
+      //   1. Per-tick AoE damage to every ant within auraRadius.
+      //   2. Per-tick slow re-application with a 0.15s expiry — re-applied
+      //      every tick to maintain the slow while ants stay in range. The
+      //      0.15s buffer (9 frames at 60Hz, 4-5 frames at 30Hz) prevents
+      //      stuttering during heavy waves.
+      //   3. A 5-second freeze cycle picks one uniform-random ant in radius
+      //      and freezes it for 2s.
+      if (def.aura) {
+        var au = def.aura;
+        for (var aai = 0; aai < game.ants.length; aai++) {
+          var aaa = game.ants[aai];
+          if (aaa.dead) { continue; }
+          if (aaa.intangible) { continue; }
+          var adx = aaa.x - c.x;
+          var ady = aaa.y - c.y;
+          if (adx * adx + ady * ady > au.radius * au.radius) { continue; }
+          applyDamage(aaa, au.damagePerTick * dt, false, c);
+          applyStatus(aaa, 'slow', au.slow, au.slowExpiry, 'aura');
+          if (aaa.hp <= 0) { killAnt(aaa, c); }
+        }
+        if (!c.lastFreezeAt) { c.lastFreezeAt = 0; }
+        if (game.time - c.lastFreezeAt >= au.freezeRandomEvery) {
+          var inRadius = [];
+          for (var fai = 0; fai < game.ants.length; fai++) {
+            var fa = game.ants[fai];
+            if (fa.dead) { continue; }
+            if (fa.intangible) { continue; }
+            var fdx = fa.x - c.x;
+            var fdy = fa.y - c.y;
+            if (fdx * fdx + fdy * fdy > au.radius * au.radius) { continue; }
+            inRadius.push(fa);
+          }
+          if (inRadius.length > 0) {
+            var pick = inRadius[Math.floor(Math.random() * inRadius.length)];
+            applyStatus(pick, 'freeze', 1, au.freezeDuration, 'aura-freeze');
+          }
+          c.lastFreezeAt = game.time;
+        }
+        continue;
+      }
+
       // Cone-DoT cannons (Plan 3 — Plasma Torch). Continuous flame cone in
       // the direction of the current target; no projectile, no cooldown.
       // firingCone gates the orange overlay in drawConeDots().
