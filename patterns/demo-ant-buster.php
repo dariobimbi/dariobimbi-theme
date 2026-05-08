@@ -566,6 +566,18 @@ body.has-ant-buster-page {
     return c;
   }
 
+  function makeCannonTurretMarksman() {
+    var c = makeCanvas(28, 28);
+    var x = c.getContext('2d');
+    x.fillStyle = '#6a8a3a';
+    x.fillRect(2, 12, 24, 3);
+    x.fillStyle = '#3a5a1a';
+    x.fillRect(10, 9, 8, 9);
+    x.fillStyle = '#fee761';
+    x.fillRect(20, 11, 2, 5);
+    return c;
+  }
+
   function makeCake(slices) {
     var c = makeCanvas(32, 32);
     var x = c.getContext('2d');
@@ -639,6 +651,7 @@ body.has-ant-buster-page {
       repeater: makeCannonTurretRepeater(),
       autocannon: makeCannonTurretAutocannon(),
       vulcan: makeCannonTurretVulcan(),
+      marksman: makeCannonTurretMarksman(),
       twingun: makeCannonTurretTwinGun(),
       frost: makeCannonTurretFrost(),
       glacier: makeCannonTurretGlacier()
@@ -1970,7 +1983,7 @@ body.has-ant-buster-page {
       projectileSpeed: 280,
       family: 'quick',
       tier: 1,
-      upgradesTo: ['autocannon']
+      upgradesTo: ['autocannon', 'marksman']
     },
     autocannon: {
       name: 'Auto-Cannon',
@@ -1982,6 +1995,22 @@ body.has-ant-buster-page {
       family: 'quick',
       tier: 2,
       upgradesTo: ['vulcan']
+    },
+    marksman: {
+      name: 'Marksman',
+      cost: 70,
+      damage: 8,
+      fireRate: 0.6,
+      range: 250,
+      projectileSpeed: 320,
+      family: 'quick',
+      tier: 2,
+      damageModifier: function (target, sourceCannon) {
+        if (target.hp >= target.maxHp - 0.001) { return 1.5; }
+        return 1;
+      },
+      // upgradesTo: ['sharpshooter', 'lance'] — populated by Tasks 16/17
+      upgradesTo: []
     },
     vulcan: {
       name: 'Vulcan',
