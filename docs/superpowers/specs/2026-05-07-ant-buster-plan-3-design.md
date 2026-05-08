@@ -545,3 +545,90 @@ The full task breakdown lives in the implementation plan. This section sketches 
 52. Final QA walk against §6 acceptance criteria + curl-grep hygiene check + write Plan 3 status doc.
 
 This is **~52 tasks** as drafted, more than the 30–35 estimate from §7's decision log. The writing-plans pass should consolidate adjacent cannon-config tasks (e.g. all 7 Heavy cannons that share the Mortar mechanic primitive can land in one or two commits). Realistic landed task count: **30–40**.
+
+---
+
+## 9. Addendum (2026-05-07): Pink Rubber Family expansion
+
+Added mid-marathon during Plan 3 execution (before Task 16). Folds a new **fourth cannon family** into Plan 3's content fill rather than deferring to a follow-up plan. The family is a single linear upgrade chain (no mid-tier branch), introduces one new mechanic primitive (MP-L: bouncing retarget), and reuses the existing knockback status from Plan 2 for its final-tier finisher.
+
+The motivating fiction: a daughter-inspired addition. The mechanical fit: a "generalist" base that contrasts the existing Howitzer (single-target heavy), Repeater (single-target sustained), and Twin Gun (multi-target light) by giving the player a rubber ball that hops between adjacent ants. Doubles as a soft counter to the King's wave-25 worker drip without overlapping with Sonic Pulse / Cryo / Spotter design space.
+
+### 9.1 New mechanic primitive — MP-L (bouncing retarget)
+
+| Field | Value |
+|---|---|
+| ID | MP-L |
+| Name | Bouncing retarget |
+| Used by | Pink Pea, Bouncy Bubble, Rubber Wrecking Ball |
+| Logic | On impact, search `game.ants` for the nearest ant within `bounceRadius` excluding ants the projectile has already hit. If found: redirect velocity vector toward that ant, decrement `bouncesRemaining`, multiply `damage` by `damageDecay`, do not despawn. If not found or `bouncesRemaining === 0`: despawn as normal. |
+| Decay | `projectile.damage = projectile.damage * damageDecay` per bounce. Default 0.8 across all three Rubber cannons. |
+| Visual | `visualScale` field on CANNON_KINDS scales the projectile sprite at render time (default 1.0). Pink Pea = 1.0, Bouncy Bubble = 1.5, Wrecking Ball = 2.5. |
+| First-hit-only effects | `statusOnFirstHit: { kind, magnitude, duration }` field on CANNON_KINDS applies a status only to the projectile's *initial* target. Bounce targets take damage but no status. Used by Wrecking Ball for "heavy knockback only on the first hit," preventing pinball chaos. |
+
+**Distinct from MP-D (Returning).** MP-D's projectile carries `originX, originY` and steers back to the tower. MP-L seeks the nearest non-hit ant. Same lifecycle hook (`onImpact`), different branch — both can share the existing `_sawAnts` array (introduced in Task 1's pierce flag split) for "don't double-hit the same ant."
+
+**Append to §2.1's primitives table** as the 12th row.
+
+### 9.2 Cannon configs — the Pink Rubber Family
+
+New base cannon added to the build palette, reachable from wave 1 (no gating).
+
+| ID | Name | Tier | Damage | Fire rate | Range | Special | Cost |
+|---|---|---|---|---|---|---|---|
+| 4.1 | Pink Pea | base | 5 | 0.8/s | 130 | bounces 1, radius 50 px, decay 0.8 | 50g (place from build palette) |
+| 4.2 | Bouncy Bubble | mid | 12 | 0.6/s | 160 | bounces 2, radius 60 px, decay 0.8, projectile 1.5× scale | +80g upgrade |
+| 4.3 | Rubber Wrecking Ball | final | 30 | 0.4/s | 180 | bounces 4, radius 70 px, decay 0.8, projectile 2.5× scale, **first-hit-only knockback 30 px** | +120g upgrade |
+
+Branch shape after Plan 3 expansion: **Pink Pea → Bouncy Bubble → Rubber Wrecking Ball.** Linear chain. No fork at the mid tier.
+
+**Build palette** extends from `['howitzer', 'repeater', 'twingun']` to `['howitzer', 'repeater', 'twingun', 'pink_pea']`. A 4th vertical card slot rendering the Pink Pea sprite + cost + family hint. Visual budget check: `SHOP_W` accommodates 4 × 70 px cards (280 px) + spacing + the wave panel beneath, with the existing 8 px gap between cards.
+
+**Color palette.** Hex range `#ff69b4` (Pink Pea) → `#ff1493` (Wrecking Ball), applied to both the turret sprite barrel and the projectile fill. Procedural placeholder art consistent with the rest of Plan 3's sprite quality (real PNG art is Plan 5 scope).
+
+**Knockback semantics on Wrecking Ball.** Reuses Plan 2's existing `knockback` status. Magnitude 30 px (no stun, distinct from Sonic Pulse which combines knockback + 0.4s stun). Applied via `statusOnFirstHit` only — bounce targets don't get knocked back. This keeps the rubber ball feeling "weighty on impact, decaying as it bounces" rather than "ant pinball machine."
+
+### 9.3 Selected-tower panel — 1-button case
+
+Plan 3 §2.2 already specified the panel renders 0/2/3 upgrade buttons (final / mid / base). The Pink Rubber Family adds the **1-button case** for Pink Pea (linear → Bouncy Bubble) and Bouncy Bubble (linear → Wrecking Ball). The existing generic loop in Task 4 (`for (var i = 0; i < upgrades.length; i++)`) already handles arbitrary lengths — no logic change needed, only verification that 1-button renders correctly with the existing layout (sell button stays at fixed `py + 174`, single upgrade button sits at `py + 90` with a clean gap below).
+
+The panel-button-count table in §2.2 extends to:
+
+| Cannon tier | Upgrade buttons rendered |
+|---|---|
+| Base (Howitzer / Repeater / Twin Gun) | 3 |
+| Base (Pink Pea) | **1 (linear chain)** |
+| Mid (e.g. Mortar) | 2 |
+| Mid (e.g. Bouncy Bubble) | **1 (linear chain)** |
+| Final (e.g. Hellfire / Wrecking Ball) | 0 |
+
+### 9.4 Acceptance criteria additions
+
+Append to §6:
+
+28. Pink Pea is buildable from the build palette starting wave 1 at 50g cost. The shop column shows 4 cards (Howitzer / Repeater / Twin Gun / Pink Pea).
+29. Pink Pea projectile bounces exactly once on impact, redirecting to the nearest non-original ant within 50 px. Decayed damage = `5 × 0.8 = 4` on the second hit.
+30. Bouncy Bubble bounces up to 2 times (radius 60 px). Projectile sprite renders at 1.5× scale.
+31. Rubber Wrecking Ball bounces up to 4 times (radius 70 px). Projectile sprite renders at 2.5× scale. First impact applies 30 px knockback; subsequent bounces deal damage but no knockback.
+32. Selected-tower panel shows 1 upgrade button for Pink Pea (→ Bouncy Bubble) and Bouncy Bubble (→ Wrecking Ball). 0 buttons for Wrecking Ball.
+
+### 9.5 Decision log additions
+
+Append to §7:
+
+- **Pink Rubber Family added mid-marathon as Bucket G (Tasks 37–40).** 4th cannon family, linear chain, ships in Plan 3 rather than deferring to a follow-up. Available from wave 1, competes with the 3 existing base cannons in the build palette.
+- **MP-L (bouncing retarget) is a new primitive distinct from MP-D (returning).** Reuses `_sawAnts` from Task 1's pierce split for "don't double-hit." Decay multiplier 0.8 uniform across all three Rubber cannons.
+- **First-hit-only knockback on Wrecking Ball.** New `statusOnFirstHit` field on CANNON_KINDS. Bounce targets take damage but no status. Prevents pinball chaos.
+- **`visualScale` field on CANNON_KINDS** scales projectile sprite at render. Pink Pea 1.0, Bouncy Bubble 1.5, Wrecking Ball 2.5. Default 1.0 for all existing cannons (no migration needed).
+- **No gating on Pink Pea.** Available from wave 1. Functions as a "generalist" 4th base cannon with multi-target potential via the bounce.
+
+### 9.6 Implementation tasks (Bucket G)
+
+Appended to the plan as Tasks 37–40:
+
+- **Task 37 — MP-L bouncing primitive:** Add `bouncesRemaining`, `bounceRadius`, `damageDecay`, `initialHit`, `statusOnFirstHit` to projectile literal in `fireProjectile`. Add bounce-retarget branch in `updateProjectiles`. Gate `statusOnHit` application on `p.initialHit`.
+- **Task 38 — Build palette + linear-chain panel verification:** Extend the shop's `keys` array from 3 to 4 to include `pink_pea`. Verify the selected-tower panel's existing generic upgrade-button loop renders the 1-button case correctly.
+- **Task 39 — The Rubber Roster:** Add `pink_pea`, `bouncy_bubble`, `rubber_wrecking_ball` to CANNON_KINDS with stats per §9.2. Wire the linear chain via `upgradesTo`.
+- **Task 40 — Visuals & polish:** Add `visualScale` to projectile rendering. Procedural pink turret + ball sprites for the three Rubber cannons. Final QA against §9.4 acceptance items.
+
+**Plan 3 final task count after Bucket G: 40 tasks.**

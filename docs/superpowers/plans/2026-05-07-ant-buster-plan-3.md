@@ -2805,9 +2805,428 @@ Pure data + sprite. Uses Plan 2's knockback and stun status framework.
 
 ---
 
+## Bucket G: Pink Rubber Family expansion (Tasks 37-40)
+
+> Added mid-marathon 2026-05-07 per spec §9 addendum. Fourth cannon family with linear upgrade chain (Pink Pea -> Bouncy Bubble -> Rubber Wrecking Ball). Introduces MP-L (bouncing retarget) primitive. Tasks land after the existing 36-task body so the King fight (wave 25) and the carryover/QA work ship before this expansion. Each task self-contained.
+
+---
+
+## Task 37: MP-L bouncing primitive (bounce-retarget on impact)
+
+**Files:**
+- Modify: `patterns/demo-ant-buster.php` — `fireProjectile` (projectile literal), `updateProjectiles` (collision branch), the existing status-on-hit application code.
+
+The bouncing primitive is structurally similar to MP-D (Returning, Task 7) but seeks the nearest non-hit ant within `bounceRadius` instead of returning to origin. Reuses the `_sawAnts` array introduced by Task 1's pierce split so the projectile never re-hits the same ant.
+
+- [ ] **Step 1: Add bounce fields to the projectile literal**
+
+  In `fireProjectile`, append to the projectile object:
+
+  ```js
+  bouncesRemaining: def.bounces ? def.bounces : 0,
+  bounceRadius: def.bounceRadius ? def.bounceRadius : 0,
+  damageDecay: def.bounceDamageDecay ? def.bounceDamageDecay : 1,
+  initialHit: true,
+  damage: def.damage,  // mutable per-projectile damage so decay applies cleanly
+  ```
+
+  `_sawAnts` already exists from Task 1. Reuse it.
+
+  Also confirm `def.bounces` reads cleanly when undefined: the `def.bounces ? ... : 0` form avoids the inline-script `||` hazard and gives 0 for any cannon without the field (existing cannons unchanged).
+
+- [ ] **Step 2: Add the bounce-retarget branch in `updateProjectiles`**
+
+  Inside the projectile loop, **after** damage is applied to the hit ant `a` and **before** the projectile would despawn, insert:
+
+  ```js
+  // MP-L: Bouncing retarget. If the projectile has bounces left, find the
+  // nearest live, non-intangible ant within bounceRadius that this projectile
+  // has not already hit. Redirect velocity, decay damage, mark non-initial.
+  if (p.bouncesRemaining > 0) {
+    var bestAnt = null;
+    var bestDist = p.bounceRadius;
+    for (var bi = 0; bi < game.ants.length; bi++) {
+      var ba = game.ants[bi];
+      if (ba.dead) { continue; }
+      if (ba === a) { continue; }
+      if (ba.intangible) { continue; }
+      var seenIdx = p._sawAnts.indexOf(ba);
+      if (seenIdx !== -1) { continue; }
+      var bdx = ba.x - p.x;
+      var bdy = ba.y - p.y;
+      var bd = Math.sqrt(bdx * bdx + bdy * bdy);
+      if (bd < bestDist) {
+        bestDist = bd;
+        bestAnt = ba;
+      }
+    }
+    if (bestAnt) {
+      p._sawAnts.push(a);
+      p.bouncesRemaining = p.bouncesRemaining - 1;
+      p.damage = p.damage * p.damageDecay;
+      p.initialHit = false;
+      var ndx = bestAnt.x - p.x;
+      var ndy = bestAnt.y - p.y;
+      var nmag = Math.sqrt(ndx * ndx + ndy * ndy);
+      var pspeed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+      if (nmag > 0) {
+        p.vx = (ndx / nmag) * pspeed;
+        p.vy = (ndy / nmag) * pspeed;
+      }
+      p.targetAnt = bestAnt;
+      hit = false;
+      continue;
+    }
+  }
+  ```
+
+  Note the **no `&&`** style: nested `if`s instead of `if (p.bouncesRemaining > 0 && bestAnt)`. The `continue` skips the despawn path — projectile stays alive for the next bounce. If no `bestAnt` is found, the projectile falls through to the existing despawn path.
+
+- [ ] **Step 3: Use `p.damage` (not `def.damage`) in the damage call**
+
+  The damage application currently reads `def.damage` or similar. For bounce projectiles, the damage decays per bounce, so `applyDamage` must read the projectile's mutable `damage`:
+
+  ```js
+  applyDamage(a, p.damage, !!def.armorPierce, sourceCannon);
+  ```
+
+  This is a one-line edit but critical — without it, every bounce deals full `def.damage` regardless of decay.
+
+  Existing cannons that don't bounce: `p.damage` is initialized to `def.damage` in Step 1, so behavior is unchanged for them.
+
+- [ ] **Step 4: Gate `statusOnHit` on `p.initialHit`**
+
+  Find the existing status application code (Task 6 or thereabouts; status is applied in the projectile-impact block):
+
+  ```js
+  if (def.statusOnHit) {
+    var s = def.statusOnHit;
+    applyStatus(a, s.kind, s.magnitude, s.duration, 'cannon');
+  }
+  ```
+
+  Replace with:
+
+  ```js
+  if (def.statusOnHit) {
+    var s = def.statusOnHit;
+    applyStatus(a, s.kind, s.magnitude, s.duration, 'cannon');
+  }
+  if (def.statusOnFirstHit) {
+    if (p.initialHit) {
+      var sf = def.statusOnFirstHit;
+      applyStatus(a, sf.kind, sf.magnitude, sf.duration, 'cannon');
+    }
+  }
+  ```
+
+  Wrecking Ball uses `statusOnFirstHit` for its 30 px knockback; bounce targets don't get knocked back.
+
+- [ ] **Step 5: PHP lint + curl-grep**
+
+  ```bash
+  c:/wamp64/bin/php/php8.2.29/php.exe -l patterns/demo-ant-buster.php
+  curl -s 'http://localhost/dariobimbi.com/demos/ant-buster/?debug=1' | grep -E '&#038;&#038;|&#124;&#124;'
+  ```
+
+  Lint must pass. Grep must return zero hits.
+
+- [ ] **Step 6: Smoke test (no Rubber cannons exist yet)**
+
+  Existing cannons must still fire correctly. Place Howitzer, Repeater, Twin Gun. Spawn ants. Confirm no console errors and projectiles still kill ants on impact. Bounce branch is dormant until `def.bounces` is set on a cannon (Task 39).
+
+- [ ] **Step 7: Commit**
+
+  ```bash
+  git commit -am "feat(ant-buster): MP-L bouncing primitive + statusOnFirstHit gate"
+  ```
+
+---
+
+## Task 38: Build palette extension + 1-button selected-tower panel verification
+
+**Files:**
+- Modify: `patterns/demo-ant-buster.php` — `drawShop` (`keys` array around line 700).
+
+Plan 2 hardcoded the build palette to 3 cannons. Plan 3's existing 36 tasks did not touch this. Bucket G adds Pink Pea as a 4th base cannon. The selected-tower panel's existing generic loop (Task 4 Step 3) already handles arbitrary `upgrades.length` including 1, so no panel logic change is needed — just verification.
+
+- [ ] **Step 1: Extend the shop `keys` array**
+
+  In `drawShop`, find:
+
+  ```js
+  var keys = ['howitzer', 'repeater', 'twingun'];
+  ```
+
+  Replace with:
+
+  ```js
+  var keys = ['howitzer', 'repeater', 'twingun', 'pink_pea'];
+  ```
+
+  The loop, card layout, click hit-testing (`ui.shopRects`), and `placeCannon` flow all already iterate over `keys.length` — no other edits in this step.
+
+- [ ] **Step 2: Confirm the shop column has visual room**
+
+  Card height = 70 px, gap 8 px, startY 32. With 4 cards: bottom of last card = `32 + 4*70 + 3*8 = 32 + 280 + 24 = 336 px`. Playfield height is 480 px. Wave panel sits beneath the shop cards. Confirm the 4-card layout fits without overlapping the wave panel — if it doesn't, reduce `cardH` from 70 to 60 or `cy` gap from 8 to 6. Most likely fits as-is; verify visually.
+
+  This step is a Playwright check, not a code edit. If it fails, do the smallest layout tweak that restores fit.
+
+- [ ] **Step 3: Verify selected-tower panel renders 1-button case**
+
+  The Task 4 generic loop:
+
+  ```js
+  for (var i = 0; i < upgrades.length; i++) { /* render upgrade button i */ }
+  for (var k = upgrades.length; k < 3; k++) { ui.upgradeRects[k] = null; }
+  ```
+
+  When `upgrades.length === 1`, this renders 1 button at slot 0 (`py + 90`) and nulls slots 1 and 2. The sell button stays at fixed `py + 174`. Result: a single upgrade button followed by a 64 px gap to the sell button. Visually OK.
+
+  No code change in this step — verify only by manually testing in Step 5 once Pink Pea exists (Task 39 + 40).
+
+- [ ] **Step 4: PHP lint + curl-grep**
+
+  ```bash
+  c:/wamp64/bin/php/php8.2.29/php.exe -l patterns/demo-ant-buster.php
+  curl -s 'http://localhost/dariobimbi.com/demos/ant-buster/?debug=1' | grep -E '&#038;&#038;|&#124;&#124;'
+  ```
+
+- [ ] **Step 5: Smoke test (Pink Pea slot empty until Task 39)**
+
+  Reload the demo. The shop column should show 4 card slots. The 4th slot will render with no name / cost / sprite because `CANNON_KINDS.pink_pea` doesn't exist yet — that is expected. Confirm: 3 existing cards still render correctly, 4th slot is visible (placeholder), no console errors. The 4th slot is hit-testable (clicking it tries to place `pink_pea` and silently no-ops because the kind is undefined). Task 39 fills the slot.
+
+- [ ] **Step 6: Commit**
+
+  ```bash
+  git commit -am "refactor(ant-buster): extend build palette to 4 slots for Pink Rubber Family"
+  ```
+
+---
+
+## Task 39: The Rubber Roster (Pink Pea, Bouncy Bubble, Rubber Wrecking Ball)
+
+**Files:**
+- Modify: `patterns/demo-ant-buster.php` — append three rows to `CANNON_KINDS`.
+
+All three cannons use the bouncing primitive from Task 37. Pink Pea is the only one reachable from the build palette (Task 38); the other two are upgrade targets. No sprite work in this task — Task 40 owns visuals.
+
+- [ ] **Step 1: Add `pink_pea` to CANNON_KINDS**
+
+  ```js
+  pink_pea: {
+    name: 'Pink Pea', cost: 50, damage: 5, fireRate: 0.8, range: 130,
+    projectileSpeed: 240,
+    family: 'rubber', tier: 1,
+    bounces: 1, bounceRadius: 50, bounceDamageDecay: 0.8,
+    visualScale: 1.0,
+    upgradesTo: ['bouncy_bubble']
+  },
+  ```
+
+  No `color` field (consistent with the marathon's "skip dead field" convention from Task 6).
+
+- [ ] **Step 2: Add `bouncy_bubble` to CANNON_KINDS**
+
+  ```js
+  bouncy_bubble: {
+    name: 'Bouncy Bubble', cost: 80, damage: 12, fireRate: 0.6, range: 160,
+    projectileSpeed: 240,
+    family: 'rubber', tier: 2,
+    bounces: 2, bounceRadius: 60, bounceDamageDecay: 0.8,
+    visualScale: 1.5,
+    upgradesTo: ['rubber_wrecking_ball']
+  },
+  ```
+
+- [ ] **Step 3: Add `rubber_wrecking_ball` to CANNON_KINDS**
+
+  ```js
+  rubber_wrecking_ball: {
+    name: 'Rubber Wrecking Ball', cost: 120, damage: 30, fireRate: 0.4, range: 180,
+    projectileSpeed: 220,
+    family: 'rubber', tier: 3,
+    bounces: 4, bounceRadius: 70, bounceDamageDecay: 0.8,
+    visualScale: 2.5,
+    statusOnFirstHit: { kind: 'knockback', magnitude: 30, duration: 0 },
+    upgradesTo: []
+  },
+  ```
+
+  `statusOnFirstHit` reuses Plan 2's `knockback` status (already implemented). Magnitude 30 px displacement. Duration 0 because knockback is an instantaneous displacement, not a sustained effect.
+
+- [ ] **Step 4: PHP lint + curl-grep**
+
+  ```bash
+  c:/wamp64/bin/php/php8.2.29/php.exe -l patterns/demo-ant-buster.php
+  curl -s 'http://localhost/dariobimbi.com/demos/ant-buster/?debug=1' | grep -E '&#038;&#038;|&#124;&#124;'
+  ```
+
+- [ ] **Step 5: Playwright verify**
+
+  Reload demo. The 4th shop slot now renders "Pink Pea" + "50g" + "rubber" hint (sprite is still default until Task 40). Place a Pink Pea. Spawn 3 workers in a tight cluster. Fire — projectile should hit the first ant for 5 dmg, then bounce to a second ant for 4 dmg (5 × 0.8). No 3rd hit (bounces=1).
+
+  Click the Pink Pea. Selected-tower panel shows **1 upgrade button**: "Bouncy Bubble (80g)". Click it (with enough gold). Cannon upgrades to Bouncy Bubble. Selected-tower panel now shows **1 upgrade button**: "Rubber Wrecking Ball (120g)". Upgrade again. Now the panel shows **0 upgrade buttons** — final tier.
+
+  Spawn ants. Wrecking Ball fires; 1st ant takes 30 dmg + knockback (30 px displacement visible). Subsequent bounce targets take damage with no knockback.
+
+- [ ] **Step 6: Commit**
+
+  ```bash
+  git commit -am "feat(ant-buster): Pink Rubber Family roster (4.1, 4.2, 4.3)"
+  ```
+
+---
+
+## Task 40: Pink Rubber visuals - turret sprites + visualScale projectile rendering + final QA
+
+**Files:**
+- Modify: `patterns/demo-ant-buster.php` — `drawProjectiles` (~line 1006), sprite factories (turret region), `game.sprites.turrets` table.
+
+- [ ] **Step 1: Add `visualScale` to projectile rendering**
+
+  Find `drawProjectiles` (~line 1006). Current body:
+
+  ```js
+  ctx.drawImage(game.sprites.projectile, Math.round(p.x - 2), Math.round(p.y - 2 + arcOffset));
+  ```
+
+  Replace with:
+
+  ```js
+  var pdef = CANNON_KINDS[p.cannonKind];
+  var pscale = 1;
+  if (pdef) {
+    if (pdef.visualScale) { pscale = pdef.visualScale; }
+  }
+  if (pscale === 1) {
+    ctx.drawImage(game.sprites.projectile, Math.round(p.x - 2), Math.round(p.y - 2 + arcOffset));
+  } else {
+    var sw = 4 * pscale;
+    var sh = 4 * pscale;
+    ctx.drawImage(
+      game.sprites.projectile,
+      Math.round(p.x - sw / 2),
+      Math.round(p.y - sh / 2 + arcOffset),
+      sw, sh
+    );
+  }
+  ```
+
+  `p.cannonKind` is the firing cannon's kind, set in `fireProjectile` (already exists from earlier tasks; if not, add `cannonKind: cannon.kind` to the projectile literal in `fireProjectile` first). The 5-arg `ctx.drawImage` scales the sprite to `(sw, sh)`. The base sprite is 4×4 px.
+
+  No `&&`/`||` — nested `if`s and explicit checks per CLAUDE.md.
+
+- [ ] **Step 2: Pink Pea turret sprite**
+
+  Add the factory near the other `makeCannonTurret*` functions:
+
+  ```js
+  function makeCannonTurretPinkPea() {
+    var s = makeCanvas(28, 28);
+    var sc = s.getContext('2d');
+    sc.fillStyle = '#ff69b4';      // pink barrel
+    sc.fillRect(10, 8, 8, 12);
+    sc.fillStyle = '#c2185b';      // darker pink base
+    sc.fillRect(8, 16, 12, 8);
+    sc.fillStyle = '#ffc1d8';      // light pink highlight on barrel
+    sc.fillRect(12, 9, 4, 2);
+    return s;
+  }
+  ```
+
+- [ ] **Step 3: Bouncy Bubble turret sprite**
+
+  ```js
+  function makeCannonTurretBouncyBubble() {
+    var s = makeCanvas(28, 28);
+    var sc = s.getContext('2d');
+    sc.fillStyle = '#ff5aa4';      // mid pink, slightly hotter
+    sc.fillRect(9, 7, 10, 13);
+    sc.fillStyle = '#a8124a';      // base
+    sc.fillRect(7, 16, 14, 8);
+    sc.fillStyle = '#ffd5e8';      // bubble highlight (round-ish)
+    sc.fillRect(11, 8, 6, 3);
+    sc.fillRect(12, 11, 4, 2);
+    return s;
+  }
+  ```
+
+- [ ] **Step 4: Rubber Wrecking Ball turret sprite**
+
+  ```js
+  function makeCannonTurretRubberWreckingBall() {
+    var s = makeCanvas(28, 28);
+    var sc = s.getContext('2d');
+    sc.fillStyle = '#ff1493';      // hot pink
+    sc.fillRect(8, 6, 12, 14);
+    sc.fillStyle = '#7a0a3e';      // dark base
+    sc.fillRect(6, 16, 16, 9);
+    sc.fillStyle = '#ffa7c8';      // chunky highlight
+    sc.fillRect(11, 8, 6, 3);
+    sc.fillStyle = '#fee761';      // tiny gold rivet
+    sc.fillRect(13, 18, 2, 2);
+    return s;
+  }
+  ```
+
+- [ ] **Step 5: Wire turret sprites into the lookup**
+
+  Find `game.sprites.turrets = { ... }` and add three entries:
+
+  ```js
+  pink_pea: makeCannonTurretPinkPea(),
+  bouncy_bubble: makeCannonTurretBouncyBubble(),
+  rubber_wrecking_ball: makeCannonTurretRubberWreckingBall(),
+  ```
+
+- [ ] **Step 6: Replace projectile sprite tint at draw time (optional polish)**
+
+  The shared `game.sprites.projectile` is a small white-ish ball. For pink projectile color without making three new sprites, add a `ctx.globalCompositeOperation = 'multiply'` overlay or a pink fill rect on top of the scaled image. Cleanest minimal version: draw a filled circle on top of the sprite for Rubber projectiles:
+
+  ```js
+  if (pdef && pdef.family === 'rubber') {
+    ctx.fillStyle = pdef.tier === 3 ? '#ff1493' : (pdef.tier === 2 ? '#ff5aa4' : '#ff69b4');
+    ctx.beginPath();
+    ctx.arc(p.x, p.y + arcOffset, 2 * pscale, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ```
+
+  Place this *after* the `ctx.drawImage` call from Step 1. Note the ternary expression is allowed — `?:` is not on the encoded-operator hazard list. If the ternary feels risky, expand to nested `if`s for the color pick.
+
+- [ ] **Step 7: PHP lint + curl-grep**
+
+  ```bash
+  c:/wamp64/bin/php/php8.2.29/php.exe -l patterns/demo-ant-buster.php
+  curl -s 'http://localhost/dariobimbi.com/demos/ant-buster/?debug=1' | grep -E '&#038;&#038;|&#124;&#124;'
+  ```
+
+  Both must return clean.
+
+- [ ] **Step 8: Final QA against §9.4 acceptance criteria**
+
+  Walk the demo at `?debug=1`:
+
+  1. Build palette shows 4 cards: Howitzer, Repeater, Twin Gun, **Pink Pea (50g, rubber family)** — sprite renders pink.
+  2. Place Pink Pea. Spawn 4 workers in a cluster. Pink Pea fires a small pink ball; first hit deals 5 dmg, second hit (bounce) deals 4 dmg (5 × 0.8). No 3rd hit.
+  3. Selected-tower panel for Pink Pea shows **1 upgrade button**: "Bouncy Bubble (80g)". Sell button below it.
+  4. Upgrade to Bouncy Bubble. Projectile is now visibly larger (1.5× scale). Bounces up to 2 times within 60 px.
+  5. Upgrade to Rubber Wrecking Ball. Projectile is 2.5× scale (clearly heavier). First impact deals 30 dmg + visible 30 px knockback. Subsequent bounces (up to 4 times within 70 px) deal damage but **no knockback** — the ant just takes damage in place.
+  6. Selected-tower panel for Rubber Wrecking Ball shows **0 upgrade buttons** (final tier).
+  7. No console errors during the walk.
+
+- [ ] **Step 9: Commit**
+
+  ```bash
+  git commit -am "feat(ant-buster): Pink Rubber visuals - turret sprites + visualScale rendering"
+  ```
+
+---
+
 ## End-of-plan notes
 
-**Branch strategy.** Plan 2 used a feature branch (`ant-buster-plan-2`) merged to `main` after status doc. Plan 3 should follow the same pattern: create `ant-buster-plan-3` from `main`, work tasks 1-36 there, merge after status doc.
+**Branch strategy.** Plan 2 used a feature branch (`ant-buster-plan-2`) merged to `main` after status doc. Plan 3 should follow the same pattern: create `ant-buster-plan-3` from `main`, work tasks 1-40 there, merge after status doc. (Task 36's status doc walk includes Bucket G's acceptance items §9.4.)
 
 **Mid-stream playtest checkpoints.** Recommended natural pause points:
 - After Task 5 (architecture refactors complete) — confirm no regressions on Plan 2 functionality
@@ -2815,9 +3234,10 @@ Pure data + sprite. Uses Plan 2's knockback and stun status framework.
 - After Task 19 (Quick family complete) — same with all 14 cannons available
 - After Task 26 (Double family complete) — full 30-cannon roster (9 from Plan 2 + 21 from Plan 3)
 - After Task 32 (King fight playable) — full wave-25 playthrough
-- Task 36 is the final acceptance walk
+- Task 36 is the original final acceptance walk
+- Tasks 37-40 (Bucket G) execute after Task 36 lands. Task 40 Step 8 is the Bucket G acceptance walk.
 
-**Subagent-driven development pattern.** Plan 2's status doc called out that the per-task implementer + combined spec/code-quality reviewer split scaled to 27 tasks. Plan 3 at 36 tasks is in the same ballpark; same pattern applies. Trivial single-line tasks (33, 34, 35) can bundle into a single commit with inline review if desired.
+**Subagent-driven development pattern.** Plan 2's status doc called out that the per-task implementer + combined spec/code-quality reviewer split scaled to 27 tasks. Plan 3 at 40 tasks (36 original + 4 Bucket G) is in the same ballpark; same pattern applies. Trivial single-line tasks (33, 34, 35) can bundle into a single commit with inline review if desired.
 
 **`window.__ab*` debug surfaces.** Plan 2 status workflow notes recommended adding `window.__abSpawn = spawnAnt` and `window.__abPlaceCannon = placeCannon`. Bake these into Task 1 (or any early task that's already touching the debug-export region) so subsequent tasks can use them in Playwright introspection without manual mouse events.
 
