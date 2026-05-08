@@ -1907,7 +1907,40 @@ body.has-ant-buster-page {
   var STATUS_KINDS = {
     slow:      { name: 'Slow',      onApply: null, perTick: null, speedMult: function(m) { return 1 - m; } },
     freeze:    { name: 'Freeze',    onApply: null, perTick: null, speedMult: function(m) { return 0; } },
-    burn:      { name: 'Burn',      onApply: null, perTick: function(ant, eff, dt) { ant.hp = ant.hp - eff.magnitude * dt; }, speedMult: null },
+    burn:      { name: 'Burn',      onApply: null, perTick: function(ant, eff, dt) { ant.hp = ant.hp - eff.magnitude * dt; }, speedMult: null,
+                 // Plan 4 — Phoenix burn-spread on burn-end. Mirror of the
+                 // poison.onTargetDeath hook: when an ant's burn duration
+                 // runs out (not on death), if the burn was tagged as
+                 // spreading, propagate to ants within 30 px. Toxin and
+                 // Plasma Torch leave the spreads tag unset so their burns
+                 // expire silently. Pushes a transient orange ring effect
+                 // for the visual cue (rendered by drawEffects, Task 13).
+                 onExpire: function(ant) {
+                   if (!ant.effects) { return; }
+                   if (!ant.effects.burn) { return; }
+                   if (!ant.effects.burn.spreads) { return; }
+                   var radius = 30;
+                   for (var i = 0; i < game.ants.length; i++) {
+                     var a = game.ants[i];
+                     if (a === ant) { continue; }
+                     if (a.dead) { continue; }
+                     var dx = a.x - ant.x;
+                     var dy = a.y - ant.y;
+                     if (dx * dx + dy * dy > radius * radius) { continue; }
+                     applyStatus(a, 'burn', 1, 2, 'burn-spread');
+                     // Spread the spread tag too so chained spreads continue
+                     // (capped naturally by burn duration decay).
+                     if (a.effects.burn) { a.effects.burn.spreads = true; }
+                   }
+                   game.effects.push({
+                     kind: 'spreadRing',
+                     x: ant.x, y: ant.y,
+                     t: 0,
+                     life: 0.2,
+                     color: '#ff7733',
+                     maxRadius: 30
+                   });
+                 } },
     poison:    { name: 'Poison',    onApply: null, perTick: function(ant, eff, dt) { ant.hp = ant.hp - eff.magnitude * dt; }, speedMult: null,
                  // Plan 3 — Plague spread-on-death hook. When an ant dies with
                  // a `spreads: true`-tagged poison effect (stamped after
@@ -2124,6 +2157,11 @@ body.has-ant-buster-page {
     for (ek in ant.effects) { keys.push(ek); }
     for (var ki = 0; ki < keys.length; ki++) {
       if (ant.effects[keys[ki]].expiresAt <= game.time) {
+        // Plan 4: fire onExpire hook (currently used by burn for Phoenix
+        // spread) before deleting the effect. Other status kinds leave
+        // onExpire unset, so this is a no-op for them.
+        var expiringDef = STATUS_KINDS[keys[ki]];
+        if (expiringDef.onExpire) { expiringDef.onExpire(ant); }
         delete ant.effects[keys[ki]];
       }
     }
@@ -3236,16 +3274,17 @@ body.has-ant-buster-page {
             if (slist2[sj].kind === 'knockback') { hasKnockback = true; }
           }
           if (hasKnockback) {
-            if (game.transientEffects) {
-              game.transientEffects.push({
-                kind: 'knockbackRing',
-                x: x, y: y,
-                startTime: game.time,
-                duration: 0.15,
-                color: '#ffffff',
-                maxRadius: radius
-              });
-            }
+            // Reuses Plan 3's existing game.effects framework
+            // (drawEffects + updateEffects). Task 13 extends drawEffects
+            // with the 'knockbackRing' kind branch.
+            game.effects.push({
+              kind: 'knockbackRing',
+              x: x, y: y,
+              t: 0,
+              life: 0.15,
+              color: '#ffffff',
+              maxRadius: radius
+            });
           }
         }
       }
