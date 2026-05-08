@@ -578,6 +578,20 @@ body.has-ant-buster-page {
     return c;
   }
 
+  function makeCannonTurretSpotter() {
+    var c = makeCanvas(28, 28);
+    var x = c.getContext('2d');
+    // Tall spotter scope on a low base, with a yellow lens dot up top hinting
+    // at the reveal beam that flags carriers for every other cannon.
+    x.fillStyle = '#aa8a3a';
+    x.fillRect(10, 8, 8, 12);                   // scope body
+    x.fillStyle = '#5a5a3a';
+    x.fillRect(2, 12, 24, 4);                   // sighting bar
+    x.fillStyle = '#fee761';
+    x.fillRect(13, 4, 2, 4);                    // lens highlight
+    return c;
+  }
+
   function makeCake(slices) {
     var c = makeCanvas(32, 32);
     var x = c.getContext('2d');
@@ -652,6 +666,7 @@ body.has-ant-buster-page {
       autocannon: makeCannonTurretAutocannon(),
       vulcan: makeCannonTurretVulcan(),
       marksman: makeCannonTurretMarksman(),
+      spotter: makeCannonTurretSpotter(),
       twingun: makeCannonTurretTwinGun(),
       frost: makeCannonTurretFrost(),
       glacier: makeCannonTurretGlacier()
@@ -1563,7 +1578,8 @@ body.has-ant-buster-page {
       phaseT: 0,
       spawnSource: source,
       spawnOrigin: { x: game.anthill.x, y: game.anthill.y },
-      firedThresholds: {}
+      firedThresholds: {},
+      isRevealed: false
     };
     game.ants.push(ant);
     return ant;
@@ -1983,7 +1999,7 @@ body.has-ant-buster-page {
       projectileSpeed: 280,
       family: 'quick',
       tier: 1,
-      upgradesTo: ['autocannon', 'marksman']
+      upgradesTo: ['autocannon', 'marksman', 'spotter']
     },
     autocannon: {
       name: 'Auto-Cannon',
@@ -2010,6 +2026,19 @@ body.has-ant-buster-page {
         return 1;
       },
       // upgradesTo: ['sharpshooter', 'lance'] — populated by Tasks 16/17
+      upgradesTo: []
+    },
+    spotter: {
+      name: 'Spotter',
+      cost: 60,
+      damage: 3,
+      fireRate: 2,
+      range: 200,
+      projectileSpeed: 280,
+      family: 'quick',
+      tier: 2,
+      reveal: true,
+      // upgradesTo: ['phantom', 'tesla'] — populated by Tasks 18/19
       upgradesTo: []
     },
     vulcan: {
@@ -2114,6 +2143,7 @@ body.has-ant-buster-page {
   function findTarget(cannon) {
     var def = CANNON_KINDS[cannon.kind];
     var rangeSq = def.range * def.range;
+    var revealedTarget = null;
     var nearest = null;
     var nearestDistSq = rangeSq;
     for (var i = 0; i < game.ants.length; i++) {
@@ -2123,15 +2153,28 @@ body.has-ant-buster-page {
       var dx = a.x - cannon.x;
       var dy = a.y - cannon.y;
       var distSq = dx * dx + dy * dy;
+      if (distSq > rangeSq) { continue; }
+      if (a.isRevealed) {
+        if (!revealedTarget) {
+          revealedTarget = a;
+        }
+      }
       if (distSq < nearestDistSq) {
         nearest = a;
         nearestDistSq = distSq;
       }
     }
+    if (revealedTarget) { return revealedTarget; }
     return nearest;
   }
 
   function updateCannons(dt) {
+    // Reveal pre-pass: clear stale isRevealed flags so each tick recomputes
+    // them from the current Spotter positions. Carrier ants in any Spotter's
+    // range get isRevealed = true below; findTarget then prefers them.
+    for (var ai = 0; ai < game.ants.length; ai++) {
+      game.ants[ai].isRevealed = false;
+    }
     for (var i = 0; i < game.cannons.length; i++) {
       var c = game.cannons[i];
       // Cannon-disabled gate (Task 20 Bomber AoE will set disabled/disabledUntil).
@@ -2143,6 +2186,21 @@ body.has-ant-buster-page {
         continue;
       }
       var def = CANNON_KINDS[c.kind];
+
+      // Spotter reveal sweep: any Carrier in range gets isRevealed = true,
+      // which biases every cannon's findTarget toward it for this tick.
+      if (def.reveal) {
+        for (var ri = 0; ri < game.ants.length; ri++) {
+          var ra = game.ants[ri];
+          if (ra.dead) { continue; }
+          if (!ra.carrying) { continue; }
+          var rdx = ra.x - c.x;
+          var rdy = ra.y - c.y;
+          if (rdx * rdx + rdy * rdy <= def.range * def.range) {
+            ra.isRevealed = true;
+          }
+        }
+      }
 
       // Beam cannons (Glacier and any future beam emitter): per-tick damage +
       // status refresh, no projectile fired. Status refresh sets duration to
