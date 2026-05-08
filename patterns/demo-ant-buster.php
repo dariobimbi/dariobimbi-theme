@@ -3035,6 +3035,44 @@ body.has-ant-buster-page {
           var sb = def.beam.statusOnTick;
           applyStatus(btarget, sb.kind, sb.magnitude, sb.duration, 'beam');
         }
+        // Plan 4 — MP-O beam line-pierce (Solar Lance). Extends the standard
+        // beam tick: after the primary damage lands, damage up to beamPierce
+        // additional ants whose centers fall within a thin cylinder along
+        // the cannon→target line. Cylinder half-width 6 px; ants are projected
+        // onto the line and accepted if 0 ≤ proj ≤ |cannon→target| and
+        // |perpendicular| ≤ 6. statusOnTick is applied to the primary only —
+        // bystanders take damage but no status (mirrors statusOnFirstHit
+        // intent for projectile cannons).
+        if (def.beamPierce) {
+          var pierceCount = def.beamPierce;
+          var pierceHalfWidth = 6;
+          var bdx = btarget.x - c.x;
+          var bdy = btarget.y - c.y;
+          var bdLen = Math.sqrt(bdx * bdx + bdy * bdy);
+          if (bdLen > 0) {
+            var bnx = bdx / bdLen;
+            var bny = bdy / bdLen;
+            var hits = 0;
+            for (var bpi = 0; bpi < game.ants.length; bpi++) {
+              var bpa = game.ants[bpi];
+              if (bpa === btarget) { continue; }
+              if (bpa.dead) { continue; }
+              if (bpa.intangible) { continue; }
+              var bpax = bpa.x - c.x;
+              var bpay = bpa.y - c.y;
+              var proj = bpax * bnx + bpay * bny;
+              if (proj < 0) { continue; }
+              if (proj > bdLen) { continue; }
+              var perp = bpax * (-bny) + bpay * bnx;
+              if (perp < 0) { perp = -perp; }
+              if (perp > pierceHalfWidth) { continue; }
+              applyDamage(bpa, def.beam.tickDamage * dt, !!def.armorPierce, c);
+              if (bpa.hp <= 0) { killAnt(bpa, c); }
+              hits = hits + 1;
+              if (hits >= pierceCount) { break; }
+            }
+          }
+        }
         c.beamTarget = btarget;
         continue;
       }
