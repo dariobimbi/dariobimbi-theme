@@ -1388,6 +1388,7 @@ body.has-ant-buster-page {
   function drawCannonTurrets() {
     for (var ci = 0; ci < game.cannons.length; ci++) {
       var c = game.cannons[ci];
+      var def = CANNON_KINDS[c.kind];
       ctx.save();
       ctx.translate(Math.round(c.x), Math.round(c.y));
       ctx.rotate(c.heading + Math.PI / 2);
@@ -1395,6 +1396,35 @@ body.has-ant-buster-page {
       if (!turretSprite) { turretSprite = game.sprites.turrets.howitzer; }
       ctx.drawImage(turretSprite, -10, -16);
       ctx.restore();
+      // Plan 4 — muzzle flash. Renders for FLASH_DUR seconds after the cannon
+      // fires; alpha fades linearly. flashScale on def scales the flash
+      // radius for god-tier rows (default 1.0, god-tier 1.7).
+      if (c.lastFiredAt) {
+        var FLASH_DUR = 0.08;
+        var dtSinceFire = game.time - c.lastFiredAt;
+        if (dtSinceFire >= 0) {
+          if (dtSinceFire < FLASH_DUR) {
+            var fAlpha = 1 - dtSinceFire / FLASH_DUR;
+            var fScale = def.flashScale ? def.flashScale : 1.0;
+            var fRadius = 6 * fScale;
+            // Barrel tip is ~16px in front of cannon center along heading.
+            var tipDist = 14;
+            var fx = c.x + Math.cos(c.heading) * tipDist;
+            var fy = c.y + Math.sin(c.heading) * tipDist;
+            ctx.save();
+            ctx.globalAlpha = fAlpha;
+            var grad = ctx.createRadialGradient(fx, fy, 0, fx, fy, fRadius);
+            grad.addColorStop(0, '#ffffff');
+            grad.addColorStop(0.4, '#ffd75e');
+            grad.addColorStop(1, 'rgba(255, 160, 30, 0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(fx, fy, fRadius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
+        }
+      }
       if (c.disabled) {
         if (Math.floor(game.time * 6) % 2 === 0) {
           ctx.fillStyle = '#ff5040';
@@ -3281,6 +3311,11 @@ body.has-ant-buster-page {
   // === PROJECTILES ===
   function fireProjectile(cannon, target) {
     var def = CANNON_KINDS[cannon.kind];
+
+    // Plan 4 — stamp the fire moment so drawCannonTurrets can render a brief
+    // muzzle flash for ~0.08s after firing. flashScale on def scales the
+    // flash radius (god-tier rows set 1.7 to read as a heavier discharge).
+    cannon.lastFiredAt = game.time;
 
     // Tesla arc-jump primitive (Plan 3 — MP-J). Resolves the primary hit and
     // up to def.teslaArc.jumps chain hits in one tick: each jump finds the
