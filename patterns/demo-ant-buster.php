@@ -5079,9 +5079,24 @@ body.has-ant-buster-page {
         }
       }
       // Click inside the right-column panel while a cannon is selected — test
-      // the upgrade buttons (up to 3) then the sell button.
+      // the targeting buttons first (Plan 7), then upgrade buttons (up to 3),
+      // then the sell button.
       if (ui.selectedCannon) {
         if (p.x >= PLAYFIELD_W) {
+          // Plan 7 — Targeting row hit-test. Mode strings are positional and
+          // must match the order in drawTargetingRow's `modes` array.
+          if (ui.targetingRects) {
+            var tModes = ['closest', 'first', 'last', 'strongest', 'weakest'];
+            for (var ti = 0; ti < ui.targetingRects.length; ti++) {
+              var trec = ui.targetingRects[ti];
+              if (trec) {
+                if (inRect(p, trec)) {
+                  ui.selectedCannon.targetingMode = tModes[ti];
+                  return;
+                }
+              }
+            }
+          }
           for (var ri = 0; ri < ui.upgradeRects.length; ri++) {
             var ur = ui.upgradeRects[ri];
             if (ur) {
