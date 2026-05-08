@@ -1295,7 +1295,13 @@ body.has-ant-buster-page {
         if (t < 0) { t = 0; }
         arcOffset = -Math.sin(t * Math.PI) * p.arcHeight;
       }
-      ctx.drawImage(game.sprites.projectile, Math.round(p.x - 2), Math.round(p.y - 2 + arcOffset));
+      // Plan 4 — visualScale scales the 4×4 sprite around the projectile's
+      // center (offset = -size/2). Pink Pea 1.0, Bouncy Bubble 1.5,
+      // Wrecking Ball 2.5. Default 1.0 keeps existing cannons unchanged.
+      var pScale = p.visualScale ? p.visualScale : 1.0;
+      var pSize = 4 * pScale;
+      var pOff = pSize / 2;
+      ctx.drawImage(game.sprites.projectile, Math.round(p.x - pOff), Math.round(p.y - pOff + arcOffset), pSize, pSize);
     }
   }
 
@@ -3064,7 +3070,11 @@ body.has-ant-buster-page {
           bouncesRemaining: 0,
           bounceRadius: 0,
           damageDecay: 1,
-          initialHit: true
+          initialHit: true,
+          // Plan 4 — visualScale and statusOnFirstHit (Bucket G fields).
+          // Pellets keep defaults (1.0 scale, no first-hit-only status).
+          visualScale: def.visualScale ? def.visualScale : 1.0,
+          statusOnFirstHit: def.statusOnFirstHit ? def.statusOnFirstHit : null
         });
       }
       return;
@@ -3128,7 +3138,15 @@ body.has-ant-buster-page {
         bouncesRemaining: def.bouncesRemaining ? def.bouncesRemaining : 0,
         bounceRadius: def.bounceRadius ? def.bounceRadius : 0,
         damageDecay: def.damageDecay ? def.damageDecay : 1,
-        initialHit: true
+        initialHit: true,
+        // Plan 4 — visualScale scales the projectile sprite at render time
+        // (Pink Pea 1.0, Bouncy Bubble 1.5, Wrecking Ball 2.5). Default 1.0
+        // for all existing cannons, so no migration needed.
+        visualScale: def.visualScale ? def.visualScale : 1.0,
+        // Plan 4 — statusOnFirstHit applies a status to the first impact
+        // only, not bounce targets (Wrecking Ball's knockback). The general
+        // statusOnHit array continues to fire on every bounce.
+        statusOnFirstHit: def.statusOnFirstHit ? def.statusOnFirstHit : null
       };
       if (def.arc) {
         p.arcStartedAt = game.time;
@@ -3407,6 +3425,20 @@ body.has-ant-buster-page {
                 if (a.effects[s.kind]) {
                   a.effects[s.kind].spreads = true;
                 }
+              }
+            }
+          }
+          // Plan 4 — statusOnFirstHit applies only to the projectile's
+          // original target, not bounce targets (Wrecking Ball's knockback).
+          // The MP-L bounce branch flips initialHit = false after the first
+          // impact, so subsequent bounces skip this block.
+          if (p.statusOnFirstHit) {
+            if (p.initialHit) {
+              var sflist = p.statusOnFirstHit;
+              if (!Array.isArray(sflist)) { sflist = [sflist]; }
+              for (var sfi = 0; sfi < sflist.length; sfi++) {
+                var sfe = sflist[sfi];
+                applyStatus(a, sfe.kind, sfe.magnitude, sfe.duration, 'first-hit');
               }
             }
           }
