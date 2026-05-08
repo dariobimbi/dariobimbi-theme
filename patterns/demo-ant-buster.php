@@ -141,7 +141,7 @@ body.has-ant-buster-page {
     godTierUnlockPulseStart: 0
   };
 
-  // Module-level rect helper used by HUD hit-tests. Avoids inline `&&` chains
+  // Module-level rect helper used by HUD hit-tests. Avoids inline and-operator chains
   // (which the WP content filter occasionally HTML-encodes) and centralizes the
   // pattern that future tasks will reuse for upgrade buttons, selected-tower UI, etc.
   function inRect(p, r) {
@@ -3056,7 +3056,15 @@ body.has-ant-buster-page {
           arcStartedAt: 0,
           arcDuration: 0,
           arcHeight: 0,
-          returning: false
+          returning: false,
+          // Plan 4 — MP-L bouncing retarget. Pellets currently never bounce
+          // (no pellet cannon also bounces), but the fields must exist on the
+          // projectile literal so updateProjectiles' single collision body
+          // can read them uniformly.
+          bouncesRemaining: 0,
+          bounceRadius: 0,
+          damageDecay: 1,
+          initialHit: true
         });
       }
       return;
@@ -3110,7 +3118,17 @@ body.has-ant-buster-page {
         // radians. Re-acquires nearest ant if the original target is dead/null.
         homing: !!def.homing,
         homingTurnRate: 0,
-        target: target
+        target: target,
+        // Plan 4 — MP-L bouncing retarget (Pink Rubber Family). On hit, search
+        // for nearest non-_sawAnts live ant within bounceRadius; if found,
+        // redirect velocity, decrement bouncesRemaining, multiply damage by
+        // damageDecay, do not despawn. initialHit flips to false after first
+        // impact so statusOnFirstHit applies only to the original target
+        // (Wrecking Ball's 30 px knockback).
+        bouncesRemaining: def.bouncesRemaining ? def.bouncesRemaining : 0,
+        bounceRadius: def.bounceRadius ? def.bounceRadius : 0,
+        damageDecay: def.damageDecay ? def.damageDecay : 1,
+        initialHit: true
       };
       if (def.arc) {
         p.arcStartedAt = game.time;
@@ -3421,11 +3439,50 @@ body.has-ant-buster-page {
             if (!p._sawAnts) { p._sawAnts = []; }
             p._sawAnts.push(a);
             // projectile keeps flying — don't set hit, don't break
+          } else if (p.bouncesRemaining > 0) {
+            // Plan 4 — MP-L bouncing retarget (Pink Rubber Family). After the
+            // hit lands, search nearest non-_sawAnts live ant within
+            // bounceRadius. Found: redirect velocity, push current ant onto
+            // _sawAnts, decrement counter, multiply damage by damageDecay, do
+            // not despawn. Not found: fall through to normal despawn.
+            if (!p._sawAnts) { p._sawAnts = []; }
+            p._sawAnts.push(a);
+            var bestBounce = null;
+            var bestBounceDist = Infinity;
+            for (var bki = 0; bki < game.ants.length; bki++) {
+              var bka = game.ants[bki];
+              if (bka.dead) { continue; }
+              if (bka.intangible) { continue; }
+              if (p._sawAnts.indexOf(bka) !== -1) { continue; }
+              var bdx = bka.x - p.x;
+              var bdy = bka.y - p.y;
+              var bd2 = bdx * bdx + bdy * bdy;
+              if (bd2 > p.bounceRadius * p.bounceRadius) { continue; }
+              if (bd2 < bestBounceDist) { bestBounceDist = bd2; bestBounce = bka; }
+            }
+            if (bestBounce) {
+              var bAngle = Math.atan2(bestBounce.y - p.y, bestBounce.x - p.x);
+              var bSpeed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+              p.vx = Math.cos(bAngle) * bSpeed;
+              p.vy = Math.sin(bAngle) * bSpeed;
+              p.bouncesRemaining = p.bouncesRemaining - 1;
+              p.damage = p.damage * p.damageDecay;
+              p.initialHit = false;
+              // Refresh life so the projectile has time to reach the bounce
+              // target — without this it might expire mid-flight on long
+              // bounces against the back of the playfield.
+              p.life = 1.5;
+              // projectile keeps flying — don't set hit, don't break
+            } else {
+              // No eligible bounce target → despawn normally.
+              hit = true;
+              break;
+            }
           } else {
             // Returning projectile primitive (Plan 3 — Discus). On the first
             // outbound hit, flip velocity toward origin so the projectile can
-            // hit more ants on the return leg. CLAUDE.md: no `&&` in inline
-            // <script>, so two nested ifs instead of `p.returning && p.phase === 'out'`.
+            // hit more ants on the return leg. CLAUDE.md: no and-operator in
+            // inline script, so two nested ifs instead of a compound condition.
             var canReturn = false;
             if (p.returning) {
               if (p.phase === 'out') {
@@ -3875,7 +3932,7 @@ body.has-ant-buster-page {
     ui.mouseX = p.x;
     ui.mouseY = p.y;
     // Track upgrade-button hover so drawRangeCircle can preview the target's range
-    // as a dashed secondary circle. Avoids `&&` for the inline-script gotcha.
+    // as a dashed secondary circle. Avoids and-operator for the inline-script gotcha.
     var hovered = null;
     for (var ri = 0; ri < ui.upgradeRects.length; ri++) {
       var ur = ui.upgradeRects[ri];
