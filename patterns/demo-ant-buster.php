@@ -111,7 +111,8 @@ body.has-ant-buster-page {
   // state machine. The render and input layers read whichever flag is relevant.
   var game = {
     state: 'idle',            // 'idle' | 'playing'
-    time: 0,                  // seconds since game start
+    time: 0,                  // seconds since game start (real-time, ignores speed multiplier)
+    simTime: 0,               // simulated seconds (scales with game.speed); used for slice timeout
     accumulator: 0,           // for fixed-timestep
     cake: { x: 352, y: 80, slices: 8, lost: 0 },
     anthill: { x: 40, y: 300 },
@@ -131,10 +132,17 @@ body.has-ant-buster-page {
     banner: { active: false, text: '', startedAt: 0, duration: 2.5, isBoss: false, isFinal: false },
     screenshake: { magnitude: 0, decay: 0 },
     paused: false,
-    speed: 1
+    speed: 1,
+    // Plan 4 — wave-15 god-tier unlock state. In-session only (no
+    // localStorage). godTierUnlocked flips true when wave 15 clears;
+    // godTierUnlockPulseStart stamps game.time so the selected-tower
+    // panel can render a 0.5s golden halo flash on T2 finals' god-tier
+    // upgrade buttons. Both reset on game-over → restart.
+    godTierUnlocked: false,
+    godTierUnlockPulseStart: 0
   };
 
-  // Module-level rect helper used by HUD hit-tests. Avoids inline `&&` chains
+  // Module-level rect helper used by HUD hit-tests. Avoids inline and-operator chains
   // (which the WP content filter occasionally HTML-encodes) and centralizes the
   // pattern that future tasks will reuse for upgrade buttons, selected-tower UI, etc.
   function inRect(p, r) {
@@ -822,6 +830,59 @@ body.has-ant-buster-page {
     return c;
   }
 
+  // === Pink Rubber Family (Plan 4 — Bucket B) ===
+  function makeCannonTurretPinkPea() {
+    // Base tier — small bright-pink turret with a short stubby barrel.
+    // Reads as a casual / approachable family alongside Howitzer / Repeater.
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    x.fillStyle = '#d24a8a';
+    x.fillRect(8, 4, 4, 12);                    // pink barrel (rotated at draw time)
+    x.fillStyle = '#ff69b4';
+    x.fillRect(7, 2, 6, 3);                     // bright pink barrel tip
+    x.fillStyle = '#ff8fc4';
+    x.fillRect(8, 4, 4, 1);                     // highlight strip
+    return c;
+  }
+
+  function makeCannonTurretBouncyBubble() {
+    // Mid tier — chunkier pink turret, slightly larger, with a bubble-tip
+    // barrel that hints at the larger projectile. Reads as a step up from
+    // Pink Pea without changing family identity.
+    var c = makeCanvas(24, 24);
+    var x = c.getContext('2d');
+    x.fillStyle = '#c83a7a';
+    x.fillRect(10, 6, 4, 12);                   // dark-pink base barrel
+    x.fillStyle = '#ff5fa0';
+    x.fillRect(9, 4, 6, 4);                     // mid-pink barrel section
+    x.fillStyle = '#ff8fc4';
+    x.fillRect(8, 1, 8, 4);                     // bubble-tip ring (lighter pink)
+    x.fillStyle = '#ffd6ec';
+    x.fillRect(10, 2, 4, 2);                    // bubble highlight
+    return c;
+  }
+
+  function makeCannonTurretRubberWreckingBall() {
+    // Final tier — big heavy pink turret with a wrecking-ball motif. Chains
+    // hint at the weight of the projectile, dark pink reads as the family's
+    // capstone. Largest sprite of the three.
+    var c = makeCanvas(28, 28);
+    var x = c.getContext('2d');
+    x.fillStyle = '#a02864';
+    x.fillRect(11, 8, 6, 14);                   // heavy dark-pink base
+    x.fillStyle = '#c83a7a';
+    x.fillRect(9, 6, 10, 6);                    // wide breech
+    x.fillStyle = '#ff1493';
+    x.fillRect(10, 0, 8, 8);                    // bright-pink wrecking-ball muzzle
+    x.fillStyle = '#181425';
+    x.fillRect(13, 8, 2, 1);                    // chain link 1 (dark)
+    x.fillRect(13, 11, 2, 1);                   // chain link 2
+    x.fillRect(13, 14, 2, 1);                   // chain link 3
+    x.fillStyle = '#ff8fc4';
+    x.fillRect(11, 1, 2, 2);                    // muzzle highlight
+    return c;
+  }
+
   function makeCake(slices) {
     var c = makeCanvas(48, 48);
     var x = c.getContext('2d');
@@ -952,7 +1013,11 @@ body.has-ant-buster-page {
       sonic_pulse: makeCannonTurretSonicPulse(),
       frost: makeCannonTurretFrost(),
       glacier: makeCannonTurretGlacier(),
-      cryo: makeCannonTurretCryo()
+      cryo: makeCannonTurretCryo(),
+      // Plan 4 — Pink Rubber Family (Bucket B). Linear chain, no T3 god.
+      pink_pea: makeCannonTurretPinkPea(),
+      bouncy_bubble: makeCannonTurretBouncyBubble(),
+      rubber_wrecking_ball: makeCannonTurretRubberWreckingBall()
     },
     anthill: makeAnthill(),
     projectile: makeProjectile()
@@ -965,7 +1030,10 @@ body.has-ant-buster-page {
     var startY = 32;
     var cardH = 70;
     var cardW = SHOP_W - 16;
-    var keys = ['howitzer', 'repeater', 'twingun'];
+    // Plan 4: Pink Pea joins the base-cannon shop column as the 4th card.
+    // The Pink Rubber Family is a "casual / approachable" 4th family per
+    // Plan 3 §9 — available from wave 1 with no gating.
+    var keys = ['howitzer', 'repeater', 'twingun', 'pink_pea'];
     ui.shopRects = [];
     for (var i = 0; i < keys.length; i++) {
       var k = keys[i];
@@ -1011,6 +1079,12 @@ body.has-ant-buster-page {
   function upgradeCannon(c, toKind) {
     var udef = CANNON_KINDS[toKind];
     if (!udef) { return; }
+    // Plan 4: block god-tier upgrades when locked. Defense-in-depth alongside
+    // the visual greying in drawTowerPanel (Bucket F). Without this guard a
+    // misclick on a 50%-alpha button would still commit the upgrade.
+    if (udef.tier === 'god') {
+      if (!game.godTierUnlocked) { return; }
+    }
     if (game.gold < udef.cost) { return; }
     game.gold = game.gold - udef.cost;
     c.kind = toKind;
@@ -1045,21 +1119,96 @@ body.has-ant-buster-page {
     ctx.fillText('KILLS ' + killCount, px + 6, py + 66);
 
     // Upgrade buttons (up to 3) — only present when sk.upgradesTo is non-empty.
-    // Base cannons offer 3 mid options, mid cannons offer 2 finals, finals offer 0.
+    // Base cannons offer 3 mid options, mid cannons offer 2 finals, finals
+    // offer 1 god-tier (Plan 4). God-tier buttons render at 50% alpha with a
+    // tooltip when locked, full alpha when unlocked, and an additive gold
+    // halo for the first 0.5s after unlock fires (game.godTierUnlockPulseStart).
     var upgrades = sk.upgradesTo;
     if (!upgrades) { upgrades = []; }
+    var hoveredLockedRect = null;
     for (var i = 0; i < upgrades.length; i++) {
       var uk = upgrades[i];
       var udef = CANNON_KINDS[uk];
       var by = py + 90 + i * 22;
+      var bx = px + 6;
+      var bw = pw - 12;
+      var bh = 18;
       var canAfford = (game.gold >= udef.cost);
+      var isGod = (udef.tier === 'god');
+      var isLocked = false;
+      if (isGod) {
+        if (!game.godTierUnlocked) { isLocked = true; }
+      }
+
+      // Plan 4 — unlock pulse halo. Renders behind the button for the first
+      // 0.5s after godTierUnlockPulseStart, fading from full to zero alpha.
+      if (isGod) {
+        var pulseAge = game.time - game.godTierUnlockPulseStart;
+        if (pulseAge >= 0) {
+          if (pulseAge < 0.5) {
+            var pulseAlpha = 1 - (pulseAge / 0.5);
+            ctx.save();
+            ctx.globalAlpha = pulseAlpha;
+            ctx.fillStyle = '#fee761';
+            ctx.fillRect(bx - 4, by - 4, bw + 8, bh + 8);
+            ctx.restore();
+          }
+        }
+      }
+
+      ctx.save();
+      if (isLocked) { ctx.globalAlpha = 0.5; }
       ctx.fillStyle = canAfford ? '#3a8c3a' : '#444';
-      ctx.fillRect(px + 6, by, pw - 12, 18);
+      if (isGod) {
+        if (!isLocked) {
+          // Unlocked god-tier gets a distinct gold-on-dark scheme so the
+          // upgrade reads as apex tier even at full alpha. Affordability
+          // still gates the inner fill — locked god uses the muted gray.
+          ctx.fillStyle = canAfford ? '#a07020' : '#444';
+        }
+      }
+      ctx.fillRect(bx, by, bw, bh);
       ctx.fillStyle = canAfford ? '#fee761' : '#888';
-      ctx.fillText('-> ' + udef.name + ' (' + udef.cost + 'g)', px + 10, by + 12);
-      ui.upgradeRects[i] = { x: px + 6, y: by, w: pw - 12, h: 18, toKind: uk };
+      if (isGod) {
+        if (!isLocked) {
+          ctx.fillStyle = canAfford ? '#fee761' : '#888';
+        }
+      }
+      ctx.fillText('-> ' + udef.name + ' (' + udef.cost + 'g)', bx + 4, by + 12);
+      ctx.restore();
+
+      ui.upgradeRects[i] = { x: bx, y: by, w: bw, h: bh, toKind: uk, locked: isLocked };
+
+      // Capture the rect for tooltip rendering after the loop, so the
+      // tooltip composites over neighbour buttons cleanly.
+      if (isLocked) {
+        if (ui.mouseX >= bx) {
+          if (ui.mouseX <= bx + bw) {
+            if (ui.mouseY >= by) {
+              if (ui.mouseY <= by + bh) {
+                hoveredLockedRect = { x: bx, y: by, w: bw, h: bh };
+              }
+            }
+          }
+        }
+      }
     }
     for (var k = upgrades.length; k < 3; k++) { ui.upgradeRects[k] = null; }
+
+    // Plan 4 — locked god-tier tooltip. Drawn after the loop so a tooltip
+    // for an upper button never sits under the button below it. 140 px wide
+    // matches the panel column width minus padding.
+    if (hoveredLockedRect) {
+      var tipX = hoveredLockedRect.x;
+      var tipY = hoveredLockedRect.y - 22;
+      ctx.save();
+      ctx.fillStyle = 'rgba(20, 22, 36, 0.92)';
+      ctx.fillRect(tipX, tipY, 140, 18);
+      ctx.fillStyle = '#fee761';
+      ctx.font = '10px monospace';
+      ctx.fillText('Unlocks at wave 15', tipX + 6, tipY + 12);
+      ctx.restore();
+    }
 
     // Sell button — pinned near the bottom of the panel rect.
     var refund = sellRefund(c);
@@ -1153,6 +1302,48 @@ body.has-ant-buster-page {
     }
   }
 
+  // Layer 5c: persistent cannon auras (Blizzard, Plan 4 — MP-N). Translucent
+  // light-blue radial fill that visually communicates the aura range. Drawn
+  // under bases/turrets/ants so ants walking through don't get obscured by
+  // it. Renders only for cannons whose def carries the aura field.
+  function drawCannonAuras() {
+    for (var i = 0; i < game.cannons.length; i++) {
+      var c = game.cannons[i];
+      var def = CANNON_KINDS[c.kind];
+      if (!def.aura) { continue; }
+      var au = def.aura;
+      ctx.save();
+      ctx.fillStyle = 'rgba(150, 200, 255, 0.15)';
+      ctx.strokeStyle = 'rgba(150, 200, 255, 0.4)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, au.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  // Plan 4 — god-tier halo. Renders a soft pulsing gold disc under any cannon
+  // whose def.tier === 'god'. Drawn between auras and bases so the halo sits
+  // beneath the round base sprite without bleeding over the turret.
+  // Period ~2s (sin of game.time * PI), alpha range 0.30 to 0.60.
+  function drawGodTierHalos() {
+    for (var i = 0; i < game.cannons.length; i++) {
+      var c = game.cannons[i];
+      var def = CANNON_KINDS[c.kind];
+      if (def.tier !== 'god') { continue; }
+      var alpha = 0.45 + 0.15 * Math.sin(game.time * Math.PI);
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = '#fee761';
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, 22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
   // Layer 6: static cannon bases. Split from the turret pass so the round bases
   // sit under ants while the turrets read on top.
   function drawCannonBases() {
@@ -1190,6 +1381,28 @@ body.has-ant-buster-page {
         ctx.drawImage(sprite, Math.round(a.x - k.spriteW / 2), Math.round(a.y - k.spriteH / 2));
       }
       if (!a.dead) {
+        // Plan 4 — Biohazard infected outline. Bright cyan pulse around any
+        // ant whose poison effect carries damageAmp >= 1.25 (Biohazard's
+        // signature). Identifies the +25% priority target at a glance,
+        // distinct from poison's existing green tint. Sin-based alpha pulse
+        // (period ~0.6s); ~2px stroke width on top of the ant sprite.
+        if (a.effects) {
+          if (a.effects.poison) {
+            if (a.effects.poison.damageAmp) {
+              if (a.effects.poison.damageAmp >= 1.25) {
+                var biAlpha = 0.65 + 0.25 * Math.sin(game.time * 10);
+                ctx.save();
+                ctx.globalAlpha = biAlpha;
+                ctx.strokeStyle = '#00ffff';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(a.x, a.y, 10, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+              }
+            }
+          }
+        }
         if (a.carrying) {
           // Crumb sub-step: tiny orange dot above the ant body.
           ctx.fillStyle = '#feae34';
@@ -1251,6 +1464,7 @@ body.has-ant-buster-page {
   function drawCannonTurrets() {
     for (var ci = 0; ci < game.cannons.length; ci++) {
       var c = game.cannons[ci];
+      var def = CANNON_KINDS[c.kind];
       ctx.save();
       ctx.translate(Math.round(c.x), Math.round(c.y));
       ctx.rotate(c.heading + Math.PI / 2);
@@ -1258,6 +1472,35 @@ body.has-ant-buster-page {
       if (!turretSprite) { turretSprite = game.sprites.turrets.howitzer; }
       ctx.drawImage(turretSprite, -10, -16);
       ctx.restore();
+      // Plan 4 — muzzle flash. Renders for FLASH_DUR seconds after the cannon
+      // fires; alpha fades linearly. flashScale on def scales the flash
+      // radius for god-tier rows (default 1.0, god-tier 1.7).
+      if (c.lastFiredAt) {
+        var FLASH_DUR = 0.08;
+        var dtSinceFire = game.time - c.lastFiredAt;
+        if (dtSinceFire >= 0) {
+          if (dtSinceFire < FLASH_DUR) {
+            var fAlpha = 1 - dtSinceFire / FLASH_DUR;
+            var fScale = def.flashScale ? def.flashScale : 1.0;
+            var fRadius = 6 * fScale;
+            // Barrel tip is ~16px in front of cannon center along heading.
+            var tipDist = 14;
+            var fx = c.x + Math.cos(c.heading) * tipDist;
+            var fy = c.y + Math.sin(c.heading) * tipDist;
+            ctx.save();
+            ctx.globalAlpha = fAlpha;
+            var grad = ctx.createRadialGradient(fx, fy, 0, fx, fy, fRadius);
+            grad.addColorStop(0, '#ffffff');
+            grad.addColorStop(0.4, '#ffd75e');
+            grad.addColorStop(1, 'rgba(255, 160, 30, 0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(fx, fy, fRadius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
+        }
+      }
       if (c.disabled) {
         if (Math.floor(game.time * 6) % 2 === 0) {
           ctx.fillStyle = '#ff5040';
@@ -1274,6 +1517,12 @@ body.has-ant-buster-page {
   function drawProjectiles() {
     for (var pi = 0; pi < game.projectiles.length; pi++) {
       var p = game.projectiles[pi];
+      // Plan 4 — barrelStagger. Dormant shells sit invisible at spawn until
+      // their activation time. Skips render entirely; the visual cost is one
+      // ctx.drawImage avoided.
+      if (p.dormantUntil) {
+        if (game.time < p.dormantUntil) { continue; }
+      }
       var arcOffset = 0;
       if (p.arcing) {
         var t;
@@ -1282,7 +1531,13 @@ body.has-ant-buster-page {
         if (t < 0) { t = 0; }
         arcOffset = -Math.sin(t * Math.PI) * p.arcHeight;
       }
-      ctx.drawImage(game.sprites.projectile, Math.round(p.x - 2), Math.round(p.y - 2 + arcOffset));
+      // Plan 4 — visualScale scales the 4×4 sprite around the projectile's
+      // center (offset = -size/2). Pink Pea 1.0, Bouncy Bubble 1.5,
+      // Wrecking Ball 2.5. Default 1.0 keeps existing cannons unchanged.
+      var pScale = p.visualScale ? p.visualScale : 1.0;
+      var pSize = 4 * pScale;
+      var pOff = pSize / 2;
+      ctx.drawImage(game.sprites.projectile, Math.round(p.x - pOff), Math.round(p.y - pOff + arcOffset), pSize, pSize);
     }
   }
 
@@ -1370,6 +1625,50 @@ body.has-ant-buster-page {
         ctx.beginPath();
         ctx.arc(ef.x, ef.y, 60 * p, 0, Math.PI * 2);
         ctx.stroke();
+      }
+      // Plan 4 — splitFlash (Cluster Strike split point). Filled circle that
+      // shrinks from maxRadius * 0.8 to 0 with alpha fading. ~0.1s lifetime.
+      if (ef.kind === 'splitFlash') {
+        var sp = ef.t / ef.life;
+        var sAlpha = 1 - sp;
+        var sRad = ef.maxRadius * (1 - sp) * 0.8;
+        ctx.save();
+        ctx.globalAlpha = sAlpha;
+        ctx.fillStyle = ef.color;
+        ctx.beginPath();
+        ctx.arc(ef.x, ef.y, sRad, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+      // Plan 4 — spreadRing (Phoenix burn-spread). Stroked circle that grows
+      // from 0 to maxRadius with alpha fading. ~0.2s lifetime, orange.
+      if (ef.kind === 'spreadRing') {
+        var rp = ef.t / ef.life;
+        var rAlpha = 1 - rp;
+        var rRad = ef.maxRadius * rp;
+        ctx.save();
+        ctx.globalAlpha = rAlpha;
+        ctx.strokeStyle = ef.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(ef.x, ef.y, rRad, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+      // Plan 4 — knockbackRing (Tempest splash impact). Stroked circle that
+      // grows from 0 to maxRadius with alpha fading. ~0.15s lifetime, white.
+      if (ef.kind === 'knockbackRing') {
+        var kp = ef.t / ef.life;
+        var kAlpha = 1 - kp;
+        var kRad = ef.maxRadius * kp;
+        ctx.save();
+        ctx.globalAlpha = kAlpha;
+        ctx.strokeStyle = ef.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(ef.x, ef.y, kRad, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
       }
     }
   }
@@ -1596,6 +1895,8 @@ body.has-ant-buster-page {
     drawSlices();              // 4. fallen slices on the ground
     if (ui.selectedCannon) { drawRangeCircle(ui.selectedCannon); } // 5. range circle
     drawConeDots();            // 5b. cone-DoT overlay (under bases/ants)
+    drawCannonAuras();         // 5c. persistent radial auras (Blizzard MP-N)
+    drawGodTierHalos();        // 5d. pulsing gold halo under T3 god-tier turrets
     drawCannonBases();         // 6. static cannon bases (under turrets/ants)
     drawAnts();                // 7. ants, sorted top-down by y
     drawCannonTurrets();       // 8. cannon turrets + muzzle/disable indicators
@@ -1907,7 +2208,40 @@ body.has-ant-buster-page {
   var STATUS_KINDS = {
     slow:      { name: 'Slow',      onApply: null, perTick: null, speedMult: function(m) { return 1 - m; } },
     freeze:    { name: 'Freeze',    onApply: null, perTick: null, speedMult: function(m) { return 0; } },
-    burn:      { name: 'Burn',      onApply: null, perTick: function(ant, eff, dt) { ant.hp = ant.hp - eff.magnitude * dt; }, speedMult: null },
+    burn:      { name: 'Burn',      onApply: null, perTick: function(ant, eff, dt) { ant.hp = ant.hp - eff.magnitude * dt; }, speedMult: null,
+                 // Plan 4 — Phoenix burn-spread on burn-end. Mirror of the
+                 // poison.onTargetDeath hook: when an ant's burn duration
+                 // runs out (not on death), if the burn was tagged as
+                 // spreading, propagate to ants within 30 px. Toxin and
+                 // Plasma Torch leave the spreads tag unset so their burns
+                 // expire silently. Pushes a transient orange ring effect
+                 // for the visual cue (rendered by drawEffects, Task 13).
+                 onExpire: function(ant) {
+                   if (!ant.effects) { return; }
+                   if (!ant.effects.burn) { return; }
+                   if (!ant.effects.burn.spreads) { return; }
+                   var radius = 30;
+                   for (var i = 0; i < game.ants.length; i++) {
+                     var a = game.ants[i];
+                     if (a === ant) { continue; }
+                     if (a.dead) { continue; }
+                     var dx = a.x - ant.x;
+                     var dy = a.y - ant.y;
+                     if (dx * dx + dy * dy > radius * radius) { continue; }
+                     applyStatus(a, 'burn', 1, 2, 'burn-spread');
+                     // Spread the spread tag too so chained spreads continue
+                     // (capped naturally by burn duration decay).
+                     if (a.effects.burn) { a.effects.burn.spreads = true; }
+                   }
+                   game.effects.push({
+                     kind: 'spreadRing',
+                     x: ant.x, y: ant.y,
+                     t: 0,
+                     life: 0.2,
+                     color: '#ff7733',
+                     maxRadius: 30
+                   });
+                 } },
     poison:    { name: 'Poison',    onApply: null, perTick: function(ant, eff, dt) { ant.hp = ant.hp - eff.magnitude * dt; }, speedMult: null,
                  // Plan 3 — Plague spread-on-death hook. When an ant dies with
                  // a `spreads: true`-tagged poison effect (stamped after
@@ -1916,9 +2250,13 @@ body.has-ant-buster-page {
                  // (matched magnitude + remaining duration). Toxin's poison
                  // omits the tag so its kills don't propagate.
                  onTargetDeath: function(deadAnt) {
-                   var radius = 30;
                    var orig = deadAnt.effects.poison;
                    if (!orig) { return; }
+                   // Plan 4 — spreadRadius (Biohazard) overrides the 30 px
+                   // default. Plague leaves spreadRadius unset, so existing
+                   // behavior is unchanged.
+                   var radius = 30;
+                   if (orig.spreadRadius) { radius = orig.spreadRadius; }
                    var remainingDur = orig.expiresAt - game.time;
                    if (remainingDur <= 0) { return; }
                    for (var i = 0; i < game.ants.length; i++) {
@@ -1929,8 +2267,14 @@ body.has-ant-buster-page {
                      var dy = a.y - deadAnt.y;
                      if (dx * dx + dy * dy > radius * radius) { continue; }
                      applyStatus(a, 'poison', orig.magnitude, remainingDur, 'plague-spread');
-                     // Spread the spread tag too so chain-deaths keep propagating.
-                     if (a.effects.poison) { a.effects.poison.spreads = true; }
+                     // Spread the spread tag, the radius, and the damageAmp
+                     // tag too so chain-deaths keep the same propagation
+                     // shape and Biohazard's biohazard outline keeps showing.
+                     if (a.effects.poison) {
+                       a.effects.poison.spreads = true;
+                       if (orig.spreadRadius) { a.effects.poison.spreadRadius = orig.spreadRadius; }
+                       if (orig.damageAmp) { a.effects.poison.damageAmp = orig.damageAmp; }
+                     }
                    }
                  } },
     stun:      { name: 'Stun',      onApply: null, perTick: null, speedMult: function(m) { return 0; } },
@@ -2124,6 +2468,11 @@ body.has-ant-buster-page {
     for (ek in ant.effects) { keys.push(ek); }
     for (var ki = 0; ki < keys.length; ki++) {
       if (ant.effects[keys[ki]].expiresAt <= game.time) {
+        // Plan 4: fire onExpire hook (currently used by burn for Phoenix
+        // spread) before deleting the effect. Other status kinds leave
+        // onExpire unset, so this is a no-op for them.
+        var expiringDef = STATUS_KINDS[keys[ki]];
+        if (expiringDef.onExpire) { expiringDef.onExpire(ant); }
         delete ant.effects[keys[ki]];
       }
     }
@@ -2300,7 +2649,7 @@ body.has-ant-buster-page {
       range: 110,
       projectileSpeed: 200,
       family: 'heavy',
-      tier: 1,
+      tier: 'base',
       upgradesTo: ['siege', 'mortar', 'discus']
     },
     siege: {
@@ -2311,7 +2660,7 @@ body.has-ant-buster-page {
       range: 110,
       projectileSpeed: 240,
       family: 'heavy',
-      tier: 2,
+      tier: 'mid',
       upgradesTo: ['railgun', 'demolisher']
     },
     railgun: {
@@ -2322,10 +2671,10 @@ body.has-ant-buster-page {
       range: 120,
       projectileSpeed: 360,
       family: 'heavy',
-      tier: 3,
+      tier: 'final',
       linePierce: 999,    // unlimited — pre-Plan-3 Railgun semantics
       armorPierce: true,
-      upgradesTo: []
+      upgradesTo: ['particle_cannon']
     },
     mortar: {
       name: 'Mortar',
@@ -2335,7 +2684,7 @@ body.has-ant-buster-page {
       range: 130,
       projectileSpeed: 200,
       family: 'heavy',
-      tier: 2,
+      tier: 'mid',
       splash: { radius: 40, falloff: 0.5, splashMult: 0.5 },
       arc: { height: 24, travelTime: 0.6 },
       upgradesTo: ['patriot', 'hellfire']
@@ -2348,10 +2697,10 @@ body.has-ant-buster-page {
       range: 200,
       projectileSpeed: 260,
       family: 'heavy',
-      tier: 3,
+      tier: 'final',
       homing: { turnRate: 4.0 },
       splash: { radius: 30, falloff: 0.4, splashMult: 0.4 },
-      upgradesTo: []
+      upgradesTo: ['cluster_strike']
     },
     demolisher: {
       name: 'Demolisher',
@@ -2361,9 +2710,9 @@ body.has-ant-buster-page {
       range: 110,
       projectileSpeed: 260,
       family: 'heavy',
-      tier: 3,
+      tier: 'final',
       armorPierce: true,
-      upgradesTo: []
+      upgradesTo: ['annihilator']
     },
     hellfire: {
       name: 'Hellfire',
@@ -2373,10 +2722,10 @@ body.has-ant-buster-page {
       range: 180,
       projectileSpeed: 200,
       family: 'heavy',
-      tier: 3,
+      tier: 'final',
       splash: { radius: 60, falloff: 0.4, splashMult: 0.67 },
       arc: { height: 32, travelTime: 0.7 },
-      upgradesTo: []
+      upgradesTo: ['saturation']
     },
     discus: {
       name: 'Discus',
@@ -2386,7 +2735,7 @@ body.has-ant-buster-page {
       range: 150,
       projectileSpeed: 220,
       family: 'heavy',
-      tier: 2,
+      tier: 'mid',
       returning: true,
       upgradesTo: ['ricochet', 'shockwave']
     },
@@ -2398,10 +2747,10 @@ body.has-ant-buster-page {
       range: 180,
       projectileSpeed: 240,
       family: 'heavy',
-      tier: 3,
+      tier: 'final',
       returning: true,
       returnPierce: 1,
-      upgradesTo: []
+      upgradesTo: ['vortex']
     },
     shockwave: {
       name: 'Shockwave',
@@ -2411,10 +2760,10 @@ body.has-ant-buster-page {
       range: 130,
       projectileSpeed: 180,
       family: 'heavy',
-      tier: 3,
+      tier: 'final',
       splash: { radius: 80, falloff: 0.3, splashMult: 0.6 },
       screenshake: { magnitude: 3, decay: 12 },
-      upgradesTo: []
+      upgradesTo: ['earthshaker']
     },
     repeater: {
       name: 'Repeater',
@@ -2424,7 +2773,7 @@ body.has-ant-buster-page {
       range: 130,
       projectileSpeed: 280,
       family: 'quick',
-      tier: 1,
+      tier: 'base',
       upgradesTo: ['autocannon', 'marksman', 'spotter']
     },
     autocannon: {
@@ -2435,7 +2784,7 @@ body.has-ant-buster-page {
       range: 130,
       projectileSpeed: 320,
       family: 'quick',
-      tier: 2,
+      tier: 'mid',
       upgradesTo: ['vulcan', 'plasma_torch']
     },
     marksman: {
@@ -2446,7 +2795,7 @@ body.has-ant-buster-page {
       range: 250,
       projectileSpeed: 320,
       family: 'quick',
-      tier: 2,
+      tier: 'mid',
       damageModifier: function (target, sourceCannon) {
         if (target.hp >= target.maxHp - 0.001) { return 1.5; }
         return 1;
@@ -2461,7 +2810,7 @@ body.has-ant-buster-page {
       range: 200,
       projectileSpeed: 280,
       family: 'quick',
-      tier: 2,
+      tier: 'mid',
       reveal: true,
       upgradesTo: ['phantom', 'tesla']
     },
@@ -2473,9 +2822,9 @@ body.has-ant-buster-page {
       range: 140,
       projectileSpeed: 360,
       family: 'quick',
-      tier: 3,
+      tier: 'final',
       spoolUp: 0.5,
-      upgradesTo: []
+      upgradesTo: ['hailstorm']
     },
     plasma_torch: {
       name: 'Plasma Torch',
@@ -2485,14 +2834,14 @@ body.has-ant-buster-page {
       range: 70,                 // mirrors coneDot.range so the panel circle preview matches
       projectileSpeed: 0,
       family: 'quick',
-      tier: 3,
+      tier: 'final',
       coneDot: {
         range: 70,
         angleDeg: 60,
         tickDamage: 10,
         statusOnTick: { kind: 'burn', magnitude: 1, duration: 2 }
       },
-      upgradesTo: []
+      upgradesTo: ['phoenix']
     },
     sharpshooter: {
       name: 'Sharpshooter',
@@ -2502,7 +2851,7 @@ body.has-ant-buster-page {
       range: 350,
       projectileSpeed: 360,
       family: 'quick',
-      tier: 3,
+      tier: 'final',
       damageModifier: function (target, sourceCannon) {
         // +50% vs full-HP, same shape as Marksman. The "ignores 50% slow penalty"
         // line in the spec describes a damage debuff that doesn't exist in Plan 2's
@@ -2511,7 +2860,7 @@ body.has-ant-buster-page {
         if (target.hp >= target.maxHp - 0.001) { return 1.5; }
         return 1;
       },
-      upgradesTo: []
+      upgradesTo: ['reaper']
     },
     lance: {
       name: 'Lance',
@@ -2521,14 +2870,14 @@ body.has-ant-buster-page {
       range: 250,
       projectileSpeed: 0,
       family: 'quick',
-      tier: 3,
+      tier: 'final',
       beam: {
         tickDamage: 4,           // 4 dps continuous; integrated as tickDamage * dt
         statusOnTick: null,      // direct damage only, no status
         color: '#3acccc',        // saturated cyan, distinct from Glacier's pale ice
         lineWidth: 1.5           // tighter than Glacier's 2 — reads as a precision lance
       },
-      upgradesTo: []
+      upgradesTo: ['solar_lance']
     },
     phantom: {
       name: 'Phantom',
@@ -2538,14 +2887,14 @@ body.has-ant-buster-page {
       range: 450,
       projectileSpeed: 380,
       family: 'quick',
-      tier: 3,
+      tier: 'final',
       damageModifier: function (target, sourceCannon) {
         // +100% vs Queen — anti-boss specialist. King is a separate kind and
         // intentionally does not benefit from this bonus.
         if (target.kind === 'queen') { return 2; }
         return 1;
       },
-      upgradesTo: []
+      upgradesTo: ['hawkeye']
     },
     tesla: {
       name: 'Tesla',
@@ -2555,9 +2904,9 @@ body.has-ant-buster-page {
       range: 200,
       projectileSpeed: 0,        // instant-resolve; no projectile travel
       family: 'quick',
-      tier: 3,
+      tier: 'final',
       teslaArc: { jumps: 3, range: 60, falloff: 0.5 },
-      upgradesTo: []
+      upgradesTo: ['stormcaller']
     },
     twingun: {
       name: 'Twin Gun',
@@ -2567,7 +2916,7 @@ body.has-ant-buster-page {
       range: 100,
       projectileSpeed: 240,
       family: 'status',
-      tier: 1,
+      tier: 'base',
       barrels: 2,            // multi-barrel volley logic landed in Task 13
       upgradesTo: ['triple_threat', 'frost', 'toxin']
     },
@@ -2579,7 +2928,7 @@ body.has-ant-buster-page {
       range: 110,
       projectileSpeed: 240,
       family: 'double',
-      tier: 2,
+      tier: 'mid',
       barrels: 3,
       spread: 0.10,          // ~5.7 deg per step — wider than Twin Gun's default
       upgradesTo: ['buckshot', 'minigun']
@@ -2592,10 +2941,10 @@ body.has-ant-buster-page {
       range: 90,
       projectileSpeed: 220,
       family: 'double',
-      tier: 3,
+      tier: 'final',
       pellets: 5,
       coneDeg: 50,           // 50 deg fan, ~12.5 deg between pellets
-      upgradesTo: []
+      upgradesTo: ['scattergun']
     },
     minigun: {
       name: 'Minigun',
@@ -2605,9 +2954,9 @@ body.has-ant-buster-page {
       range: 120,
       projectileSpeed: 320,
       family: 'double',
-      tier: 3,
+      tier: 'final',
       aimJitter: 0.05,       // ~2.9 deg max per-shot angular wobble
-      upgradesTo: []
+      upgradesTo: ['phalanx']
     },
     toxin: {
       name: 'Toxin',
@@ -2617,7 +2966,7 @@ body.has-ant-buster-page {
       range: 100,
       projectileSpeed: 200,
       family: 'double',
-      tier: 2,
+      tier: 'mid',
       statusOnHit: { kind: 'poison', magnitude: 1, duration: 5 },   // 1 dps over 5s = 5 dmg DoT
       upgradesTo: ['plague', 'sonic_pulse']
     },
@@ -2629,12 +2978,12 @@ body.has-ant-buster-page {
       range: 110,
       projectileSpeed: 220,
       family: 'double',
-      tier: 3,
+      tier: 'final',
       // damageAmp tag on the freeze effect: subsequent damage from any cannon
       // lands +50% while the 0.8s freeze is active. See Step 2 stamp pattern
       // and applyDamage's freeze.damageAmp read.
       statusOnHit: { kind: 'freeze', magnitude: 1, duration: 0.8, damageAmp: 1.5 },
-      upgradesTo: []
+      upgradesTo: ['absolute_zero']
     },
     plague: {
       name: 'Plague',
@@ -2644,13 +2993,13 @@ body.has-ant-buster-page {
       range: 110,
       projectileSpeed: 200,
       family: 'double',
-      tier: 3,
+      tier: 'final',
       // spreads tag on the poison effect: when the carrier dies, the same
       // poison (matched magnitude + remaining duration) propagates to live
       // ants within 30 px via STATUS_KINDS.poison.onTargetDeath. 2.5 dps over
       // 6s = 15 dmg per stack.
       statusOnHit: { kind: 'poison', magnitude: 2.5, duration: 6, spreads: true },
-      upgradesTo: []
+      upgradesTo: ['biohazard']
     },
     sonic_pulse: {
       name: 'Sonic Pulse',
@@ -2660,7 +3009,7 @@ body.has-ant-buster-page {
       range: 100,
       projectileSpeed: 240,
       family: 'double',
-      tier: 3,
+      tier: 'final',
       // statusOnHit array: knockback (one-shot 30 px backward shove) +
       // stun (0.4s zero-movement). Array form is handled by the
       // projectile-collision pathway's wrap-and-iterate.
@@ -2668,7 +3017,7 @@ body.has-ant-buster-page {
         { kind: 'knockback', magnitude: 30, duration: 0 },
         { kind: 'stun', magnitude: 1, duration: 0.4 }
       ],
-      upgradesTo: []
+      upgradesTo: ['tempest']
     },
     frost: {
       name: 'Frost',
@@ -2678,7 +3027,7 @@ body.has-ant-buster-page {
       range: 100,
       projectileSpeed: 220,
       family: 'status',
-      tier: 2,
+      tier: 'mid',
       statusOnHit: { kind: 'slow', magnitude: 0.3, duration: 2 },
       upgradesTo: ['glacier', 'cryo']
     },
@@ -2689,13 +3038,405 @@ body.has-ant-buster-page {
       fireRate: 0,
       range: 130,
       family: 'status',
-      tier: 3,
+      tier: 'final',
       beam: {
         tickDamage: 1,
         statusOnTick: { kind: 'slow', magnitude: 0.5, duration: 1 },
         color: '#a4d4ff',
         lineWidth: 2
       },
+      upgradesTo: ['blizzard']
+    },
+
+    // === Pink Rubber Family (Plan 4 — Bucket G carryover from Plan 3 §9) ===
+    // Linear chain (no fork at mid). MP-L bouncing-retarget primitive (Task 6).
+    // visualScale + statusOnFirstHit fields (Task 7). No T3 god-tier — the
+    // family stays "casual / approachable" by design.
+    pink_pea: {
+      name: 'Pink Pea',
+      cost: 50,
+      damage: 5,
+      fireRate: 0.8,
+      range: 130,
+      projectileSpeed: 220,
+      family: 'rubber',
+      tier: 'base',
+      bouncesRemaining: 1,
+      bounceRadius: 50,
+      damageDecay: 0.8,
+      visualScale: 1.0,
+      upgradesTo: ['bouncy_bubble']
+    },
+    bouncy_bubble: {
+      name: 'Bouncy Bubble',
+      cost: 80,
+      damage: 12,
+      fireRate: 0.6,
+      range: 160,
+      projectileSpeed: 240,
+      family: 'rubber',
+      tier: 'mid',
+      bouncesRemaining: 2,
+      bounceRadius: 60,
+      damageDecay: 0.8,
+      visualScale: 1.5,
+      upgradesTo: ['rubber_wrecking_ball']
+    },
+    rubber_wrecking_ball: {
+      name: 'Rubber Wrecking Ball',
+      cost: 120,
+      damage: 30,
+      fireRate: 0.4,
+      range: 180,
+      projectileSpeed: 200,
+      family: 'rubber',
+      tier: 'final',
+      bouncesRemaining: 4,
+      bounceRadius: 70,
+      damageDecay: 0.8,
+      visualScale: 2.5,
+      // First-hit-only knockback. Bounce targets take damage but no status
+      // (prevents pinball chaos). Magnitude 30 px, duration 0 (instant
+      // displacement, no follow-on tick).
+      statusOnFirstHit: { kind: 'knockback', magnitude: 30, duration: 0 },
+      upgradesTo: []
+    },
+
+    // === HEAVY FAMILY GOD-TIER (Plan 4 — Bucket E, Task 19) ===
+    // Six T3 rows, each upgraded from one Heavy T2 final. All gated behind
+    // wave-15 unlock (game.godTierUnlocked). flashScale: 1.7 produces the
+    // larger muzzle flash; the gold halo is rendered automatically by
+    // drawGodTierHalos when tier === 'god'.
+    particle_cannon: {
+      name: 'Particle Cannon',
+      cost: 250,
+      damage: 60,
+      fireRate: 0.6,
+      range: 140,
+      projectileSpeed: 360,
+      family: 'heavy',
+      tier: 'god',
+      linePierce: 999,
+      armorPierce: true,
+      flashScale: 1.7,
+      upgradesTo: []
+    },
+    annihilator: {
+      name: 'Annihilator',
+      cost: 280,
+      damage: 120,
+      fireRate: 0.3,
+      range: 130,
+      projectileSpeed: 260,
+      family: 'heavy',
+      tier: 'god',
+      armorPierce: true,
+      // Base 120 dmg; splashMult 0.25 yields 30 splash damage in the 60 px ring.
+      splash: { radius: 60, falloff: 0.4, splashMult: 0.25 },
+      flashScale: 1.7,
+      screenShakeMag: 5,
+      upgradesTo: []
+    },
+    saturation: {
+      name: 'Saturation',
+      cost: 260,
+      damage: 25,
+      fireRate: 0.5,
+      range: 200,
+      projectileSpeed: 220,
+      family: 'heavy',
+      tier: 'god',
+      barrels: 3,
+      // 0.05s stagger between the three shells so the volley reads as a
+      // rolling rain instead of a simultaneous triple-fire. fireProjectile
+      // delays each barrel's spawn-active time and arc start by i*stagger.
+      barrelStagger: 0.05,
+      arc: { height: 32, travelTime: 0.7 },
+      splash: { radius: 80, falloff: 0.4, splashMult: 0.8 },
+      flashScale: 1.7,
+      upgradesTo: []
+    },
+    cluster_strike: {
+      name: 'Cluster Strike',
+      cost: 280,
+      damage: 30,
+      fireRate: 0.5,
+      range: 220,
+      projectileSpeed: 240,
+      family: 'heavy',
+      tier: 'god',
+      homing: { turnRate: 5.0 },
+      // MP-M mid-flight split. Parent missile splits at 50% of distance to
+      // its initial target; three homing children spread across a 60 deg arc
+      // and re-acquire targets on spawn.
+      splitFraction: 0.5,
+      splitCount: 3,
+      splash: { radius: 30, falloff: 0.4, splashMult: 0.4 },
+      flashScale: 1.7,
+      upgradesTo: []
+    },
+    vortex: {
+      name: 'Vortex',
+      cost: 250,
+      damage: 12,
+      fireRate: 0.4,
+      range: 200,
+      projectileSpeed: 240,
+      family: 'heavy',
+      tier: 'god',
+      barrels: 2,
+      returning: true,
+      returnPierce: 2,
+      flashScale: 1.7,
+      upgradesTo: []
+    },
+    earthshaker: {
+      name: 'Earthshaker',
+      cost: 300,
+      damage: 80,
+      fireRate: 0.12,
+      range: 140,
+      projectileSpeed: 180,
+      family: 'heavy',
+      tier: 'god',
+      // 120 px splash at 62.5% mult yields 50 splash damage; stun radiates to
+      // every ant in the ring (splashStatus: true gates the broadcast).
+      splash: { radius: 120, falloff: 0.4, splashMult: 0.625 },
+      splashStatus: true,
+      statusOnHit: { kind: 'stun', magnitude: 1, duration: 0.6 },
+      flashScale: 1.7,
+      screenShakeMag: 8,
+      upgradesTo: []
+    },
+
+    // === QUICK FAMILY GOD-TIER (Plan 4 — Bucket E, Task 20) ===
+    // Six T3 rows for the Quick lineage. Phoenix uses the burn.onExpire spread
+    // hook from Task 4. Reaper and Hawkeye carry damageModifier functions that
+    // ride on top of any sourceCannon-keyed multiplier in applyDamage.
+    hailstorm: {
+      name: 'Hailstorm',
+      cost: 250,
+      damage: 4,
+      fireRate: 14,
+      range: 160,
+      projectileSpeed: 360,
+      family: 'quick',
+      tier: 'god',
+      spoolUp: 0.5,
+      aimJitter: 0,
+      flashScale: 1.7,
+      upgradesTo: []
+    },
+    phoenix: {
+      name: 'Phoenix',
+      cost: 260,
+      damage: 0,
+      fireRate: 0,
+      range: 80,
+      projectileSpeed: 0,
+      family: 'quick',
+      tier: 'god',
+      coneDot: {
+        range: 80,
+        angleDeg: 70,
+        tickDamage: 12,
+        // spreads on burn — Task 4's burn.onExpire hook fires the Phoenix
+        // chain when the burn duration runs out, not on death.
+        statusOnTick: { kind: 'burn', magnitude: 3, duration: 3, spreads: true }
+      },
+      flashScale: 1.7,
+      upgradesTo: []
+    },
+    reaper: {
+      name: 'Reaper',
+      cost: 280,
+      damage: 60,
+      fireRate: 0.5,
+      range: 380,
+      projectileSpeed: 360,
+      family: 'quick',
+      tier: 'god',
+      damageModifier: function (target, sourceCannon) {
+        // Instakill Worker and Scout. +100% vs full-HP everything else.
+        // Nested ifs avoid the inline-script and-operator (CLAUDE.md note).
+        if (target.kind === 'worker') { return 999; }
+        if (target.kind === 'scout') { return 999; }
+        if (target.hp >= target.maxHp - 0.001) { return 2; }
+        return 1;
+      },
+      flashScale: 1.7,
+      upgradesTo: []
+    },
+    solar_lance: {
+      name: 'Solar Lance',
+      cost: 290,
+      damage: 0,
+      fireRate: 0,
+      range: 280,
+      projectileSpeed: 0,
+      family: 'quick',
+      tier: 'god',
+      // beam: object form so Plan 3's existing beam pathway picks it up.
+      // beamPierce reads from the def root (Task 12 — MP-O cylinder math).
+      beam: {
+        tickDamage: 8,
+        statusOnTick: null,
+        color: '#ffd75e',
+        lineWidth: 3
+      },
+      beamPierce: 2,
+      flashScale: 1.7,
+      upgradesTo: []
+    },
+    hawkeye: {
+      name: 'Hawkeye',
+      cost: 300,
+      damage: 80,
+      fireRate: 0.3,
+      range: 600,
+      projectileSpeed: 400,
+      family: 'quick',
+      tier: 'god',
+      // minRange documented for future "ranger does not fire on adjacent ants"
+      // hooks — currently a no-op since no targeting code reads it.
+      minRange: 0,
+      damageModifier: function (target, sourceCannon) {
+        if (target.kind === 'queen') { return 3; }
+        return 1;
+      },
+      flashScale: 1.7,
+      upgradesTo: []
+    },
+    stormcaller: {
+      name: 'Stormcaller',
+      cost: 280,
+      damage: 18,
+      fireRate: 1,
+      range: 240,
+      projectileSpeed: 360,
+      family: 'quick',
+      tier: 'god',
+      // Plan 4 plan literally said falloff: 1, but the Tesla math is
+      // dmg * (1 - falloff), so falloff: 1 would deal zero on every hop.
+      // Spec intent is "no falloff, full damage every jump" = falloff: 0.
+      teslaArc: { jumps: 6, range: 80, falloff: 0 },
+      flashScale: 1.7,
+      upgradesTo: []
+    },
+
+    // === DOUBLE FAMILY GOD-TIER (Plan 4 — Bucket E, Task 21) ===
+    // Six T3 rows for the Double / status lineage. Blizzard uses MP-N (Task
+    // 11). Absolute Zero and Tempest carry splashStatus: true with
+    // splashMult: 0 — the splash exists only to broadcast the status, not to
+    // damage. Biohazard's spreadRadius reads in poison.onTargetDeath (below).
+    scattergun: {
+      name: 'Scattergun',
+      cost: 260,
+      damage: 3,
+      fireRate: 0.7,
+      range: 100,
+      projectileSpeed: 320,
+      family: 'double',
+      tier: 'god',
+      pellets: 8,
+      // coneDeg is the existing pellet-fan field; spreadDeg is the spec name.
+      coneDeg: 70,
+      linePierce: 1,
+      flashScale: 1.7,
+      upgradesTo: []
+    },
+    phalanx: {
+      name: 'Phalanx',
+      cost: 280,
+      damage: 2,
+      fireRate: 18,
+      range: 140,
+      projectileSpeed: 380,
+      family: 'double',
+      tier: 'god',
+      barrels: 3,
+      aimJitter: 0,
+      flashScale: 1.7,
+      upgradesTo: []
+    },
+    blizzard: {
+      name: 'Blizzard',
+      cost: 260,
+      damage: 0,
+      fireRate: 0,
+      range: 150,
+      projectileSpeed: 0,
+      family: 'double',
+      tier: 'god',
+      // MP-N persistent radial aura (Task 11). damagePerTick is per render
+      // tick at 60fps; updateCannons scales by dt. slow expires after
+      // slowExpiry seconds without re-application; freezeRandomEvery picks
+      // one ant in radius every N seconds and freezes for freezeDuration.
+      aura: {
+        radius: 150,
+        damagePerTick: 60,
+        slow: 0.5,
+        slowExpiry: 0.15,
+        freezeRandomEvery: 5,
+        freezeDuration: 2
+      },
+      flashScale: 1.7,
+      upgradesTo: []
+    },
+    absolute_zero: {
+      name: 'Absolute Zero',
+      cost: 280,
+      damage: 6,
+      fireRate: 1,
+      range: 130,
+      projectileSpeed: 280,
+      family: 'double',
+      tier: 'god',
+      // 1.5x damageAmp on the freeze tag — Plan 3's freeze.damageAmp pathway
+      // multiplies subsequent damage during the freeze window.
+      statusOnHit: { kind: 'freeze', magnitude: 1, duration: 1.5, damageAmp: 1.5 },
+      // splash for splashStatus broadcast only — splashMult 0 yields zero
+      // damage to bystanders, just propagates the freeze.
+      splash: { radius: 40, falloff: 0, splashMult: 0 },
+      splashStatus: true,
+      flashScale: 1.7,
+      upgradesTo: []
+    },
+    biohazard: {
+      name: 'Biohazard',
+      cost: 260,
+      damage: 4,
+      fireRate: 1,
+      range: 130,
+      projectileSpeed: 260,
+      family: 'double',
+      tier: 'god',
+      // 30 dmg over 8s = 3.75 dps. spreadRadius 50 propagates on death;
+      // damageAmp 1.25 makes the infected ant take 25% extra from any damage
+      // source (read in applyDamage's poison.damageAmp branch — Task 3).
+      statusOnHit: { kind: 'poison', magnitude: 30 / 8, duration: 8, spreads: true, spreadRadius: 50, damageAmp: 1.25 },
+      flashScale: 1.7,
+      upgradesTo: []
+    },
+    tempest: {
+      name: 'Tempest',
+      cost: 260,
+      damage: 10,
+      fireRate: 0.7,
+      range: 110,
+      projectileSpeed: 280,
+      family: 'double',
+      tier: 'god',
+      // splash for splashStatus broadcast only — splashMult 0, no damage.
+      splash: { radius: 50, falloff: 0, splashMult: 0 },
+      splashStatus: true,
+      // statusOnHit array — Plan 3's projectile-collision pathway wraps and
+      // iterates. Knockback 50 px backward + 0.8s stun.
+      statusOnHit: [
+        { kind: 'knockback', magnitude: 50, duration: 0 },
+        { kind: 'stun', magnitude: 1, duration: 0.8 }
+      ],
+      flashScale: 1.7,
       upgradesTo: []
     }
   };
@@ -2864,7 +3605,89 @@ body.has-ant-buster-page {
           var sb = def.beam.statusOnTick;
           applyStatus(btarget, sb.kind, sb.magnitude, sb.duration, 'beam');
         }
+        // Plan 4 — MP-O beam line-pierce (Solar Lance). Extends the standard
+        // beam tick: after the primary damage lands, damage up to beamPierce
+        // additional ants whose centers fall within a thin cylinder along
+        // the cannon→target line. Cylinder half-width 6 px; ants are projected
+        // onto the line and accepted if 0 ≤ proj ≤ |cannon→target| and
+        // |perpendicular| ≤ 6. statusOnTick is applied to the primary only —
+        // bystanders take damage but no status (mirrors statusOnFirstHit
+        // intent for projectile cannons).
+        if (def.beamPierce) {
+          var pierceCount = def.beamPierce;
+          var pierceHalfWidth = 6;
+          var bdx = btarget.x - c.x;
+          var bdy = btarget.y - c.y;
+          var bdLen = Math.sqrt(bdx * bdx + bdy * bdy);
+          if (bdLen > 0) {
+            var bnx = bdx / bdLen;
+            var bny = bdy / bdLen;
+            var hits = 0;
+            for (var bpi = 0; bpi < game.ants.length; bpi++) {
+              var bpa = game.ants[bpi];
+              if (bpa === btarget) { continue; }
+              if (bpa.dead) { continue; }
+              if (bpa.intangible) { continue; }
+              var bpax = bpa.x - c.x;
+              var bpay = bpa.y - c.y;
+              var proj = bpax * bnx + bpay * bny;
+              if (proj < 0) { continue; }
+              if (proj > bdLen) { continue; }
+              var perp = bpax * (-bny) + bpay * bnx;
+              if (perp < 0) { perp = -perp; }
+              if (perp > pierceHalfWidth) { continue; }
+              applyDamage(bpa, def.beam.tickDamage * dt, !!def.armorPierce, c);
+              if (bpa.hp <= 0) { killAnt(bpa, c); }
+              hits = hits + 1;
+              if (hits >= pierceCount) { break; }
+            }
+          }
+        }
         c.beamTarget = btarget;
+        continue;
+      }
+
+      // Plan 4 — MP-N persistent radial aura (Blizzard). The cannon IS the
+      // AoE: no projectile, no fire-rate cooldown, no target acquisition.
+      // Three independent timers run in parallel:
+      //   1. Per-tick AoE damage to every ant within auraRadius.
+      //   2. Per-tick slow re-application with a 0.15s expiry — re-applied
+      //      every tick to maintain the slow while ants stay in range. The
+      //      0.15s buffer (9 frames at 60Hz, 4-5 frames at 30Hz) prevents
+      //      stuttering during heavy waves.
+      //   3. A 5-second freeze cycle picks one uniform-random ant in radius
+      //      and freezes it for 2s.
+      if (def.aura) {
+        var au = def.aura;
+        for (var aai = 0; aai < game.ants.length; aai++) {
+          var aaa = game.ants[aai];
+          if (aaa.dead) { continue; }
+          if (aaa.intangible) { continue; }
+          var adx = aaa.x - c.x;
+          var ady = aaa.y - c.y;
+          if (adx * adx + ady * ady > au.radius * au.radius) { continue; }
+          applyDamage(aaa, au.damagePerTick * dt, false, c);
+          applyStatus(aaa, 'slow', au.slow, au.slowExpiry, 'aura');
+          if (aaa.hp <= 0) { killAnt(aaa, c); }
+        }
+        if (!c.lastFreezeAt) { c.lastFreezeAt = 0; }
+        if (game.time - c.lastFreezeAt >= au.freezeRandomEvery) {
+          var inRadius = [];
+          for (var fai = 0; fai < game.ants.length; fai++) {
+            var fa = game.ants[fai];
+            if (fa.dead) { continue; }
+            if (fa.intangible) { continue; }
+            var fdx = fa.x - c.x;
+            var fdy = fa.y - c.y;
+            if (fdx * fdx + fdy * fdy > au.radius * au.radius) { continue; }
+            inRadius.push(fa);
+          }
+          if (inRadius.length > 0) {
+            var pick = inRadius[Math.floor(Math.random() * inRadius.length)];
+            applyStatus(pick, 'freeze', 1, au.freezeDuration, 'aura-freeze');
+          }
+          c.lastFreezeAt = game.time;
+        }
         continue;
       }
 
@@ -2918,6 +3741,11 @@ body.has-ant-buster-page {
   // === PROJECTILES ===
   function fireProjectile(cannon, target) {
     var def = CANNON_KINDS[cannon.kind];
+
+    // Plan 4 — stamp the fire moment so drawCannonTurrets can render a brief
+    // muzzle flash for ~0.08s after firing. flashScale on def scales the
+    // flash radius (god-tier rows set 1.7 to read as a heavier discharge).
+    cannon.lastFiredAt = game.time;
 
     // Tesla arc-jump primitive (Plan 3 — MP-J). Resolves the primary hit and
     // up to def.teslaArc.jumps chain hits in one tick: each jump finds the
@@ -3005,13 +3833,35 @@ body.has-ant-buster-page {
           arcStartedAt: 0,
           arcDuration: 0,
           arcHeight: 0,
-          returning: false
+          returning: false,
+          // Plan 4 — MP-L bouncing retarget. Pellets currently never bounce
+          // (no pellet cannon also bounces), but the fields must exist on the
+          // projectile literal so updateProjectiles' single collision body
+          // can read them uniformly.
+          bouncesRemaining: 0,
+          bounceRadius: 0,
+          damageDecay: 1,
+          initialHit: true,
+          // Plan 4 — visualScale and statusOnFirstHit (Bucket G fields).
+          // Pellets keep defaults (1.0 scale, no first-hit-only status).
+          visualScale: def.visualScale ? def.visualScale : 1.0,
+          statusOnFirstHit: def.statusOnFirstHit ? def.statusOnFirstHit : null,
+          // Plan 4 — MP-M mid-flight split. Pellets don't split; fields exist
+          // for uniform read in the per-tick split branch.
+          splitFraction: 0,
+          splitCount: 0,
+          splitOriginX: 0,
+          splitOriginY: 0,
+          splitTotalDist: 0,
+          _splitFired: false,
+          dormantUntil: 0
         });
       }
       return;
     }
 
     var spread = def.spread ? def.spread : 0.06;   // per-step radian offset; ~3.4 deg default (Twin Gun)
+    var stagger = def.barrelStagger ? def.barrelStagger : 0;
     for (var i = 0; i < n; i++) {
       var off;
       if (n === 1) {
@@ -3020,6 +3870,7 @@ body.has-ant-buster-page {
         off = (i - (n - 1) / 2) * spread;
       }
       var h = heading + off;
+      var dormantUntil = stagger > 0 ? game.time + i * stagger : 0;
       // Aim jitter (Plan 3 — MP-F, Minigun). Random per-shot angular offset
       // turns a high-fire-rate single-barrel into a spray cone — no formal
       // spread param, just constant inaccuracy. Multiplied by 2 to span the
@@ -3059,15 +3910,59 @@ body.has-ant-buster-page {
         // radians. Re-acquires nearest ant if the original target is dead/null.
         homing: !!def.homing,
         homingTurnRate: 0,
-        target: target
+        target: target,
+        // Plan 4 — MP-L bouncing retarget (Pink Rubber Family). On hit, search
+        // for nearest non-_sawAnts live ant within bounceRadius; if found,
+        // redirect velocity, decrement bouncesRemaining, multiply damage by
+        // damageDecay, do not despawn. initialHit flips to false after first
+        // impact so statusOnFirstHit applies only to the original target
+        // (Wrecking Ball's 30 px knockback).
+        bouncesRemaining: def.bouncesRemaining ? def.bouncesRemaining : 0,
+        bounceRadius: def.bounceRadius ? def.bounceRadius : 0,
+        damageDecay: def.damageDecay ? def.damageDecay : 1,
+        initialHit: true,
+        // Plan 4 — visualScale scales the projectile sprite at render time
+        // (Pink Pea 1.0, Bouncy Bubble 1.5, Wrecking Ball 2.5). Default 1.0
+        // for all existing cannons, so no migration needed.
+        visualScale: def.visualScale ? def.visualScale : 1.0,
+        // Plan 4 — statusOnFirstHit applies a status to the first impact
+        // only, not bounce targets (Wrecking Ball's knockback). The general
+        // statusOnHit array continues to fire on every bounce.
+        statusOnFirstHit: def.statusOnFirstHit ? def.statusOnFirstHit : null,
+        // Plan 4 — MP-M mid-flight split (Cluster Strike). When the parent
+        // missile travels splitTotalDist from origin, despawn and spawn
+        // splitCount homing children. splitTotalDist is computed below from
+        // the original target distance × splitFraction.
+        splitFraction: def.splitFraction ? def.splitFraction : 0,
+        splitCount: def.splitCount ? def.splitCount : 0,
+        splitOriginX: cannon.x,
+        splitOriginY: cannon.y,
+        splitTotalDist: 0,
+        _splitFired: false,
+        // Plan 4 — barrelStagger (Saturation). dormantUntil > game.time
+        // freezes the projectile at its spawn position until activation;
+        // updateProjectiles and drawProjectiles both skip dormant shells.
+        dormantUntil: dormantUntil
       };
       if (def.arc) {
-        p.arcStartedAt = game.time;
+        // Shift the arc start with the dormancy so a shell that activates
+        // 0.05s late also lands 0.05s late — the rolling-rain feel needs the
+        // arc clock to track dormancy, not real time.
+        p.arcStartedAt = dormantUntil > 0 ? dormantUntil : game.time;
         p.arcDuration = def.arc.travelTime;
         p.arcHeight = def.arc.height;
       }
       if (def.homing) {
         p.homingTurnRate = def.homing.turnRate;
+      }
+      // Plan 4 — MP-M splitTotalDist computed from current cannon position
+      // to original target. Children spawn when the parent has traveled
+      // this distance from origin.
+      if (def.splitFraction) {
+        var sdx = target.x - cannon.x;
+        var sdy = target.y - cannon.y;
+        var sd = Math.sqrt(sdx * sdx + sdy * sdy);
+        p.splitTotalDist = sd * def.splitFraction;
       }
       game.projectiles.push(p);
     }
@@ -3097,6 +3992,17 @@ body.has-ant-buster-page {
       if (ant.effects.freeze) {
         var amp = ant.effects.freeze.damageAmp;
         if (amp) { dmg = dmg * amp; }
+      }
+    }
+    // Plan 4: Biohazard +25% damage amp via poison.damageAmp. Mirror of the
+    // freeze.damageAmp pattern above. Stamped onto the live poison effect by
+    // the tag-after-apply path in updateProjectiles. Toxin and Plague leave
+    // damageAmp unset (default 1, no amp). Source-independent — any cannon
+    // firing on a Biohazard-infected target deals +25%.
+    if (ant.effects) {
+      if (ant.effects.poison) {
+        var pamp = ant.effects.poison.damageAmp;
+        if (pamp) { dmg = dmg * pamp; }
       }
     }
     if (!armorPierce) {
@@ -3139,7 +4045,7 @@ body.has-ant-buster-page {
     // a life deduction (updateSlices). Cake accounting: kill->drop is neutral on cake.slices,
     // timeout refunds it, ground pickup just transfers ownership.
     if (ant.carrying) {
-      game.slices.push({ x: ant.x, y: ant.y, droppedAt: game.time, claimedBy: null });
+      game.slices.push({ x: ant.x, y: ant.y, droppedAt: game.simTime, claimedBy: null });
       ant.carrying = false;
     }
     if (killer) {
@@ -3170,6 +4076,16 @@ body.has-ant-buster-page {
   // carrier specifically. `damage` is the already-scaled splash damage
   // (caller multiplies by splashMult).
   function applySplash(x, y, radius, damage, falloff, sourceCannon) {
+    // Plan 4: when sourceCannon has splashStatus: true, apply each entry of
+    // its statusOnHit array to every ant caught in the splash, not just the
+    // direct-hit. Backward compatible — splash cannons without splashStatus
+    // (Mortar, Hellfire, Shockwave) keep their pre-Plan-4 damage-only behavior.
+    var def = null;
+    if (sourceCannon) { def = CANNON_KINDS[sourceCannon.kind]; }
+    var applyStatusToAll = false;
+    if (def) {
+      if (def.splashStatus) { applyStatusToAll = true; }
+    }
     for (var i = 0; i < game.ants.length; i++) {
       var a = game.ants[i];
       if (a.dead) { continue; }
@@ -3182,7 +4098,53 @@ body.has-ant-buster-page {
       if (falloff > 0) { pct = 1 - (dist / radius) * falloff; } else { pct = 1; }
       if (pct < 0) { pct = 0; }
       applyDamage(a, damage * pct, false, sourceCannon);
+      if (applyStatusToAll) {
+        if (def.statusOnHit) {
+          var slist = def.statusOnHit;
+          if (!Array.isArray(slist)) { slist = [slist]; }
+          for (var si = 0; si < slist.length; si++) {
+            var s = slist[si];
+            applyStatus(a, s.kind, s.magnitude, s.duration, 'splash');
+            // Tag-after-apply for damageAmp / spreads (mirrors the
+            // projectile-collision pathway in updateProjectiles).
+            if (s.damageAmp) {
+              if (a.effects[s.kind]) { a.effects[s.kind].damageAmp = s.damageAmp; }
+            }
+            if (s.spreads) {
+              if (a.effects[s.kind]) { a.effects[s.kind].spreads = true; }
+            }
+          }
+        }
+      }
       if (a.hp <= 0) { killAnt(a, sourceCannon); }
+    }
+    // Plan 4: when splashStatus carries a knockback effect (Tempest), push a
+    // transient white ring at the impact point. Same shape as Phoenix's
+    // burn-spread ring; rendered by drawTransientEffects (Task 13).
+    if (applyStatusToAll) {
+      if (def) {
+        if (def.statusOnHit) {
+          var hasKnockback = false;
+          var slist2 = def.statusOnHit;
+          if (!Array.isArray(slist2)) { slist2 = [slist2]; }
+          for (var sj = 0; sj < slist2.length; sj++) {
+            if (slist2[sj].kind === 'knockback') { hasKnockback = true; }
+          }
+          if (hasKnockback) {
+            // Reuses Plan 3's existing game.effects framework
+            // (drawEffects + updateEffects). Task 13 extends drawEffects
+            // with the 'knockbackRing' kind branch.
+            game.effects.push({
+              kind: 'knockbackRing',
+              x: x, y: y,
+              t: 0,
+              life: 0.15,
+              color: '#ffffff',
+              maxRadius: radius
+            });
+          }
+        }
+      }
     }
   }
 
@@ -3190,6 +4152,14 @@ body.has-ant-buster-page {
     var kept = [];
     for (var i = 0; i < game.projectiles.length; i++) {
       var p = game.projectiles[i];
+      // Plan 4 — barrelStagger (Saturation). A staggered shell sits dormant
+      // until game.time catches up to its dormantUntil; no movement, no
+      // collision, no render. Lets a 3-shell volley feel like rolling rain
+      // instead of a triple-fire instant. drawProjectiles also skips dormant
+      // shells, so the ramp-up is purely time-gated.
+      if (p.dormantUntil) {
+        if (game.time < p.dormantUntil) { kept.push(p); continue; }
+      }
       // Homing steer (Plan 3 — Patriot). Bend the velocity vector up to
       // homingTurnRate*dt radians toward p.target each tick. If the target is
       // null or already dead, scan game.ants for the nearest live, non-intangible
@@ -3236,6 +4206,86 @@ body.has-ant-buster-page {
       p.x += p.vx * dt;
       p.y += p.vy * dt;
       p.life -= dt;
+      // Plan 4 — MP-M mid-flight projectile split (Cluster Strike). When the
+      // parent missile has traveled splitTotalDist from its launch origin,
+      // despawn and spawn splitCount homing children at the parent's current
+      // position. Each child re-acquires the nearest live ant via the standard
+      // MP-C homing pathway. Children inherit splash, statusOnHit, sourceCannon
+      // so on-impact effects fire normally. Visual: white-flash transient
+      // pushed onto game.effects (rendered by Task 13). One-shot per parent.
+      if (p.splitFraction > 0) {
+        if (!p._splitFired) {
+          var ddx = p.x - p.splitOriginX;
+          var ddy = p.y - p.splitOriginY;
+          var travDist = Math.sqrt(ddx * ddx + ddy * ddy);
+          if (travDist >= p.splitTotalDist) {
+            p._splitFired = true;
+            var pSpeed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+            for (var sc = 0; sc < p.splitCount; sc++) {
+              // Distribute children around a 60-degree arc centered on the
+              // parent's heading. With splitCount = 3, that's -30°, 0°, +30°.
+              var spread;
+              if (p.splitCount === 1) {
+                spread = 0;
+              } else {
+                spread = (sc / (p.splitCount - 1) - 0.5) * (Math.PI / 3);
+              }
+              var parentHeading = Math.atan2(p.vy, p.vx);
+              var childHeading = parentHeading + spread;
+              game.projectiles.push({
+                x: p.x, y: p.y,
+                vx: Math.cos(childHeading) * pSpeed,
+                vy: Math.sin(childHeading) * pSpeed,
+                damage: p.damage,
+                linePierce: 0,
+                armorPierce: !!p.armorPierce,
+                pierceLeft: 0,
+                statusOnHit: p.statusOnHit,
+                sourceCannon: p.sourceCannon,
+                _sawAnts: [],
+                life: 1.5,
+                arcing: false,
+                arcStartedAt: 0,
+                arcDuration: 0,
+                arcHeight: 0,
+                returning: false,
+                phase: 'out',
+                originX: p.splitOriginX,
+                originY: p.splitOriginY,
+                homing: true,
+                homingTurnRate: 5.0,
+                target: null,
+                bouncesRemaining: 0,
+                bounceRadius: 0,
+                damageDecay: 1,
+                initialHit: true,
+                visualScale: p.visualScale ? p.visualScale * 0.7 : 0.7,
+                statusOnFirstHit: null,
+                splitFraction: 0,
+                splitCount: 0,
+                splitOriginX: 0,
+                splitOriginY: 0,
+                splitTotalDist: 0,
+                _splitFired: true,
+                dormantUntil: 0
+              });
+            }
+            // Push white-flash transient at the split point. Drawn by the
+            // 'splitFlash' branch in drawEffects (Task 13).
+            game.effects.push({
+              kind: 'splitFlash',
+              x: p.x, y: p.y,
+              t: 0,
+              life: 0.1,
+              color: '#ffffff',
+              maxRadius: 12
+            });
+            // Despawn the parent — life=-1 fails the `life > 0` check below.
+            p.life = -1;
+            continue;
+          }
+        }
+      }
       var hit = false;
       for (var j = 0; j < game.ants.length; j++) {
         var a = game.ants[j];
@@ -3274,6 +4324,20 @@ body.has-ant-buster-page {
               }
             }
           }
+          // Plan 4 — statusOnFirstHit applies only to the projectile's
+          // original target, not bounce targets (Wrecking Ball's knockback).
+          // The MP-L bounce branch flips initialHit = false after the first
+          // impact, so subsequent bounces skip this block.
+          if (p.statusOnFirstHit) {
+            if (p.initialHit) {
+              var sflist = p.statusOnFirstHit;
+              if (!Array.isArray(sflist)) { sflist = [sflist]; }
+              for (var sfi = 0; sfi < sflist.length; sfi++) {
+                var sfe = sflist[sfi];
+                applyStatus(a, sfe.kind, sfe.magnitude, sfe.duration, 'first-hit');
+              }
+            }
+          }
           // Splash trigger (Plan 3 — Mortar, Hellfire, Demolisher, Sonic Pulse).
           // Runs before the carrier kill check so the radius scan sees
           // game.ants positions live; carrier is excluded later by the dead flag
@@ -3287,11 +4351,20 @@ body.has-ant-buster-page {
           if (sk) {
             if (sk.splash) {
               applySplash(p.x, p.y, sk.splash.radius, p.damage * sk.splash.splashMult, sk.splash.falloff, p.sourceCannon);
-              // Screenshake on splash impact (Plan 3 — Shockwave). Direct hits
-              // without splash never trigger shake. Nested ifs avoid the and-operator.
-              if (sk.screenshake) {
-                game.screenshake.magnitude = sk.screenshake.magnitude;
-                game.screenshake.decay = sk.screenshake.decay;
+              // Screenshake on splash impact (Plan 3 — Shockwave; Plan 4 —
+              // Earthshaker, Annihilator). Direct hits without splash never
+              // trigger shake. Plan 4 prefers the flat screenShakeMag number
+              // (default decay 12); legacy screenshake object kept for
+              // Shockwave's tuned 3-magnitude / 12-decay snap. Nested ifs
+              // avoid the and-operator.
+              if (sk.screenShakeMag) {
+                game.screenshake.magnitude = sk.screenShakeMag;
+                game.screenshake.decay = 12;
+              } else {
+                if (sk.screenshake) {
+                  game.screenshake.magnitude = sk.screenshake.magnitude;
+                  game.screenshake.decay = sk.screenshake.decay;
+                }
               }
             }
           }
@@ -3303,11 +4376,50 @@ body.has-ant-buster-page {
             if (!p._sawAnts) { p._sawAnts = []; }
             p._sawAnts.push(a);
             // projectile keeps flying — don't set hit, don't break
+          } else if (p.bouncesRemaining > 0) {
+            // Plan 4 — MP-L bouncing retarget (Pink Rubber Family). After the
+            // hit lands, search nearest non-_sawAnts live ant within
+            // bounceRadius. Found: redirect velocity, push current ant onto
+            // _sawAnts, decrement counter, multiply damage by damageDecay, do
+            // not despawn. Not found: fall through to normal despawn.
+            if (!p._sawAnts) { p._sawAnts = []; }
+            p._sawAnts.push(a);
+            var bestBounce = null;
+            var bestBounceDist = Infinity;
+            for (var bki = 0; bki < game.ants.length; bki++) {
+              var bka = game.ants[bki];
+              if (bka.dead) { continue; }
+              if (bka.intangible) { continue; }
+              if (p._sawAnts.indexOf(bka) !== -1) { continue; }
+              var bdx = bka.x - p.x;
+              var bdy = bka.y - p.y;
+              var bd2 = bdx * bdx + bdy * bdy;
+              if (bd2 > p.bounceRadius * p.bounceRadius) { continue; }
+              if (bd2 < bestBounceDist) { bestBounceDist = bd2; bestBounce = bka; }
+            }
+            if (bestBounce) {
+              var bAngle = Math.atan2(bestBounce.y - p.y, bestBounce.x - p.x);
+              var bSpeed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+              p.vx = Math.cos(bAngle) * bSpeed;
+              p.vy = Math.sin(bAngle) * bSpeed;
+              p.bouncesRemaining = p.bouncesRemaining - 1;
+              p.damage = p.damage * p.damageDecay;
+              p.initialHit = false;
+              // Refresh life so the projectile has time to reach the bounce
+              // target — without this it might expire mid-flight on long
+              // bounces against the back of the playfield.
+              p.life = 1.5;
+              // projectile keeps flying — don't set hit, don't break
+            } else {
+              // No eligible bounce target → despawn normally.
+              hit = true;
+              break;
+            }
           } else {
             // Returning projectile primitive (Plan 3 — Discus). On the first
             // outbound hit, flip velocity toward origin so the projectile can
-            // hit more ants on the return leg. CLAUDE.md: no `&&` in inline
-            // <script>, so two nested ifs instead of `p.returning && p.phase === 'out'`.
+            // hit more ants on the return leg. CLAUDE.md: no and-operator in
+            // inline script, so two nested ifs instead of a compound condition.
             var canReturn = false;
             if (p.returning) {
               if (p.phase === 'out') {
@@ -3571,6 +4683,15 @@ body.has-ant-buster-page {
           // intentional rebalance to make the 21-cannon roster's choices feel
           // meaningful in the late-game economy).
           game.gold = game.gold + (20 + wv.number);
+          // Plan 4: wave-15 unlocks god-tier upgrades. Fires once per run.
+          // Stamps godTierUnlockPulseStart so the selected-tower panel can
+          // render a 0.5s golden halo on T2 finals' god-tier buttons.
+          if (wv.number === 15) {
+            if (!game.godTierUnlocked) {
+              game.godTierUnlocked = true;
+              game.godTierUnlockPulseStart = game.time;
+            }
+          }
           if (game.waveIndex + 1 >= WAVES.length) {
             game.waveState = 'won';
           } else {
@@ -3586,6 +4707,7 @@ body.has-ant-buster-page {
   function resetGame() {
     game.state = 'playing';
     game.time = 0;
+    game.simTime = 0;
     game.cake.slices = 8;
     game.cake.lost = 0;
     game.ants = [];
@@ -3612,6 +4734,8 @@ body.has-ant-buster-page {
     game.screenshake.decay = 0;
     game.paused = false;
     game.speed = 1;
+    game.godTierUnlocked = false;
+    game.godTierUnlockPulseStart = 0;
     ui.sendNextRect = null;
     ui.restartRunRect = null;
     ui.dragging = null;
@@ -3746,7 +4870,7 @@ body.has-ant-buster-page {
     ui.mouseX = p.x;
     ui.mouseY = p.y;
     // Track upgrade-button hover so drawRangeCircle can preview the target's range
-    // as a dashed secondary circle. Avoids `&&` for the inline-script gotcha.
+    // as a dashed secondary circle. Avoids and-operator for the inline-script gotcha.
     var hovered = null;
     for (var ri = 0; ri < ui.upgradeRects.length; ri++) {
       var ur = ui.upgradeRects[ri];
@@ -3802,13 +4926,16 @@ body.has-ant-buster-page {
   // Task 23: tick fallen-slice timeouts. After 8s of nobody picking up a dropped
   // slice, it snaps back to the cake without a life deduction (the player is not
   // penalized for an enemy that died mid-carry). dt is unused — we compare against
-  // game.time which advances in update() — but kept in the signature for parity
+  // game.simTime which advances in update() — but kept in the signature for parity
   // with the other update* functions.
   function updateSlices(dt) {
     var kept = [];
     for (var i = 0; i < game.slices.length; i++) {
       var s = game.slices[i];
-      var age = game.time - s.droppedAt;
+      // Plan 4 Task 26 — read simTime so 8s "feels" like 8 simulation seconds
+      // at any speed multiplier. Slices dropped from killAnt also stamp
+      // droppedAt: game.simTime, so the diff stays consistent.
+      var age = game.simTime - s.droppedAt;
       if (age >= 8) {
         game.cake.slices = game.cake.slices + 1;
         continue;
@@ -3831,6 +4958,12 @@ body.has-ant-buster-page {
     }
     game.time += dt;
     var simDt = dt * game.speed;
+    // Plan 4 Task 26 — simulated-time accumulator. Slice timeout (and any
+    // future age-based mechanic that should "feel" the speed multiplier)
+    // reads game.simTime so an 8-second slice still ages 8 simulated seconds
+    // at 0.5x or 2x speed. game.time stays on the real-world clock for
+    // screenshake decay and unlock-pulse animations.
+    game.simTime = game.simTime + simDt;
     updateWaveState(dt);
     // Periodic spawn jobs (Plan 3 Task 31 — King's worker drip). Each job
     // fires on its own interval and is owned by an ant; jobs whose owners
@@ -3924,6 +5057,40 @@ body.has-ant-buster-page {
         debugCycleIdx = debugCycleIdx + 1;
         return;
       }
+      // Plan 4 — ?debug=1 G: toggle godTierUnlocked. When toggling true,
+      // also stamps godTierUnlockPulseStart so the panel-button pulse fires
+      // for visual testing. Branched two ifs to avoid the inline-script
+      // and-operator (CLAUDE.md note on || encoding).
+      var keyG = false;
+      if (e.key === 'g') { keyG = true; }
+      if (e.key === 'G') { keyG = true; }
+      if (keyG) {
+        game.godTierUnlocked = !game.godTierUnlocked;
+        if (game.godTierUnlocked) {
+          game.godTierUnlockPulseStart = game.time;
+        }
+        return;
+      }
+      // Plan 4 — ?debug=1 W: soft-reset to wave 16 prep with god-tier
+      // already unlocked. Skips the 15-wave grind so King-fight tuning
+      // (post-implementation playtest, spec §9) doesn't require a 20-min
+      // run-up every iteration. Field names align with resetGame.
+      var keyW = false;
+      if (e.key === 'w') { keyW = true; }
+      if (e.key === 'W') { keyW = true; }
+      if (keyW) {
+        game.ants = [];
+        game.projectiles = [];
+        game.lightningBolts = [];
+        game.effects = [];
+        game.spawnJobs = [];
+        game.waveIndex = 15;
+        game.waveState = 'prep';
+        game.prepRemaining = wavePrepDuration(WAVES[game.waveIndex]);
+        game.godTierUnlocked = true;
+        game.godTierUnlockPulseStart = game.time;
+        return;
+      }
     }
   });
 
@@ -3936,5 +5103,15 @@ body.has-ant-buster-page {
   window.__abApplyStatus = applyStatus;
   window.__abApplyDamage = applyDamage;
   window.__abWaves = WAVES;
+  // Plan 4: read/write the god-tier unlock state. Pass a boolean to set,
+  // omit to read. Used by the ?debug=1 G hotkey (Task 23) and Playwright
+  // tests that don't want to grind 15 waves to access the gated tier.
+  window.__abGodTierUnlocked = function (v) {
+    if (typeof v === 'boolean') {
+      game.godTierUnlocked = v;
+      if (v) { game.godTierUnlockPulseStart = game.time; }
+    }
+    return game.godTierUnlocked;
+  };
 })();
 </script>
