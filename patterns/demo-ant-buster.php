@@ -501,6 +501,20 @@ body.has-ant-buster-page {
     return c;
   }
 
+  function makeCannonTurretPatriot() {
+    var c = makeCanvas(28, 28);
+    var x = c.getContext('2d');
+    // Vertical missile silhouette on a wide breech; yellow nose flicker reads
+    // as a homing warhead at glance.
+    x.fillStyle = '#3a4d8a';
+    x.fillRect(10, 4, 8, 20);                   // missile body
+    x.fillStyle = '#1a2d4a';
+    x.fillRect(6, 18, 16, 8);                   // breech base
+    x.fillStyle = '#fee761';
+    x.fillRect(13, 6, 2, 4);                    // warhead tip
+    return c;
+  }
+
   function makeCake(slices) {
     var c = makeCanvas(32, 32);
     var x = c.getContext('2d');
@@ -566,6 +580,7 @@ body.has-ant-buster-page {
       railgun: makeCannonTurretRailgun(),
       mortar: makeCannonTurretMortar(),
       discus: makeCannonTurretDiscus(),
+      patriot: makeCannonTurretPatriot(),
       repeater: makeCannonTurretRepeater(),
       autocannon: makeCannonTurretAutocannon(),
       vulcan: makeCannonTurretVulcan(),
@@ -1741,7 +1756,7 @@ body.has-ant-buster-page {
   //   linePierce: number — projectile passes through up to N ants (Plan 3).
   //   armorPierce: bool — bypass armored mitigation (Plan 3).
   //   splash: { radius, falloff: number 0..1 } — AoE damage on impact.
-  //   homing: bool — projectile re-targets each tick (Patriot).
+  //   homing: { turnRate } — projectile steers each tick toward p.target (Patriot).
   //   arc: { height, travelTime } — ballistic arcing visual + fixed land time.
   //   returning: { phases } — projectile reverses path after first hit.
   //   pellets: number — multi-pellet cone (Buckshot).
@@ -1797,7 +1812,20 @@ body.has-ant-buster-page {
       tier: 2,
       splash: { radius: 40, falloff: 0.5, splashMult: 0.5 },
       arc: { height: 24, travelTime: 0.6 },
-      upgradesTo: []           // upgradesTo: ['hellfire', 'patriot'] — populated by Tasks 10/8
+      upgradesTo: ['patriot']  // upgradesTo: ['hellfire', 'patriot'] — Task 10 still pending
+    },
+    patriot: {
+      name: 'Patriot',
+      cost: 110,
+      damage: 20,
+      fireRate: 0.5,
+      range: 200,
+      projectileSpeed: 260,
+      family: 'heavy',
+      tier: 3,
+      homing: { turnRate: 4.0 },
+      splash: { radius: 30, falloff: 0.4, splashMult: 0.4 },
+      upgradesTo: []
     },
     discus: {
       name: 'Discus',
@@ -2062,12 +2090,21 @@ body.has-ant-buster-page {
         returning: !!def.returning,
         phase: 'out',
         originX: cannon.x,
-        originY: cannon.y
+        originY: cannon.y,
+        // Homing primitive (Plan 3 — Patriot). Each tick updateProjectiles
+        // steers the velocity vector toward p.target by up to homingTurnRate*dt
+        // radians. Re-acquires nearest ant if the original target is dead/null.
+        homing: !!def.homing,
+        homingTurnRate: 0,
+        target: target
       };
       if (def.arc) {
         p.arcStartedAt = game.time;
         p.arcDuration = def.arc.travelTime;
         p.arcHeight = def.arc.height;
+      }
+      if (def.homing) {
+        p.homingTurnRate = def.homing.turnRate;
       }
       game.projectiles.push(p);
     }
@@ -2151,6 +2188,49 @@ body.has-ant-buster-page {
     var kept = [];
     for (var i = 0; i < game.projectiles.length; i++) {
       var p = game.projectiles[i];
+      // Homing steer (Plan 3 — Patriot). Bend the velocity vector up to
+      // homingTurnRate*dt radians toward p.target each tick. If the target is
+      // null or already dead, scan game.ants for the nearest live, non-intangible
+      // ant and re-acquire. CLAUDE.md: no `||` in inline <script>, so the
+      // need-reacquire check is two if/else branches instead of `!t || t.dead`.
+      if (p.homing) {
+        var t = p.target;
+        var needReacquire = false;
+        if (!t) {
+          needReacquire = true;
+        } else if (t.dead) {
+          needReacquire = true;
+        }
+        if (needReacquire) {
+          var nearest = null;
+          var bestDist = Infinity;
+          for (var k = 0; k < game.ants.length; k++) {
+            var ka = game.ants[k];
+            if (ka.dead) { continue; }
+            if (ka.intangible) { continue; }
+            var kdx = ka.x - p.x;
+            var kdy = ka.y - p.y;
+            var kd = kdx * kdx + kdy * kdy;
+            if (kd < bestDist) { bestDist = kd; nearest = ka; }
+          }
+          p.target = nearest;
+          t = nearest;
+        }
+        if (t) {
+          var desiredAngle = Math.atan2(t.y - p.y, t.x - p.x);
+          var currentAngle = Math.atan2(p.vy, p.vx);
+          var delta = desiredAngle - currentAngle;
+          while (delta > Math.PI) { delta = delta - Math.PI * 2; }
+          while (delta < -Math.PI) { delta = delta + Math.PI * 2; }
+          var maxTurn = p.homingTurnRate * dt;
+          if (delta > maxTurn) { delta = maxTurn; }
+          if (delta < -maxTurn) { delta = -maxTurn; }
+          var newAngle = currentAngle + delta;
+          var speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+          p.vx = Math.cos(newAngle) * speed;
+          p.vy = Math.sin(newAngle) * speed;
+        }
+      }
       p.x += p.vx * dt;
       p.y += p.vy * dt;
       p.life -= dt;
