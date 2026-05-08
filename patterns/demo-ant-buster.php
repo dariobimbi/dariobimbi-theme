@@ -1226,6 +1226,28 @@ body.has-ant-buster-page {
     }
   }
 
+  // Layer 5c: persistent cannon auras (Blizzard, Plan 4 — MP-N). Translucent
+  // light-blue radial fill that visually communicates the aura range. Drawn
+  // under bases/turrets/ants so ants walking through don't get obscured by
+  // it. Renders only for cannons whose def carries the aura field.
+  function drawCannonAuras() {
+    for (var i = 0; i < game.cannons.length; i++) {
+      var c = game.cannons[i];
+      var def = CANNON_KINDS[c.kind];
+      if (!def.aura) { continue; }
+      var au = def.aura;
+      ctx.save();
+      ctx.fillStyle = 'rgba(150, 200, 255, 0.15)';
+      ctx.strokeStyle = 'rgba(150, 200, 255, 0.4)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, au.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
   // Layer 6: static cannon bases. Split from the turret pass so the round bases
   // sit under ants while the turrets read on top.
   function drawCannonBases() {
@@ -1741,6 +1763,7 @@ body.has-ant-buster-page {
     drawSlices();              // 4. fallen slices on the ground
     if (ui.selectedCannon) { drawRangeCircle(ui.selectedCannon); } // 5. range circle
     drawConeDots();            // 5b. cone-DoT overlay (under bases/ants)
+    drawCannonAuras();         // 5c. persistent radial auras (Blizzard MP-N)
     drawCannonBases();         // 6. static cannon bases (under turrets/ants)
     drawAnts();                // 7. ants, sorted top-down by y
     drawCannonTurrets();       // 8. cannon turrets + muzzle/disable indicators
