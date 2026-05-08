@@ -515,6 +515,18 @@ body.has-ant-buster-page {
     return c;
   }
 
+  function makeCannonTurretDemolisher() {
+    var c = makeCanvas(28, 28);
+    var x = c.getContext('2d');
+    // Stout horizontal barrel on a heavy square breech; rust-brown body reads
+    // as armor-piercing siege weight at glance.
+    x.fillStyle = '#7a3a1a';
+    x.fillRect(4, 11, 22, 6);                   // wide stubby barrel
+    x.fillStyle = '#3a1a0a';
+    x.fillRect(8, 8, 12, 12);                   // heavy breech block
+    return c;
+  }
+
   function makeCake(slices) {
     var c = makeCanvas(32, 32);
     var x = c.getContext('2d');
@@ -581,6 +593,7 @@ body.has-ant-buster-page {
       mortar: makeCannonTurretMortar(),
       discus: makeCannonTurretDiscus(),
       patriot: makeCannonTurretPatriot(),
+      demolisher: makeCannonTurretDemolisher(),
       repeater: makeCannonTurretRepeater(),
       autocannon: makeCannonTurretAutocannon(),
       vulcan: makeCannonTurretVulcan(),
@@ -1786,7 +1799,7 @@ body.has-ant-buster-page {
       projectileSpeed: 240,
       family: 'heavy',
       tier: 2,
-      upgradesTo: ['railgun']
+      upgradesTo: ['railgun', 'demolisher']
     },
     railgun: {
       name: 'Railgun',
@@ -1825,6 +1838,18 @@ body.has-ant-buster-page {
       tier: 3,
       homing: { turnRate: 4.0 },
       splash: { radius: 30, falloff: 0.4, splashMult: 0.4 },
+      upgradesTo: []
+    },
+    demolisher: {
+      name: 'Demolisher',
+      cost: 110,
+      damage: 60,
+      fireRate: 0.25,
+      range: 110,
+      projectileSpeed: 260,
+      family: 'heavy',
+      tier: 3,
+      armorPierce: true,
       upgradesTo: []
     },
     discus: {
