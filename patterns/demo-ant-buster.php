@@ -125,6 +125,7 @@ body.has-ant-buster-page {
     prepRemaining: 30,        // seconds remaining in current prep window
     spawner: { groupIndex: 0, spawnedInGroup: 0, nextSpawnAt: 0, queueDone: false },
     banner: { active: false, text: '', startedAt: 0, duration: 2.5, isBoss: false },
+    screenshake: { magnitude: 0, decay: 0 },
     paused: false,
     speed: 1
   };
@@ -551,6 +552,20 @@ body.has-ant-buster-page {
     return c;
   }
 
+  function makeCannonTurretShockwave() {
+    var c = makeCanvas(28, 28);
+    var x = c.getContext('2d');
+    // Stout violet barrel on a wide squat base, with a yellow band on the
+    // muzzle that hints at the splash/shake punch.
+    x.fillStyle = '#a040c0';
+    x.fillRect(10, 6, 8, 14);                   // central barrel
+    x.fillStyle = '#5a1a5a';
+    x.fillRect(4, 16, 20, 8);                   // wide squat base
+    x.fillStyle = '#fee761';
+    x.fillRect(11, 8, 6, 2);                    // muzzle band
+    return c;
+  }
+
   function makeCake(slices) {
     var c = makeCanvas(32, 32);
     var x = c.getContext('2d');
@@ -620,6 +635,7 @@ body.has-ant-buster-page {
       demolisher: makeCannonTurretDemolisher(),
       hellfire: makeCannonTurretHellfire(),
       ricochet: makeCannonTurretRicochet(),
+      shockwave: makeCannonTurretShockwave(),
       repeater: makeCannonTurretRepeater(),
       autocannon: makeCannonTurretAutocannon(),
       vulcan: makeCannonTurretVulcan(),
@@ -1198,6 +1214,18 @@ body.has-ant-buster-page {
   // the spec §3.5, back to front. Each step is its own helper so additions
   // land in a clearly-named slot rather than accreting inline.
   function render() {
+    // Screenshake (Plan 3 — Shockwave). Translate the canvas by a small
+    // random offset whose magnitude decays in update(). The drawBackground()
+    // call below repaints the whole 320x180 view each frame, so the shake's
+    // 1-3 px translate doesn't leave ghosted pixels at the edges.
+    var shaking = false;
+    if (game.screenshake.magnitude > 0) {
+      var sx = (Math.random() * 2 - 1) * game.screenshake.magnitude;
+      var sy = (Math.random() * 2 - 1) * game.screenshake.magnitude;
+      ctx.save();
+      ctx.translate(sx, sy);
+      shaking = true;
+    }
     drawBackground();          // 1. blanket + grass + shop bg
     drawCake();                // 2. cake (current damage state)
     drawAnthill();             // 3. anthill
@@ -1221,6 +1249,9 @@ body.has-ant-buster-page {
       ui.sellRect = null;
     }
     drawOverlays();            // 13. drag preview, banner, modals (paused/win/lose/idle)
+    if (shaking) {
+      ctx.restore();
+    }
   }
 
   // === ANTS ===
@@ -1804,6 +1835,7 @@ body.has-ant-buster-page {
   //   coneDot: { range, angleDeg, tickDamage, statusOnTick } — Plasma Torch.
   //   teslaArc: { jumps, range, falloff } — chain-jump targeting (Tesla).
   //   reveal: bool — sets target.isRevealed = true each tick (Spotter).
+  //   screenshake: { magnitude, decay } — splash-triggered camera shake (Shockwave).
   var CANNON_KINDS = {
     howitzer: {
       name: 'Howitzer',
@@ -1901,7 +1933,7 @@ body.has-ant-buster-page {
       family: 'heavy',
       tier: 2,
       returning: true,
-      upgradesTo: ['ricochet']           // 'shockwave' appended by Task 12
+      upgradesTo: ['ricochet', 'shockwave']
     },
     ricochet: {
       name: 'Ricochet',
@@ -1914,6 +1946,19 @@ body.has-ant-buster-page {
       tier: 3,
       returning: true,
       returnPierce: 1,
+      upgradesTo: []
+    },
+    shockwave: {
+      name: 'Shockwave',
+      cost: 110,
+      damage: 50,
+      fireRate: 0.15,
+      range: 130,
+      projectileSpeed: 180,
+      family: 'heavy',
+      tier: 3,
+      splash: { radius: 80, falloff: 0.3, splashMult: 0.6 },
+      screenshake: { magnitude: 3, decay: 12 },
       upgradesTo: []
     },
     repeater: {
@@ -2340,6 +2385,12 @@ body.has-ant-buster-page {
           if (sk) {
             if (sk.splash) {
               applySplash(p.x, p.y, sk.splash.radius, p.damage * sk.splash.splashMult, sk.splash.falloff, p.sourceCannon);
+              // Screenshake on splash impact (Plan 3 — Shockwave). Direct hits
+              // without splash never trigger shake. Nested ifs to avoid `&&`.
+              if (sk.screenshake) {
+                game.screenshake.magnitude = sk.screenshake.magnitude;
+                game.screenshake.decay = sk.screenshake.decay;
+              }
             }
           }
           if (a.hp <= 0) {
@@ -2537,6 +2588,8 @@ body.has-ant-buster-page {
     game.banner.startedAt = 0;
     game.banner.duration = 2.5;
     game.banner.isBoss = false;
+    game.screenshake.magnitude = 0;
+    game.screenshake.decay = 0;
     game.paused = false;
     game.speed = 1;
     ui.sendNextRect = null;
@@ -2750,6 +2803,12 @@ body.has-ant-buster-page {
     if (game.state !== 'playing') { return; }
     if (game.waveState === 'won') { return; }
     if (game.waveState === 'lost') { return; }
+    // Screenshake decay (Plan 3 — Shockwave). Decay runs in real time on dt
+    // (not simDt) so 2x speed doesn't drain the shake faster than the eye sees it.
+    if (game.screenshake.magnitude > 0) {
+      game.screenshake.magnitude = game.screenshake.magnitude - game.screenshake.decay * dt;
+      if (game.screenshake.magnitude < 0) { game.screenshake.magnitude = 0; }
+    }
     game.time += dt;
     var simDt = dt * game.speed;
     updateWaveState(dt);
