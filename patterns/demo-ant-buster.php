@@ -1962,6 +1962,24 @@ body.has-ant-buster-page {
       onDeath: null,
       armor: 0
     },
+    royal_guard: {
+      name: 'Royal Guard',
+      hp: 20,
+      speed: 35,
+      carryingSpeedMult: 1.5,
+      gold: 4,
+      alignment: 0.3,
+      jitterRate: 3.0,
+      wanderFreqMin: 0.3, wanderFreqMax: 0.7,
+      wanderAmpMin: 0.9, wanderAmpMax: 1.5,
+      spriteKey: 'royal_guard',
+      spriteW: 16, spriteH: 16,
+      slowResist: 0.3,
+      damageMult: 1,
+      pierceMult: 1,
+      canPickup: true,
+      armor: 0.2
+    },
     carrier: {
       name: 'Carrier',
       hp: 15,
