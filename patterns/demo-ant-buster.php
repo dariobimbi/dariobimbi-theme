@@ -420,6 +420,26 @@ body.has-ant-buster-page {
     return c;
   }
 
+  function makeCannonTurretMinigun() {
+    // Double tier-3 (sustained hose). Single sleek dark steel barrel with a
+    // long muzzle and visible vent slits — reads as a high-RPM hose, distinct
+    // from Vulcan's three rotating barrels and Buckshot's flared bell.
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    x.fillStyle = '#3a3a3a';
+    x.fillRect(8, 1, 4, 17);                    // long single barrel
+    x.fillStyle = '#1a1a1a';
+    x.fillRect(7, 0, 6, 3);                     // dark muzzle tip
+    x.fillStyle = '#5a5a5a';
+    x.fillRect(6, 12, 8, 6);                    // wider breech housing
+    x.fillStyle = '#2a2a2a';
+    x.fillRect(9, 5, 1, 1);                     // vent slit
+    x.fillRect(10, 5, 1, 1);
+    x.fillRect(9, 8, 1, 1);
+    x.fillRect(10, 8, 1, 1);
+    return c;
+  }
+
   function makeCannonTurretBuckshot() {
     // Double tier-3 (5-pellet shotgun cone). Wide flared muzzle reads as a
     // sawed-off blunderbuss; warm orange tones distinguish it from Triple
@@ -796,6 +816,7 @@ body.has-ant-buster-page {
       twingun: makeCannonTurretTwinGun(),
       triple_threat: makeCannonTurretTripleThreat(),
       buckshot: makeCannonTurretBuckshot(),
+      minigun: makeCannonTurretMinigun(),
       frost: makeCannonTurretFrost(),
       glacier: makeCannonTurretGlacier()
     },
@@ -2336,8 +2357,7 @@ body.has-ant-buster-page {
       tier: 2,
       barrels: 3,
       spread: 0.10,          // ~5.7 deg per step — wider than Twin Gun's default
-      // upgradesTo: Task 22 will append 'minigun'
-      upgradesTo: ['buckshot']
+      upgradesTo: ['buckshot', 'minigun']
     },
     buckshot: {
       name: 'Buckshot',
@@ -2350,6 +2370,18 @@ body.has-ant-buster-page {
       tier: 3,
       pellets: 5,
       coneDeg: 50,           // 50 deg fan, ~12.5 deg between pellets
+      upgradesTo: []
+    },
+    minigun: {
+      name: 'Minigun',
+      cost: 110,
+      damage: 1,
+      fireRate: 14,
+      range: 120,
+      projectileSpeed: 320,
+      family: 'double',
+      tier: 3,
+      aimJitter: 0.05,       // ~2.9 deg max per-shot angular wobble
       upgradesTo: []
     },
     frost: {
@@ -2702,6 +2734,13 @@ body.has-ant-buster-page {
         off = (i - (n - 1) / 2) * spread;
       }
       var h = heading + off;
+      // Aim jitter (Plan 3 — MP-F, Minigun). Random per-shot angular offset
+      // turns a high-fire-rate single-barrel into a spray cone — no formal
+      // spread param, just constant inaccuracy. Multiplied by 2 to span the
+      // full ±aimJitter range from a single random sample.
+      if (def.aimJitter) {
+        h = h + (Math.random() * 2 - 1) * def.aimJitter;
+      }
       var p = {
         x: cannon.x + Math.cos(h) * 12,
         y: cannon.y + Math.sin(h) * 12,
