@@ -640,6 +640,24 @@ body.has-ant-buster-page {
     return c;
   }
 
+  function makeCannonTurretPhantom() {
+    // Quick tier-3 (anti-Queen specialist). Long purple barrel with a
+    // ghostly white wisp running along it - reads as a long-range spectral
+    // sniper, distinct from Sharpshooter's scoped rifle and Lance's emitter.
+    var c = makeCanvas(28, 28);
+    var x = c.getContext('2d');
+    x.fillStyle = '#5a2a7a';
+    x.fillRect(9, 10, 10, 10);                  // dark purple base
+    x.fillStyle = '#9a6acc';
+    x.fillRect(1, 12, 26, 3);                   // long purple barrel (range 450)
+    x.fillStyle = '#c8a4f0';
+    x.fillRect(1, 11, 4, 1);                    // muzzle highlight
+    x.fillStyle = '#ffffff';
+    x.fillRect(2, 13, 24, 1);                   // ghostly inner-barrel wisp
+    x.fillRect(13, 8, 2, 3);                    // dorsal sight glint
+    return c;
+  }
+
   function makeCake(slices) {
     var c = makeCanvas(32, 32);
     var x = c.getContext('2d');
@@ -716,6 +734,7 @@ body.has-ant-buster-page {
       plasma_torch: makeCannonTurretPlasmaTorch(),
       sharpshooter: makeCannonTurretSharpshooter(),
       lance: makeCannonTurretLance(),
+      phantom: makeCannonTurretPhantom(),
       marksman: makeCannonTurretMarksman(),
       spotter: makeCannonTurretSpotter(),
       twingun: makeCannonTurretTwinGun(),
@@ -2114,8 +2133,8 @@ body.has-ant-buster-page {
       family: 'quick',
       tier: 2,
       reveal: true,
-      // upgradesTo: ['phantom', 'tesla'] — populated by Tasks 18/19
-      upgradesTo: []
+      // upgradesTo: Task 19 will append 'tesla'
+      upgradesTo: ['phantom']
     },
     vulcan: {
       name: 'Vulcan',
@@ -2179,6 +2198,23 @@ body.has-ant-buster-page {
         statusOnTick: null,      // direct damage only, no status
         color: '#3acccc',        // saturated cyan, distinct from Glacier's pale ice
         lineWidth: 1.5           // tighter than Glacier's 2 — reads as a precision lance
+      },
+      upgradesTo: []
+    },
+    phantom: {
+      name: 'Phantom',
+      cost: 110,
+      damage: 40,
+      fireRate: 0.3,
+      range: 450,
+      projectileSpeed: 380,
+      family: 'quick',
+      tier: 3,
+      damageModifier: function (target, sourceCannon) {
+        // +100% vs Queen — anti-boss specialist. King is a separate kind and
+        // intentionally does not benefit from this bonus.
+        if (target.kind === 'queen') { return 2; }
+        return 1;
       },
       upgradesTo: []
     },
