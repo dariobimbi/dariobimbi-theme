@@ -1118,21 +1118,96 @@ body.has-ant-buster-page {
     ctx.fillText('KILLS ' + killCount, px + 6, py + 66);
 
     // Upgrade buttons (up to 3) — only present when sk.upgradesTo is non-empty.
-    // Base cannons offer 3 mid options, mid cannons offer 2 finals, finals offer 0.
+    // Base cannons offer 3 mid options, mid cannons offer 2 finals, finals
+    // offer 1 god-tier (Plan 4). God-tier buttons render at 50% alpha with a
+    // tooltip when locked, full alpha when unlocked, and an additive gold
+    // halo for the first 0.5s after unlock fires (game.godTierUnlockPulseStart).
     var upgrades = sk.upgradesTo;
     if (!upgrades) { upgrades = []; }
+    var hoveredLockedRect = null;
     for (var i = 0; i < upgrades.length; i++) {
       var uk = upgrades[i];
       var udef = CANNON_KINDS[uk];
       var by = py + 90 + i * 22;
+      var bx = px + 6;
+      var bw = pw - 12;
+      var bh = 18;
       var canAfford = (game.gold >= udef.cost);
+      var isGod = (udef.tier === 'god');
+      var isLocked = false;
+      if (isGod) {
+        if (!game.godTierUnlocked) { isLocked = true; }
+      }
+
+      // Plan 4 — unlock pulse halo. Renders behind the button for the first
+      // 0.5s after godTierUnlockPulseStart, fading from full to zero alpha.
+      if (isGod) {
+        var pulseAge = game.time - game.godTierUnlockPulseStart;
+        if (pulseAge >= 0) {
+          if (pulseAge < 0.5) {
+            var pulseAlpha = 1 - (pulseAge / 0.5);
+            ctx.save();
+            ctx.globalAlpha = pulseAlpha;
+            ctx.fillStyle = '#fee761';
+            ctx.fillRect(bx - 4, by - 4, bw + 8, bh + 8);
+            ctx.restore();
+          }
+        }
+      }
+
+      ctx.save();
+      if (isLocked) { ctx.globalAlpha = 0.5; }
       ctx.fillStyle = canAfford ? '#3a8c3a' : '#444';
-      ctx.fillRect(px + 6, by, pw - 12, 18);
+      if (isGod) {
+        if (!isLocked) {
+          // Unlocked god-tier gets a distinct gold-on-dark scheme so the
+          // upgrade reads as apex tier even at full alpha. Affordability
+          // still gates the inner fill — locked god uses the muted gray.
+          ctx.fillStyle = canAfford ? '#a07020' : '#444';
+        }
+      }
+      ctx.fillRect(bx, by, bw, bh);
       ctx.fillStyle = canAfford ? '#fee761' : '#888';
-      ctx.fillText('-> ' + udef.name + ' (' + udef.cost + 'g)', px + 10, by + 12);
-      ui.upgradeRects[i] = { x: px + 6, y: by, w: pw - 12, h: 18, toKind: uk };
+      if (isGod) {
+        if (!isLocked) {
+          ctx.fillStyle = canAfford ? '#fee761' : '#888';
+        }
+      }
+      ctx.fillText('-> ' + udef.name + ' (' + udef.cost + 'g)', bx + 4, by + 12);
+      ctx.restore();
+
+      ui.upgradeRects[i] = { x: bx, y: by, w: bw, h: bh, toKind: uk, locked: isLocked };
+
+      // Capture the rect for tooltip rendering after the loop, so the
+      // tooltip composites over neighbour buttons cleanly.
+      if (isLocked) {
+        if (ui.mouseX >= bx) {
+          if (ui.mouseX <= bx + bw) {
+            if (ui.mouseY >= by) {
+              if (ui.mouseY <= by + bh) {
+                hoveredLockedRect = { x: bx, y: by, w: bw, h: bh };
+              }
+            }
+          }
+        }
+      }
     }
     for (var k = upgrades.length; k < 3; k++) { ui.upgradeRects[k] = null; }
+
+    // Plan 4 — locked god-tier tooltip. Drawn after the loop so a tooltip
+    // for an upper button never sits under the button below it. 140 px wide
+    // matches the panel column width minus padding.
+    if (hoveredLockedRect) {
+      var tipX = hoveredLockedRect.x;
+      var tipY = hoveredLockedRect.y - 22;
+      ctx.save();
+      ctx.fillStyle = 'rgba(20, 22, 36, 0.92)';
+      ctx.fillRect(tipX, tipY, 140, 18);
+      ctx.fillStyle = '#fee761';
+      ctx.font = '10px monospace';
+      ctx.fillText('Unlocks at wave 15', tipX + 6, tipY + 12);
+      ctx.restore();
+    }
 
     // Sell button — pinned near the bottom of the panel rect.
     var refund = sellRefund(c);
