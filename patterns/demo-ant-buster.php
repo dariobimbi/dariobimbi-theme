@@ -1450,6 +1450,50 @@ body.has-ant-buster-page {
         ctx.arc(ef.x, ef.y, 60 * p, 0, Math.PI * 2);
         ctx.stroke();
       }
+      // Plan 4 — splitFlash (Cluster Strike split point). Filled circle that
+      // shrinks from maxRadius * 0.8 to 0 with alpha fading. ~0.1s lifetime.
+      if (ef.kind === 'splitFlash') {
+        var sp = ef.t / ef.life;
+        var sAlpha = 1 - sp;
+        var sRad = ef.maxRadius * (1 - sp) * 0.8;
+        ctx.save();
+        ctx.globalAlpha = sAlpha;
+        ctx.fillStyle = ef.color;
+        ctx.beginPath();
+        ctx.arc(ef.x, ef.y, sRad, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+      // Plan 4 — spreadRing (Phoenix burn-spread). Stroked circle that grows
+      // from 0 to maxRadius with alpha fading. ~0.2s lifetime, orange.
+      if (ef.kind === 'spreadRing') {
+        var rp = ef.t / ef.life;
+        var rAlpha = 1 - rp;
+        var rRad = ef.maxRadius * rp;
+        ctx.save();
+        ctx.globalAlpha = rAlpha;
+        ctx.strokeStyle = ef.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(ef.x, ef.y, rRad, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+      // Plan 4 — knockbackRing (Tempest splash impact). Stroked circle that
+      // grows from 0 to maxRadius with alpha fading. ~0.15s lifetime, white.
+      if (ef.kind === 'knockbackRing') {
+        var kp = ef.t / ef.life;
+        var kAlpha = 1 - kp;
+        var kRad = ef.maxRadius * kp;
+        ctx.save();
+        ctx.globalAlpha = kAlpha;
+        ctx.strokeStyle = ef.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(ef.x, ef.y, kRad, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
     }
   }
 
