@@ -2250,7 +2250,7 @@ body.has-ant-buster-page {
           lastFiredAt: game.time,
           owner: king,
           fn: function() {
-            spawnAntAt('worker', 10, 320, 'drip', { x: 10, y: 320 });
+            spawnAntAt('royal_guard', 10, 320, 'drip', { x: 10, y: 320 });
           }
         });
       },
