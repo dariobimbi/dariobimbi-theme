@@ -5021,6 +5021,7 @@ body.has-ant-buster-page {
     ui.upgradeRects[2] = null;
     ui.hoveredUpgrade = null;
     ui.sellRect = null;
+    ui.targetingRects = [];   // Plan 7 — clear targeting hit-test rects on restart
     ui.shopRects = [];
   }
 
