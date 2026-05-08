@@ -131,7 +131,14 @@ body.has-ant-buster-page {
     banner: { active: false, text: '', startedAt: 0, duration: 2.5, isBoss: false, isFinal: false },
     screenshake: { magnitude: 0, decay: 0 },
     paused: false,
-    speed: 1
+    speed: 1,
+    // Plan 4 — wave-15 god-tier unlock state. In-session only (no
+    // localStorage). godTierUnlocked flips true when wave 15 clears;
+    // godTierUnlockPulseStart stamps game.time so the selected-tower
+    // panel can render a 0.5s golden halo flash on T2 finals' god-tier
+    // upgrade buttons. Both reset on game-over → restart.
+    godTierUnlocked: false,
+    godTierUnlockPulseStart: 0
   };
 
   // Module-level rect helper used by HUD hit-tests. Avoids inline `&&` chains
@@ -1011,6 +1018,12 @@ body.has-ant-buster-page {
   function upgradeCannon(c, toKind) {
     var udef = CANNON_KINDS[toKind];
     if (!udef) { return; }
+    // Plan 4: block god-tier upgrades when locked. Defense-in-depth alongside
+    // the visual greying in drawTowerPanel (Bucket F). Without this guard a
+    // misclick on a 50%-alpha button would still commit the upgrade.
+    if (udef.tier === 'god') {
+      if (!game.godTierUnlocked) { return; }
+    }
     if (game.gold < udef.cost) { return; }
     game.gold = game.gold - udef.cost;
     c.kind = toKind;
@@ -3676,6 +3689,15 @@ body.has-ant-buster-page {
           // intentional rebalance to make the 21-cannon roster's choices feel
           // meaningful in the late-game economy).
           game.gold = game.gold + (20 + wv.number);
+          // Plan 4: wave-15 unlocks god-tier upgrades. Fires once per run.
+          // Stamps godTierUnlockPulseStart so the selected-tower panel can
+          // render a 0.5s golden halo on T2 finals' god-tier buttons.
+          if (wv.number === 15) {
+            if (!game.godTierUnlocked) {
+              game.godTierUnlocked = true;
+              game.godTierUnlockPulseStart = game.time;
+            }
+          }
           if (game.waveIndex + 1 >= WAVES.length) {
             game.waveState = 'won';
           } else {
@@ -3717,6 +3739,8 @@ body.has-ant-buster-page {
     game.screenshake.decay = 0;
     game.paused = false;
     game.speed = 1;
+    game.godTierUnlocked = false;
+    game.godTierUnlockPulseStart = 0;
     ui.sendNextRect = null;
     ui.restartRunRect = null;
     ui.dragging = null;
@@ -4041,5 +4065,15 @@ body.has-ant-buster-page {
   window.__abApplyStatus = applyStatus;
   window.__abApplyDamage = applyDamage;
   window.__abWaves = WAVES;
+  // Plan 4: read/write the god-tier unlock state. Pass a boolean to set,
+  // omit to read. Used by the ?debug=1 G hotkey (Task 23) and Playwright
+  // tests that don't want to grind 15 waves to access the gated tier.
+  window.__abGodTierUnlocked = function (v) {
+    if (typeof v === 'boolean') {
+      game.godTierUnlocked = v;
+      if (v) { game.godTierUnlockPulseStart = game.time; }
+    }
+    return game.godTierUnlocked;
+  };
 })();
 </script>
