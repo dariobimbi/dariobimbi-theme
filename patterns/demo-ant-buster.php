@@ -3170,6 +3170,16 @@ body.has-ant-buster-page {
   // carrier specifically. `damage` is the already-scaled splash damage
   // (caller multiplies by splashMult).
   function applySplash(x, y, radius, damage, falloff, sourceCannon) {
+    // Plan 4: when sourceCannon has splashStatus: true, apply each entry of
+    // its statusOnHit array to every ant caught in the splash, not just the
+    // direct-hit. Backward compatible — splash cannons without splashStatus
+    // (Mortar, Hellfire, Shockwave) keep their pre-Plan-4 damage-only behavior.
+    var def = null;
+    if (sourceCannon) { def = CANNON_KINDS[sourceCannon.kind]; }
+    var applyStatusToAll = false;
+    if (def) {
+      if (def.splashStatus) { applyStatusToAll = true; }
+    }
     for (var i = 0; i < game.ants.length; i++) {
       var a = game.ants[i];
       if (a.dead) { continue; }
@@ -3182,7 +3192,52 @@ body.has-ant-buster-page {
       if (falloff > 0) { pct = 1 - (dist / radius) * falloff; } else { pct = 1; }
       if (pct < 0) { pct = 0; }
       applyDamage(a, damage * pct, false, sourceCannon);
+      if (applyStatusToAll) {
+        if (def.statusOnHit) {
+          var slist = def.statusOnHit;
+          if (!Array.isArray(slist)) { slist = [slist]; }
+          for (var si = 0; si < slist.length; si++) {
+            var s = slist[si];
+            applyStatus(a, s.kind, s.magnitude, s.duration, 'splash');
+            // Tag-after-apply for damageAmp / spreads (mirrors the
+            // projectile-collision pathway in updateProjectiles).
+            if (s.damageAmp) {
+              if (a.effects[s.kind]) { a.effects[s.kind].damageAmp = s.damageAmp; }
+            }
+            if (s.spreads) {
+              if (a.effects[s.kind]) { a.effects[s.kind].spreads = true; }
+            }
+          }
+        }
+      }
       if (a.hp <= 0) { killAnt(a, sourceCannon); }
+    }
+    // Plan 4: when splashStatus carries a knockback effect (Tempest), push a
+    // transient white ring at the impact point. Same shape as Phoenix's
+    // burn-spread ring; rendered by drawTransientEffects (Task 13).
+    if (applyStatusToAll) {
+      if (def) {
+        if (def.statusOnHit) {
+          var hasKnockback = false;
+          var slist2 = def.statusOnHit;
+          if (!Array.isArray(slist2)) { slist2 = [slist2]; }
+          for (var sj = 0; sj < slist2.length; sj++) {
+            if (slist2[sj].kind === 'knockback') { hasKnockback = true; }
+          }
+          if (hasKnockback) {
+            if (game.transientEffects) {
+              game.transientEffects.push({
+                kind: 'knockbackRing',
+                x: x, y: y,
+                startTime: game.time,
+                duration: 0.15,
+                color: '#ffffff',
+                maxRadius: radius
+              });
+            }
+          }
+        }
+      }
     }
   }
 
