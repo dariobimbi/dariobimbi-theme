@@ -592,6 +592,20 @@ body.has-ant-buster-page {
     return c;
   }
 
+  function makeCannonTurretPlasmaTorch() {
+    // Quick tier-3 (cone-DoT). Orange flame body over a dark base, with a
+    // bright yellow inner core hinting at the plasma jet that emits the cone.
+    var c = makeCanvas(28, 28);
+    var x = c.getContext('2d');
+    x.fillStyle = '#ff7a30';
+    x.fillRect(8, 6, 12, 14);
+    x.fillStyle = '#a4421a';
+    x.fillRect(6, 18, 16, 6);
+    x.fillStyle = '#fee761';
+    x.fillRect(11, 9, 6, 4);
+    return c;
+  }
+
   function makeCake(slices) {
     var c = makeCanvas(32, 32);
     var x = c.getContext('2d');
@@ -665,6 +679,7 @@ body.has-ant-buster-page {
       repeater: makeCannonTurretRepeater(),
       autocannon: makeCannonTurretAutocannon(),
       vulcan: makeCannonTurretVulcan(),
+      plasma_torch: makeCannonTurretPlasmaTorch(),
       marksman: makeCannonTurretMarksman(),
       spotter: makeCannonTurretSpotter(),
       twingun: makeCannonTurretTwinGun(),
@@ -1005,6 +1020,27 @@ body.has-ant-buster-page {
 
   // Layer 9b: beam lines (Glacier). Thin icy line from a beam cannon to its
   // current live target. Only drawn while the target is alive.
+  // Cone overlay for cone-DoT cannons (Plan 3 — Plasma Torch). Drawn before
+  // the bases/turrets/ants so the orange wedge sits under sprites, not over
+  // them. firingCone is set in updateCannons whenever the cannon has a target.
+  function drawConeDots() {
+    for (var ci = 0; ci < game.cannons.length; ci++) {
+      var cc = game.cannons[ci];
+      var cdef = CANNON_KINDS[cc.kind];
+      if (cdef.coneDot) {
+        if (cc.firingCone) {
+          var halfA = (cdef.coneDot.angleDeg * Math.PI / 180) / 2;
+          ctx.fillStyle = 'rgba(255, 120, 30, 0.18)';
+          ctx.beginPath();
+          ctx.moveTo(cc.x, cc.y);
+          ctx.arc(cc.x, cc.y, cdef.coneDot.range, cc.heading - halfA, cc.heading + halfA);
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+    }
+  }
+
   function drawBeams() {
     for (var bi = 0; bi < game.cannons.length; bi++) {
       var bc = game.cannons[bi];
@@ -1259,6 +1295,7 @@ body.has-ant-buster-page {
     drawAnthill();             // 3. anthill
     drawSlices();              // 4. fallen slices on the ground
     if (ui.selectedCannon) { drawRangeCircle(ui.selectedCannon); } // 5. range circle
+    drawConeDots();            // 5b. cone-DoT overlay (under bases/ants)
     drawCannonBases();         // 6. static cannon bases (under turrets/ants)
     drawAnts();                // 7. ants, sorted top-down by y
     drawCannonTurrets();       // 8. cannon turrets + muzzle/disable indicators
@@ -2010,7 +2047,7 @@ body.has-ant-buster-page {
       projectileSpeed: 320,
       family: 'quick',
       tier: 2,
-      upgradesTo: ['vulcan']
+      upgradesTo: ['vulcan', 'plasma_torch']
     },
     marksman: {
       name: 'Marksman',
@@ -2051,6 +2088,23 @@ body.has-ant-buster-page {
       family: 'quick',
       tier: 3,
       spoolUp: 0.5,
+      upgradesTo: []
+    },
+    plasma_torch: {
+      name: 'Plasma Torch',
+      cost: 90,
+      damage: 0,                 // cone-DoT cannons don't fire projectiles
+      fireRate: 0,
+      range: 70,                 // mirrors coneDot.range so the panel circle preview matches
+      projectileSpeed: 0,
+      family: 'quick',
+      tier: 3,
+      coneDot: {
+        range: 70,
+        angleDeg: 60,
+        tickDamage: 10,
+        statusOnTick: { kind: 'burn', magnitude: 1, duration: 2 }
+      },
       upgradesTo: []
     },
     twingun: {
@@ -2168,6 +2222,37 @@ body.has-ant-buster-page {
     return nearest;
   }
 
+  // Cone-DoT primitive (Plan 3 — Plasma Torch and future cone-DoT cannons).
+  // Plasma Torch doesn't fire projectiles; instead it emits a continuous flame
+  // cone in the direction of cannon.heading. Every ant inside the cone takes
+  // tickDamage * dt every frame and (optionally) refreshes a status. The angle
+  // delta is normalized into [-PI, PI] before the half-angle compare so the
+  // wrap-around at the +/- PI boundary doesn't drop targets.
+  function applyConeDoT(cannon, def, dt) {
+    var range = def.coneDot.range;
+    var halfAngle = (def.coneDot.angleDeg * Math.PI / 180) / 2;
+    for (var i = 0; i < game.ants.length; i++) {
+      var a = game.ants[i];
+      if (a.dead) { continue; }
+      if (a.intangible) { continue; }
+      var dx = a.x - cannon.x;
+      var dy = a.y - cannon.y;
+      var dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > range) { continue; }
+      var angleToAnt = Math.atan2(dy, dx);
+      var delta = angleToAnt - cannon.heading;
+      while (delta > Math.PI) { delta = delta - Math.PI * 2; }
+      while (delta < -Math.PI) { delta = delta + Math.PI * 2; }
+      if (Math.abs(delta) > halfAngle) { continue; }
+      applyDamage(a, def.coneDot.tickDamage * dt, !!def.armorPierce, cannon);
+      if (def.coneDot.statusOnTick) {
+        var s = def.coneDot.statusOnTick;
+        applyStatus(a, s.kind, s.magnitude, s.duration, 'cone');
+      }
+      if (a.hp <= 0) { killAnt(a, cannon); }
+    }
+  }
+
   function updateCannons(dt) {
     // Reveal pre-pass: clear stale isRevealed flags so each tick recomputes
     // them from the current Spotter positions. Carrier ants in any Spotter's
@@ -2222,6 +2307,22 @@ body.has-ant-buster-page {
           applyStatus(btarget, sb.kind, sb.magnitude, sb.duration, 'beam');
         }
         c.beamTarget = btarget;
+        continue;
+      }
+
+      // Cone-DoT cannons (Plan 3 — Plasma Torch). Continuous flame cone in
+      // the direction of the current target; no projectile, no cooldown.
+      // firingCone gates the orange overlay in drawConeDots().
+      if (def.coneDot) {
+        var ct = findTarget(c);
+        c.target = ct;
+        if (ct) {
+          c.heading = Math.atan2(ct.y - c.y, ct.x - c.x);
+          applyConeDoT(c, def, dt);
+          c.firingCone = true;
+        } else {
+          c.firingCone = false;
+        }
         continue;
       }
 
