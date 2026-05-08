@@ -527,6 +527,18 @@ body.has-ant-buster-page {
     return c;
   }
 
+  function makeCannonTurretHellfire() {
+    var c = makeCanvas(28, 28);
+    var x = c.getContext('2d');
+    // Stubby high-angle launcher in fiery red over a charred dark base; reads
+    // as a heavier kin of Mortar that lobs a wider blast.
+    x.fillStyle = '#d04020';
+    x.fillRect(7, 4, 14, 12);                   // upward launcher mouth
+    x.fillStyle = '#5a1a0a';
+    x.fillRect(6, 14, 16, 10);                  // charred breech base
+    return c;
+  }
+
   function makeCake(slices) {
     var c = makeCanvas(32, 32);
     var x = c.getContext('2d');
@@ -594,6 +606,7 @@ body.has-ant-buster-page {
       discus: makeCannonTurretDiscus(),
       patriot: makeCannonTurretPatriot(),
       demolisher: makeCannonTurretDemolisher(),
+      hellfire: makeCannonTurretHellfire(),
       repeater: makeCannonTurretRepeater(),
       autocannon: makeCannonTurretAutocannon(),
       vulcan: makeCannonTurretVulcan(),
@@ -1825,7 +1838,7 @@ body.has-ant-buster-page {
       tier: 2,
       splash: { radius: 40, falloff: 0.5, splashMult: 0.5 },
       arc: { height: 24, travelTime: 0.6 },
-      upgradesTo: ['patriot']  // upgradesTo: ['hellfire', 'patriot'] — Task 10 still pending
+      upgradesTo: ['patriot', 'hellfire']
     },
     patriot: {
       name: 'Patriot',
@@ -1850,6 +1863,19 @@ body.has-ant-buster-page {
       family: 'heavy',
       tier: 3,
       armorPierce: true,
+      upgradesTo: []
+    },
+    hellfire: {
+      name: 'Hellfire',
+      cost: 90,
+      damage: 15,
+      fireRate: 0.4,
+      range: 180,
+      projectileSpeed: 200,
+      family: 'heavy',
+      tier: 3,
+      splash: { radius: 60, falloff: 0.4, splashMult: 0.67 },
+      arc: { height: 32, travelTime: 0.7 },
       upgradesTo: []
     },
     discus: {
