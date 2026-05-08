@@ -539,6 +539,18 @@ body.has-ant-buster-page {
     return c;
   }
 
+  function makeCannonTurretRicochet() {
+    var c = makeCanvas(28, 28);
+    var x = c.getContext('2d');
+    // Heavier kin of Discus with a wider horizontal launcher; the warmer
+    // orange reads as the upgraded variant at glance.
+    x.fillStyle = '#cc6a4a';
+    x.fillRect(2, 12, 24, 4);                   // wide horizontal launcher
+    x.fillStyle = '#9b3a1a';
+    x.fillRect(10, 8, 8, 12);                   // taller breech block
+    return c;
+  }
+
   function makeCake(slices) {
     var c = makeCanvas(32, 32);
     var x = c.getContext('2d');
@@ -607,6 +619,7 @@ body.has-ant-buster-page {
       patriot: makeCannonTurretPatriot(),
       demolisher: makeCannonTurretDemolisher(),
       hellfire: makeCannonTurretHellfire(),
+      ricochet: makeCannonTurretRicochet(),
       repeater: makeCannonTurretRepeater(),
       autocannon: makeCannonTurretAutocannon(),
       vulcan: makeCannonTurretVulcan(),
@@ -1888,7 +1901,20 @@ body.has-ant-buster-page {
       family: 'heavy',
       tier: 2,
       returning: true,
-      upgradesTo: []           // upgradesTo: ['ricochet', 'shockwave'] — populated by Tasks 11/12
+      upgradesTo: ['ricochet']           // 'shockwave' appended by Task 12
+    },
+    ricochet: {
+      name: 'Ricochet',
+      cost: 90,
+      damage: 8,
+      fireRate: 0.4,
+      range: 180,
+      projectileSpeed: 240,
+      family: 'heavy',
+      tier: 3,
+      returning: true,
+      returnPierce: 1,
+      upgradesTo: []
     },
     repeater: {
       name: 'Repeater',
@@ -2348,6 +2374,14 @@ body.has-ant-buster-page {
               if (!p._sawAnts) { p._sawAnts = []; }
               p._sawAnts.push(a);
               p.life = 1.5;
+              // Return-leg pierce re-arm (Plan 3 — Ricochet). Cannons without
+              // returnPierce keep their default behavior (return-leg single hit,
+              // despawn at origin). Nested ifs to avoid `&&` in inline <script>.
+              if (sk) {
+                if (sk.returnPierce) {
+                  p.pierceLeft = sk.returnPierce;
+                }
+              }
               // projectile keeps flying back — don't set hit, don't break
             } else {
               hit = true;
