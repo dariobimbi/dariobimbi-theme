@@ -117,6 +117,7 @@ body.has-ant-buster-page {
     cannons: [],
     projectiles: [],
     effects: [],              // transient visual effects (e.g. Bomber AoE flash); see updateEffects
+    lightningBolts: [],       // Tesla arc-jump polylines; each { points: [{x,y}], expiresAt: number }
     slices: [],               // fallen cake slices on the ground (Task 23); 8s timeout returns to cake
     sprites: {},              // populated in Task 4
     gold: 150,
@@ -640,6 +641,26 @@ body.has-ant-buster-page {
     return c;
   }
 
+  function makeCannonTurretTesla() {
+    // Quick tier-3 (chain-jump arc). Squat blue body with a stacked coil
+    // emitter on top — reads as a Tesla coil at glance, distinct from the
+    // long-barrel Sharpshooter / Phantom and the lens-emitter Lance.
+    var c = makeCanvas(28, 28);
+    var x = c.getContext('2d');
+    x.fillStyle = '#1a3a5a';
+    x.fillRect(8, 14, 12, 8);                   // dark blue base
+    x.fillStyle = '#5a8acc';
+    x.fillRect(10, 6, 8, 9);                    // mid-body coil housing
+    x.fillStyle = '#b0d8ff';
+    x.fillRect(11, 4, 6, 2);                    // top coil disc
+    x.fillRect(12, 1, 4, 3);                    // upper coil disc
+    x.fillStyle = '#e4f4ff';
+    x.fillRect(13, 0, 2, 1);                    // top spark
+    x.fillRect(11, 8, 6, 1);                    // coil banding
+    x.fillRect(11, 11, 6, 1);                   // coil banding
+    return c;
+  }
+
   function makeCannonTurretPhantom() {
     // Quick tier-3 (anti-Queen specialist). Long purple barrel with a
     // ghostly white wisp running along it - reads as a long-range spectral
@@ -735,6 +756,7 @@ body.has-ant-buster-page {
       sharpshooter: makeCannonTurretSharpshooter(),
       lance: makeCannonTurretLance(),
       phantom: makeCannonTurretPhantom(),
+      tesla: makeCannonTurretTesla(),
       marksman: makeCannonTurretMarksman(),
       spotter: makeCannonTurretSpotter(),
       twingun: makeCannonTurretTwinGun(),
@@ -1119,6 +1141,30 @@ body.has-ant-buster-page {
     }
   }
 
+  // Layer 9c: Tesla arc-jump polyline. Drawn over ants so the chain lines
+  // remain visible across hit targets. Each bolt fades from full to 0 alpha
+  // over its 0.15s lifetime; small per-segment jitter sells the lightning feel.
+  function drawLightningBolts() {
+    for (var bi = 0; bi < game.lightningBolts.length; bi++) {
+      var b = game.lightningBolts[bi];
+      var lifeRemaining = b.expiresAt - game.time;
+      var alpha = lifeRemaining / 0.15;
+      if (alpha < 0) { alpha = 0; }
+      if (alpha > 1) { alpha = 1; }
+      ctx.strokeStyle = 'rgba(180, 220, 255, ' + alpha + ')';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(b.points[0].x, b.points[0].y);
+      for (var pi = 1; pi < b.points.length; pi++) {
+        var jx = b.points[pi].x + (Math.random() * 6 - 3);
+        var jy = b.points[pi].y + (Math.random() * 6 - 3);
+        ctx.lineTo(jx, jy);
+      }
+      ctx.stroke();
+      ctx.lineWidth = 1;
+    }
+  }
+
   // Layer 10: transient effects — AoE rings today, hit sparks/splat fades/
   // phase shimmer/status indicators slot in here as later tasks add them.
   // Each entry advances its own `t` in updateEffects; render uses p = t/life
@@ -1359,7 +1405,8 @@ body.has-ant-buster-page {
     drawAnts();                // 7. ants, sorted top-down by y
     drawCannonTurrets();       // 8. cannon turrets + muzzle/disable indicators
     drawProjectiles();         // 9a. projectiles
-    drawBeams();               // 9b. beam lines (Glacier)
+    drawBeams();               // 9b. beam lines (Glacier, Lance)
+    drawLightningBolts();      // 9c. Tesla arc-jump polylines (~0.15s flash)
     drawEffects();             // 10. AoE flashes + future hit/splat fx
     drawHud();                 // 11. HUD strip
     if (ui.selectedCannon) {   // 12. shop / tower-detail panel
@@ -2133,8 +2180,7 @@ body.has-ant-buster-page {
       family: 'quick',
       tier: 2,
       reveal: true,
-      // upgradesTo: Task 19 will append 'tesla'
-      upgradesTo: ['phantom']
+      upgradesTo: ['phantom', 'tesla']
     },
     vulcan: {
       name: 'Vulcan',
@@ -2216,6 +2262,18 @@ body.has-ant-buster-page {
         if (target.kind === 'queen') { return 2; }
         return 1;
       },
+      upgradesTo: []
+    },
+    tesla: {
+      name: 'Tesla',
+      cost: 100,
+      damage: 10,
+      fireRate: 1,
+      range: 200,
+      projectileSpeed: 0,        // instant-resolve; no projectile travel
+      family: 'quick',
+      tier: 3,
+      teslaArc: { jumps: 3, range: 60, falloff: 0.5 },
       upgradesTo: []
     },
     twingun: {
@@ -2478,6 +2536,55 @@ body.has-ant-buster-page {
   // === PROJECTILES ===
   function fireProjectile(cannon, target) {
     var def = CANNON_KINDS[cannon.kind];
+
+    // Tesla arc-jump primitive (Plan 3 — MP-J). Resolves the primary hit and
+    // up to def.teslaArc.jumps chain hits in one tick: each jump finds the
+    // nearest non-hit live ant within def.teslaArc.range of the previous hit
+    // and applies dmg * (1 - falloff) per hop. The chain "feel" is sold by
+    // the lightning polyline (rendered for ~0.15s by drawLightningBolts), not
+    // by a moving particle. Skips the projectile-spawn loop on return.
+    if (def.teslaArc) {
+      var primary = target;
+      var hits = [primary];
+      var current = primary;
+      var jumps = def.teslaArc.jumps;
+      var jumpRange = def.teslaArc.range;
+      var falloff = def.teslaArc.falloff;
+      var dmg = def.damage;
+
+      applyDamage(primary, dmg, !!def.armorPierce, cannon);
+      if (primary.hp <= 0) { killAnt(primary, cannon); }
+
+      for (var j = 0; j < jumps; j++) {
+        var nearest = null;
+        var bestDist = Infinity;
+        for (var ai = 0; ai < game.ants.length; ai++) {
+          var aa = game.ants[ai];
+          if (aa.dead) { continue; }
+          if (aa.intangible) { continue; }
+          if (hits.indexOf(aa) !== -1) { continue; }
+          var jdx = aa.x - current.x;
+          var jdy = aa.y - current.y;
+          var jd2 = jdx * jdx + jdy * jdy;
+          if (jd2 > jumpRange * jumpRange) { continue; }
+          if (jd2 < bestDist) { bestDist = jd2; nearest = aa; }
+        }
+        if (!nearest) { break; }
+        dmg = dmg * (1 - falloff);
+        applyDamage(nearest, dmg, !!def.armorPierce, cannon);
+        if (nearest.hp <= 0) { killAnt(nearest, cannon); }
+        hits.push(nearest);
+        current = nearest;
+      }
+
+      var bolt = { points: [{ x: cannon.x, y: cannon.y }], expiresAt: game.time + 0.15 };
+      for (var hi = 0; hi < hits.length; hi++) {
+        bolt.points.push({ x: hits[hi].x, y: hits[hi].y });
+      }
+      game.lightningBolts.push(bolt);
+      return;
+    }
+
     var heading = angleTowards(cannon.x, cannon.y, target.x, target.y);
     var n = def.barrels;
     if (!n) { n = 1; }
@@ -3122,6 +3229,15 @@ body.has-ant-buster-page {
     updateCannons(simDt);
     updateProjectiles(simDt);
     updateEffects(simDt);
+    // Tesla lightning bolts decay against game.time (already advanced above).
+    // Each bolt lives ~0.15s; expired bolts are filtered out before render.
+    var keptBolts = [];
+    for (var lbi = 0; lbi < game.lightningBolts.length; lbi++) {
+      if (game.lightningBolts[lbi].expiresAt > game.time) {
+        keptBolts.push(game.lightningBolts[lbi]);
+      }
+    }
+    game.lightningBolts = keptBolts;
     updateSlices(simDt);
     checkPickupsAndDeliveries();
     pruneAnts();
