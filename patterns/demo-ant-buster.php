@@ -1646,7 +1646,7 @@ body.has-ant-buster-page {
       name: 'Worker',
       hp: 10,
       speed: 30,
-      carryingSpeedMult: 0.7,    // Plan 1: carrying ants slow to 70% on the way home
+      carryingSpeedMult: 1.5,    // Plan 3 Task 33 — flee-sprint at 1.5x; spec acceptance item 21 covers worker-turned-carrier too
       gold: 2,
       alignment: 0.2,
       jitterRate: 4.0,
@@ -1684,7 +1684,7 @@ body.has-ant-buster-page {
       name: 'Scout',
       hp: 6,
       speed: 60,
-      carryingSpeedMult: 0.7,
+      carryingSpeedMult: 1.5,    // Plan 3 Task 33 — flee-sprint at 1.5x; spec acceptance item 21 covers worker-turned-carrier too
       gold: 3,
       alignment: 0.4,
       jitterRate: 5.0,
@@ -1710,7 +1710,7 @@ body.has-ant-buster-page {
       wanderAmpMin: 0.6, wanderAmpMax: 1.0,
       spriteKey: 'soldier',
       spriteW: 16, spriteH: 16,
-      carryingSpeedMult: 0.7,
+      carryingSpeedMult: 1.5,    // Plan 3 Task 33 — flee-sprint at 1.5x; spec acceptance item 21 covers worker-turned-carrier too
       slowResist: 0.5,
       damageMult: 1,
       pierceMult: 1,
@@ -1729,7 +1729,7 @@ body.has-ant-buster-page {
       wanderAmpMin: 0.4, wanderAmpMax: 0.7,
       spriteKey: 'tank',
       spriteW: 24, spriteH: 24,
-      carryingSpeedMult: 0.7,
+      carryingSpeedMult: 1,        // unused (canPickup=false) but keeps the schema uniform
       slowResist: 0,
       damageMult: 1,
       pierceMult: 1,
@@ -1748,7 +1748,7 @@ body.has-ant-buster-page {
       wanderAmpMin: 0.8, wanderAmpMax: 1.3,
       spriteKey: 'splitter',
       spriteW: 16, spriteH: 16,
-      carryingSpeedMult: 0.7,
+      carryingSpeedMult: 1.5,    // Plan 3 Task 33 — flee-sprint at 1.5x; spec acceptance item 21 covers worker-turned-carrier too
       slowResist: 0,
       damageMult: 1,
       pierceMult: 1,
@@ -1772,7 +1772,7 @@ body.has-ant-buster-page {
       wanderAmpMin: 1.0, wanderAmpMax: 1.5,
       spriteKey: 'mini_splitter',
       spriteW: 8, spriteH: 8,
-      carryingSpeedMult: 0.7,
+      carryingSpeedMult: 1.5,    // Plan 3 Task 33 — flee-sprint at 1.5x; spec acceptance item 21 covers worker-turned-carrier too
       slowResist: 0,
       damageMult: 1,
       pierceMult: 1,
@@ -1791,7 +1791,7 @@ body.has-ant-buster-page {
       wanderAmpMin: 0.9, wanderAmpMax: 1.4,
       spriteKey: 'phase',
       spriteW: 16, spriteH: 16,
-      carryingSpeedMult: 0.7,
+      carryingSpeedMult: 1.5,    // Plan 3 Task 33 — flee-sprint at 1.5x; spec acceptance item 21 covers worker-turned-carrier too
       slowResist: 0,
       damageMult: 1,
       pierceMult: 1,
@@ -1812,7 +1812,7 @@ body.has-ant-buster-page {
       wanderAmpMin: 1.0, wanderAmpMax: 1.5,
       spriteKey: 'bomber',
       spriteW: 16, spriteH: 16,
-      carryingSpeedMult: 0.7,
+      carryingSpeedMult: 1.5,    // Plan 3 Task 33 — flee-sprint at 1.5x; spec acceptance item 21 covers worker-turned-carrier too
       slowResist: 0,
       damageMult: 1,
       pierceMult: 1,
@@ -1845,7 +1845,7 @@ body.has-ant-buster-page {
       wanderAmpMin: 0.3, wanderAmpMax: 0.5,
       spriteKey: 'queen',
       spriteW: 24, spriteH: 24,
-      carryingSpeedMult: 0.7,
+      carryingSpeedMult: 1.5,    // Plan 3 Task 33 — flee-sprint at 1.5x; spec acceptance item 21 covers worker-turned-carrier too
       slowResist: 0.25,
       damageMult: 1,
       pierceMult: 1,
@@ -3092,7 +3092,7 @@ body.has-ant-buster-page {
     // applied with a damageAmp tag (stamped on after applyStatus by the
     // projectile-collision pathway), every subsequent damage tick lands +N%
     // until the freeze expires. Independent of which cannon does the damage —
-    // any follow-up hit benefits. Nested ifs to avoid inline-script `&&`.
+    // any follow-up hit benefits. Nested ifs to avoid the inline-script and-operator.
     if (ant.effects) {
       if (ant.effects.freeze) {
         var amp = ant.effects.freeze.damageAmp;
@@ -3108,7 +3108,7 @@ body.has-ant-buster-page {
     // Threshold-summon hook (Plan 3 Task 30 — King). Each entry fires once
     // when HP drops past `at` (a fraction of maxHp). firedThresholds is
     // initialized in spawnAnt so the keyed write here is safe even on the
-    // first crossing. Nested ifs to avoid inline-script `&&`.
+    // first crossing. Nested ifs to avoid the inline-script and-operator.
     if (k.onHpThresholds) {
       var pct = ant.hp / ant.maxHp;
       for (var ti = 0; ti < k.onHpThresholds.length; ti++) {
@@ -3152,7 +3152,7 @@ body.has-ant-buster-page {
     // Plague spread-on-death (Plan 3). Tagged poison effects propagate to
     // ants within 30 px when their carrier dies. Toxin's poison omits the
     // spreads tag so this is a no-op for Toxin kills. Nested ifs to avoid
-    // inline-script `&&` (CLAUDE.md HTML-encoding gotcha).
+    // the inline-script and-operator (CLAUDE.md HTML-encoding gotcha).
     if (ant.effects) {
       if (ant.effects.poison) {
         if (ant.effects.poison.spreads) {
@@ -3288,7 +3288,7 @@ body.has-ant-buster-page {
             if (sk.splash) {
               applySplash(p.x, p.y, sk.splash.radius, p.damage * sk.splash.splashMult, sk.splash.falloff, p.sourceCannon);
               // Screenshake on splash impact (Plan 3 — Shockwave). Direct hits
-              // without splash never trigger shake. Nested ifs to avoid `&&`.
+              // without splash never trigger shake. Nested ifs avoid the and-operator.
               if (sk.screenshake) {
                 game.screenshake.magnitude = sk.screenshake.magnitude;
                 game.screenshake.decay = sk.screenshake.decay;
@@ -3329,7 +3329,7 @@ body.has-ant-buster-page {
               p.life = 1.5;
               // Return-leg pierce re-arm (Plan 3 — Ricochet). Cannons without
               // returnPierce keep their default behavior (return-leg single hit,
-              // despawn at origin). Nested ifs to avoid `&&` in inline <script>.
+              // despawn at origin). Nested ifs avoid the inline-script and-operator.
               if (sk) {
                 if (sk.returnPierce) {
                   p.pierceLeft = sk.returnPierce;
@@ -3834,7 +3834,7 @@ body.has-ant-buster-page {
     updateWaveState(dt);
     // Periodic spawn jobs (Plan 3 Task 31 — King's worker drip). Each job
     // fires on its own interval and is owned by an ant; jobs whose owners
-    // have died are pruned out. Nested ifs to avoid inline-script `&&`.
+    // have died are pruned out. Nested ifs to avoid the inline-script and-operator.
     for (var ji = 0; ji < game.spawnJobs.length; ji++) {
       var job = game.spawnJobs[ji];
       if (job.owner) {
