@@ -123,6 +123,7 @@ body.has-ant-buster-page {
     lightningBolts: [],       // Tesla arc-jump polylines; each { points: [{x,y}], expiresAt: number }
     spawnJobs: [],            // periodic spawn callbacks (King's worker drip — Plan 3 Task 31)
     slices: [],               // fallen cake slices on the ground (Task 23); 8s timeout returns to cake
+    shatterParticles: [],     // Plan 6: ephemeral cyan particles; never persisted
     sprites: {},              // populated in Task 4
     gold: 150,
     waveIndex: 0,             // index into WAVES
@@ -1938,6 +1939,7 @@ body.has-ant-buster-page {
     drawGodTierHalos();        // 5d. pulsing gold halo under T3 god-tier turrets
     drawCannonBases();         // 6. static cannon bases (under turrets/ants)
     drawAnts();                // 7. ants, sorted top-down by y
+    drawShatterParticles();    // 7b. cyan shatter particles (Plan 6 Brittle)
     drawCannonTurrets();       // 8. cannon turrets + muzzle/disable indicators
     drawProjectiles();         // 9a. projectiles
     drawBeams();               // 9b. beam lines (Glacier, Lance)
@@ -2358,6 +2360,60 @@ body.has-ant-buster-page {
     ant.effects[kindKey] = { magnitude: magnitude, expiresAt: newExpiry, source: source };
     var def = STATUS_KINDS[kindKey];
     if (def.onApply) { def.onApply(ant, magnitude); }
+  }
+
+  // Plan 6: Shatter particle factory. Called by the Brittle predicate inside
+  // applyDamage when a heavy-family direct hit lands on a frozen ant. Pushes
+  // 10 cyan particles onto game.shatterParticles with random radial velocity.
+  // The particles tick on real-time dt (see updateShatterParticles below) so
+  // the visual stays readable at any game speed.
+  function spawnShatterParticles(x, y) {
+    for (var i = 0; i < 10; i++) {
+      var angle = Math.random() * Math.PI * 2;
+      var speed = 80 + Math.random() * 60;
+      game.shatterParticles.push({
+        x: x,
+        y: y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        age: 0,
+        lifetime: 0.18
+      });
+    }
+  }
+
+  // Plan 6: Particle tick. Caller passes real-time dt (NOT simDt) so the burst
+  // always lasts 0.18s wall-time regardless of game speed. Reverse iteration
+  // so splice(i, 1) doesn't break the index — same convention as
+  // updateProjectiles and the slices loop elsewhere in this file.
+  function updateShatterParticles(dt) {
+    for (var i = game.shatterParticles.length - 1; i >= 0; i--) {
+      var p = game.shatterParticles[i];
+      p.x = p.x + p.vx * dt;
+      p.y = p.y + p.vy * dt;
+      p.vx = p.vx * 0.92;
+      p.vy = p.vy * 0.92;
+      p.age = p.age + dt;
+      if (p.age >= p.lifetime) {
+        game.shatterParticles.splice(i, 1);
+      }
+    }
+  }
+
+  // Plan 6: Particle draw. Linear alpha fade over lifetime. Math.round on the
+  // position to dodge subpixel blur on the 320x180 canvas. fillStyle hex
+  // literal — no operator-encoding concerns.
+  function drawShatterParticles() {
+    if (game.shatterParticles.length === 0) { return; }
+    ctx.save();
+    ctx.fillStyle = '#88f0ff';
+    for (var i = 0; i < game.shatterParticles.length; i++) {
+      var p = game.shatterParticles[i];
+      var alpha = 1 - (p.age / p.lifetime);
+      ctx.globalAlpha = alpha;
+      ctx.fillRect(Math.round(p.x) - 1, Math.round(p.y) - 1, 2, 2);
+    }
+    ctx.restore();
   }
 
   // Spawn an ant of `kindKey` at an explicit (x, y). Used by spawnAnt for the
@@ -4031,7 +4087,9 @@ body.has-ant-buster-page {
   // Plan 3: optional `sourceCannon` lets the per-cannon `damageModifier` hook
   // multiply damage (Marksman, Sharpshooter, Phantom). Falls through cleanly
   // when sourceCannon is omitted (existing call sites stay 3-arg compatible).
-  function applyDamage(ant, amount, armorPierce, sourceCannon) {
+  // Plan 6: optional `isDirectHit` (boolean) marks projectile-direct collisions.
+  // Only direct hits trigger the heavy-family Brittle predicate (3x on frozen).
+  function applyDamage(ant, amount, armorPierce, sourceCannon, isDirectHit) {
     var k = ANT_KINDS[ant.kind];
     var dmg = amount;
     if (sourceCannon) {
@@ -4060,6 +4118,25 @@ body.has-ant-buster-page {
       if (ant.effects.poison) {
         var pamp = ant.effects.poison.damageAmp;
         if (pamp) { dmg = dmg * pamp; }
+      }
+    }
+    // Plan 6: Brittle synergy. Heavy-family direct hit on a frozen ant deals
+    // 2x damage on top of any existing freeze.damageAmp (composes multiplicatively),
+    // consumes the freeze status, and spawns a cyan shatter visual. Direct hit
+    // only — splash, beam, aura, and chain-link calls leave isDirectHit unset.
+    // Nested ifs to dodge the inline-script and-operator encoding gotcha.
+    if (isDirectHit) {
+      if (sourceCannon) {
+        var sk2 = CANNON_KINDS[sourceCannon.kind];
+        if (sk2.family === 'heavy') {
+          if (ant.effects) {
+            if (ant.effects.freeze) {
+              dmg = dmg * 2;
+              delete ant.effects.freeze;
+              spawnShatterParticles(ant.x, ant.y);
+            }
+          }
+        }
       }
     }
     if (!armorPierce) {
@@ -4354,7 +4431,7 @@ body.has-ant-buster-page {
         var dx = a.x - p.x;
         var dy = a.y - p.y;
         if (dx * dx + dy * dy < 6 * 6) {
-          applyDamage(a, p.damage, p.armorPierce, p.sourceCannon);
+          applyDamage(a, p.damage, p.armorPierce, p.sourceCannon, true);
           if (p.statusOnHit) {
             // statusOnHit is one effect descriptor or an array of them. Sonic
             // Pulse uses an array (knockback + stun in one volley); single-
@@ -4773,6 +4850,8 @@ body.has-ant-buster-page {
     game.effects = [];
     game.spawnJobs = [];
     game.slices = [];
+    // game.shatterParticles is ephemeral; do not persist if Save State is added later.
+    game.shatterParticles = [];
     game.gold = 150;
     game.waveIndex = 0;
     game.waveState = 'prep';
@@ -5013,6 +5092,7 @@ body.has-ant-buster-page {
       game.screenshake.magnitude = game.screenshake.magnitude - game.screenshake.decay * dt;
       if (game.screenshake.magnitude < 0) { game.screenshake.magnitude = 0; }
     }
+    updateShatterParticles(dt);
     game.time += dt;
     var simDt = dt * game.speed;
     // Plan 4 Task 26 — simulated-time accumulator. Slice timeout (and any
