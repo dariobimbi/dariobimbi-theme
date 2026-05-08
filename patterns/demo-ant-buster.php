@@ -2174,9 +2174,13 @@ body.has-ant-buster-page {
                  // (matched magnitude + remaining duration). Toxin's poison
                  // omits the tag so its kills don't propagate.
                  onTargetDeath: function(deadAnt) {
-                   var radius = 30;
                    var orig = deadAnt.effects.poison;
                    if (!orig) { return; }
+                   // Plan 4 — spreadRadius (Biohazard) overrides the 30 px
+                   // default. Plague leaves spreadRadius unset, so existing
+                   // behavior is unchanged.
+                   var radius = 30;
+                   if (orig.spreadRadius) { radius = orig.spreadRadius; }
                    var remainingDur = orig.expiresAt - game.time;
                    if (remainingDur <= 0) { return; }
                    for (var i = 0; i < game.ants.length; i++) {
@@ -2187,8 +2191,14 @@ body.has-ant-buster-page {
                      var dy = a.y - deadAnt.y;
                      if (dx * dx + dy * dy > radius * radius) { continue; }
                      applyStatus(a, 'poison', orig.magnitude, remainingDur, 'plague-spread');
-                     // Spread the spread tag too so chain-deaths keep propagating.
-                     if (a.effects.poison) { a.effects.poison.spreads = true; }
+                     // Spread the spread tag, the radius, and the damageAmp
+                     // tag too so chain-deaths keep the same propagation
+                     // shape and Biohazard's biohazard outline keeps showing.
+                     if (a.effects.poison) {
+                       a.effects.poison.spreads = true;
+                       if (orig.spreadRadius) { a.effects.poison.spreadRadius = orig.spreadRadius; }
+                       if (orig.damageAmp) { a.effects.poison.damageAmp = orig.damageAmp; }
+                     }
                    }
                  } },
     stun:      { name: 'Stun',      onApply: null, perTick: null, speedMult: function(m) { return 0; } },
@@ -2858,7 +2868,7 @@ body.has-ant-buster-page {
       tier: 'final',
       pellets: 5,
       coneDeg: 50,           // 50 deg fan, ~12.5 deg between pellets
-      upgradesTo: []
+      upgradesTo: ['scattergun']
     },
     minigun: {
       name: 'Minigun',
@@ -2870,7 +2880,7 @@ body.has-ant-buster-page {
       family: 'double',
       tier: 'final',
       aimJitter: 0.05,       // ~2.9 deg max per-shot angular wobble
-      upgradesTo: []
+      upgradesTo: ['phalanx']
     },
     toxin: {
       name: 'Toxin',
@@ -2897,7 +2907,7 @@ body.has-ant-buster-page {
       // lands +50% while the 0.8s freeze is active. See Step 2 stamp pattern
       // and applyDamage's freeze.damageAmp read.
       statusOnHit: { kind: 'freeze', magnitude: 1, duration: 0.8, damageAmp: 1.5 },
-      upgradesTo: []
+      upgradesTo: ['absolute_zero']
     },
     plague: {
       name: 'Plague',
@@ -2913,7 +2923,7 @@ body.has-ant-buster-page {
       // ants within 30 px via STATUS_KINDS.poison.onTargetDeath. 2.5 dps over
       // 6s = 15 dmg per stack.
       statusOnHit: { kind: 'poison', magnitude: 2.5, duration: 6, spreads: true },
-      upgradesTo: []
+      upgradesTo: ['biohazard']
     },
     sonic_pulse: {
       name: 'Sonic Pulse',
@@ -2931,7 +2941,7 @@ body.has-ant-buster-page {
         { kind: 'knockback', magnitude: 30, duration: 0 },
         { kind: 'stun', magnitude: 1, duration: 0.4 }
       ],
-      upgradesTo: []
+      upgradesTo: ['tempest']
     },
     frost: {
       name: 'Frost',
@@ -2959,7 +2969,7 @@ body.has-ant-buster-page {
         color: '#a4d4ff',
         lineWidth: 2
       },
-      upgradesTo: []
+      upgradesTo: ['blizzard']
     },
 
     // === Pink Rubber Family (Plan 4 — Bucket G carryover from Plan 3 §9) ===
@@ -3234,6 +3244,122 @@ body.has-ant-buster-page {
       // dmg * (1 - falloff), so falloff: 1 would deal zero on every hop.
       // Spec intent is "no falloff, full damage every jump" = falloff: 0.
       teslaArc: { jumps: 6, range: 80, falloff: 0 },
+      flashScale: 1.7,
+      upgradesTo: []
+    },
+
+    // === DOUBLE FAMILY GOD-TIER (Plan 4 — Bucket E, Task 21) ===
+    // Six T3 rows for the Double / status lineage. Blizzard uses MP-N (Task
+    // 11). Absolute Zero and Tempest carry splashStatus: true with
+    // splashMult: 0 — the splash exists only to broadcast the status, not to
+    // damage. Biohazard's spreadRadius reads in poison.onTargetDeath (below).
+    scattergun: {
+      name: 'Scattergun',
+      cost: 260,
+      damage: 3,
+      fireRate: 0.7,
+      range: 100,
+      projectileSpeed: 320,
+      family: 'double',
+      tier: 'god',
+      pellets: 8,
+      // coneDeg is the existing pellet-fan field; spreadDeg is the spec name.
+      coneDeg: 70,
+      linePierce: 1,
+      flashScale: 1.7,
+      upgradesTo: []
+    },
+    phalanx: {
+      name: 'Phalanx',
+      cost: 280,
+      damage: 2,
+      fireRate: 18,
+      range: 140,
+      projectileSpeed: 380,
+      family: 'double',
+      tier: 'god',
+      barrels: 3,
+      aimJitter: 0,
+      flashScale: 1.7,
+      upgradesTo: []
+    },
+    blizzard: {
+      name: 'Blizzard',
+      cost: 260,
+      damage: 0,
+      fireRate: 0,
+      range: 150,
+      projectileSpeed: 0,
+      family: 'double',
+      tier: 'god',
+      // MP-N persistent radial aura (Task 11). damagePerTick is per render
+      // tick at 60fps; updateCannons scales by dt. slow expires after
+      // slowExpiry seconds without re-application; freezeRandomEvery picks
+      // one ant in radius every N seconds and freezes for freezeDuration.
+      aura: {
+        radius: 150,
+        damagePerTick: 60,
+        slow: 0.5,
+        slowExpiry: 0.15,
+        freezeRandomEvery: 5,
+        freezeDuration: 2
+      },
+      flashScale: 1.7,
+      upgradesTo: []
+    },
+    absolute_zero: {
+      name: 'Absolute Zero',
+      cost: 280,
+      damage: 6,
+      fireRate: 1,
+      range: 130,
+      projectileSpeed: 280,
+      family: 'double',
+      tier: 'god',
+      // 1.5x damageAmp on the freeze tag — Plan 3's freeze.damageAmp pathway
+      // multiplies subsequent damage during the freeze window.
+      statusOnHit: { kind: 'freeze', magnitude: 1, duration: 1.5, damageAmp: 1.5 },
+      // splash for splashStatus broadcast only — splashMult 0 yields zero
+      // damage to bystanders, just propagates the freeze.
+      splash: { radius: 40, falloff: 0, splashMult: 0 },
+      splashStatus: true,
+      flashScale: 1.7,
+      upgradesTo: []
+    },
+    biohazard: {
+      name: 'Biohazard',
+      cost: 260,
+      damage: 4,
+      fireRate: 1,
+      range: 130,
+      projectileSpeed: 260,
+      family: 'double',
+      tier: 'god',
+      // 30 dmg over 8s = 3.75 dps. spreadRadius 50 propagates on death;
+      // damageAmp 1.25 makes the infected ant take 25% extra from any damage
+      // source (read in applyDamage's poison.damageAmp branch — Task 3).
+      statusOnHit: { kind: 'poison', magnitude: 30 / 8, duration: 8, spreads: true, spreadRadius: 50, damageAmp: 1.25 },
+      flashScale: 1.7,
+      upgradesTo: []
+    },
+    tempest: {
+      name: 'Tempest',
+      cost: 260,
+      damage: 10,
+      fireRate: 0.7,
+      range: 110,
+      projectileSpeed: 280,
+      family: 'double',
+      tier: 'god',
+      // splash for splashStatus broadcast only — splashMult 0, no damage.
+      splash: { radius: 50, falloff: 0, splashMult: 0 },
+      splashStatus: true,
+      // statusOnHit array — Plan 3's projectile-collision pathway wraps and
+      // iterates. Knockback 50 px backward + 0.8s stun.
+      statusOnHit: [
+        { kind: 'knockback', magnitude: 50, duration: 0 },
+        { kind: 'stun', magnitude: 1, duration: 0.8 }
+      ],
       flashScale: 1.7,
       upgradesTo: []
     }
