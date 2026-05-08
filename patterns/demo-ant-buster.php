@@ -420,6 +420,25 @@ body.has-ant-buster-page {
     return c;
   }
 
+  function makeCannonTurretToxin() {
+    // Double tier-2 (poison DoT). Bright green barrel with darker venom drips
+    // along the lower edge — reads as a chemical sprayer, distinct from
+    // Frost's icy blue and Triple Threat's magenta.
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    x.fillStyle = '#2a5a2a';
+    x.fillRect(7, 6, 6, 12);                    // dark green base
+    x.fillStyle = '#3aaa3a';
+    x.fillRect(8, 2, 4, 10);                    // bright green barrel
+    x.fillStyle = '#1a4a1a';
+    x.fillRect(7, 0, 6, 3);                     // dark muzzle tip
+    x.fillStyle = '#88e088';
+    x.fillRect(9, 3, 2, 1);                     // highlight
+    x.fillRect(6, 14, 1, 2);                    // venom drip left
+    x.fillRect(13, 16, 1, 2);                   // venom drip right
+    return c;
+  }
+
   function makeCannonTurretMinigun() {
     // Double tier-3 (sustained hose). Single sleek dark steel barrel with a
     // long muzzle and visible vent slits — reads as a high-RPM hose, distinct
@@ -817,6 +836,7 @@ body.has-ant-buster-page {
       triple_threat: makeCannonTurretTripleThreat(),
       buckshot: makeCannonTurretBuckshot(),
       minigun: makeCannonTurretMinigun(),
+      toxin: makeCannonTurretToxin(),
       frost: makeCannonTurretFrost(),
       glacier: makeCannonTurretGlacier()
     },
@@ -2343,8 +2363,7 @@ body.has-ant-buster-page {
       family: 'status',
       tier: 1,
       barrels: 2,            // multi-barrel volley logic landed in Task 13
-      // upgradesTo: Task 23 will append 'toxin'
-      upgradesTo: ['triple_threat', 'frost']
+      upgradesTo: ['triple_threat', 'frost', 'toxin']
     },
     triple_threat: {
       name: 'Triple Threat',
@@ -2382,6 +2401,19 @@ body.has-ant-buster-page {
       family: 'double',
       tier: 3,
       aimJitter: 0.05,       // ~2.9 deg max per-shot angular wobble
+      upgradesTo: []
+    },
+    toxin: {
+      name: 'Toxin',
+      cost: 75,
+      damage: 1,
+      fireRate: 1,
+      range: 100,
+      projectileSpeed: 200,
+      family: 'double',
+      tier: 2,
+      statusOnHit: { kind: 'poison', magnitude: 1, duration: 5 },   // 1 dps over 5s = 5 dmg DoT
+      // upgradesTo: ['plague', 'sonic_pulse'] — populated by Tasks 25/26
       upgradesTo: []
     },
     frost: {
