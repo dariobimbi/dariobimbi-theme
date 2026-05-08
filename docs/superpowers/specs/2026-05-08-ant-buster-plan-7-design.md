@@ -24,7 +24,7 @@ This turns the game's existing spatial puzzle (Plan 5) and compositional puzzle 
 - **Persistence.** No `localStorage` work. Targeting modes reset to `'closest'` on page refresh, like every other in-session state.
 - **Audio.** No click sound for mode buttons. Ant Buster has no audio system today and Plan 7 does not introduce one.
 - **Global toggles.** No "set all cannons to mode X" button. Targeting is strictly per-cannon. The strategic value of the feature is per-cannon differentiation; a global toggle would defeat the purpose.
-- **Aura and cone-DoT cannons.** Cannons whose kind def has an `aura` property (MP-N and similar radial-effect cannons) or that emit a cone DoT (Plasma Torch and similar) do not call `findTarget()`. They affect everything in radius or in the cone. The targeting UI is omitted on those cannons.
+- **Aura cannons.** Cannons whose kind def has an `aura` property (MP-N and similar radial-effect cannons) do not call `findTarget()`. They damage everything in radius and freeze a uniform-random pick. The targeting UI is omitted on those cannons. Cone-DoT cannons (Plasma Torch) DO call `findTarget()` to aim the cone, so they receive the UI like normal projectile cannons.
 - **Status-aware modes.** No "Target Un-Slowed" or "Target Frozen first" mode. Status-aware targeting is a real design space but a different conceptual category (filtering by status presence vs ranking by inherent property), and deserves its own design pass. Logged as a Plan 8+ candidate.
 - **Tooltip copy or in-game guidance.** No "the King is the strongest target" tutorial text in the UI. The mode buttons are dials; what the player does with them is the tactical decision.
 - **New cannon kinds.** Plan 7 modifies the targeting logic of the existing 51 cannons. No new cannons.
@@ -66,7 +66,7 @@ The selected-tower panel grows a new "Targeting" row:
 - Hover state: brief one-shade-lighter background highlight.
 - Below the button row: a single-line text label like "Targeting: Strongest" that updates based on the active mode.
 
-The targeting row is omitted entirely when the selected cannon's kind def has an `aura` property (truthy object check, not boolean) or when the kind is one that uses `applyConeDoT` for damage delivery. Implementer should grep for the actual cone marker at task time.
+The targeting row is omitted entirely when the selected cannon's kind def has an `aura` property (truthy object check, not boolean). Cone-DoT cannons (`def.coneDot`) and beam cannons (`def.beam`) both call `findTarget` and use targeting modes meaningfully (cone heading and beam target follow the picked ant), so they receive the UI.
 
 ### 2.4 — Visual feedback
 
@@ -298,13 +298,13 @@ In whichever function renders the selected-tower panel (the implementer should g
 
 ```js
 var def = CANNON_KINDS[cannon.kind];
-// Skip the targeting row for aura cannons (e.g., MP-N) and cone-DoT cannons
-// (e.g., Plasma Torch). They never call findTarget so the UI would be a no-op.
+// Skip the targeting row for aura cannons (e.g., MP-N). They never call
+// findTarget so the UI would be a no-op. Cone-DoT cannons (Plasma Torch)
+// and beam cannons (Glacier, Solar Lance) DO call findTarget and use
+// targeting modes meaningfully, so they receive the row.
 if (def.aura) {
   // skip rendering the targeting row
 } else {
-  // implementer should also check for the cone-DoT marker by grepping for
-  // applyConeDoT call sites and confirming the kind-def field that flags them.
   drawTargetingRow(cannon, panelX, panelY);
 }
 ```
@@ -389,9 +389,11 @@ If `game.ants` is empty or every ant in range fails the dead/intangible filter, 
 
 `ui.targetingRects` is populated only when the selected-tower panel renders. If `ui.selectedCannon` becomes null mid-frame (the player clicks elsewhere), the click handler must check `ui.targetingRects` for non-null before iterating, similar to the existing `ui.upgradeRects[i]` null-checks.
 
-### 7.4 — Mode buttons on aura/cone-DoT cannons
+### 7.4 — Mode buttons on aura cannons
 
-The targeting row is omitted entirely on these cannon kinds. The selected-tower panel still renders normally with name, upgrade buttons, sell, range preview, just without the targeting row. The vertical space the row would have occupied collapses naturally (the upgrade buttons sit higher). This makes "this cannon doesn't have a targeting decision" obvious by absence rather than by a disabled-looking control.
+The targeting row is omitted entirely on aura cannons (MP-N and similar `def.aura` kinds). The selected-tower panel still renders normally with name, upgrade buttons, sell, range preview, just without the targeting row. The vertical space the row would have occupied collapses naturally (the upgrade buttons sit higher). This makes "this cannon doesn't have a targeting decision" obvious by absence rather than by a disabled-looking control.
+
+Cone-DoT and beam cannons receive the row normally. For cone-DoT, the targeting mode determines which ant the cone is aimed at, which then determines which other ants get caught in the cone's spread. For beam, the targeting mode determines the beam's primary target (and, for pierce-beam cannons like Solar Lance, the line along which bystanders take damage).
 
 ### 7.5 — Tie cases
 
@@ -445,7 +447,7 @@ QA walk via Playwright against `http://localhost/dariobimbi.com/demos/ant-buster
 8. **Stealth override still wins.** Spawn a Stalker (or any stealth ant) plus a tougher non-stealth ant, reveal the Stalker via Hawkeye, set the cannon to `'strongest'`. Confirm the Stalker is the target despite having lower HP, because it is the only revealed ant in range.
 9. **Stealth + mode picking within revealed pool.** Spawn two revealed Stalkers in range, one with HP 10 and one with HP 40 (after partial damage). Mode `'strongest'`. Confirm the higher-HP one is the target.
 10. **Targeting row hidden on aura cannons.** Place an MP-N (or any aura cannon), select it, confirm the targeting row does not render in the panel.
-11. **Targeting row hidden on cone-DoT cannons.** Place a Plasma Torch (or any cone-DoT cannon), select it, confirm the targeting row does not render.
+11. **Cone-DoT heading follows targeting mode.** Place a Plasma Torch with one ant near the cannon and one ant near the cake. Set mode `'closest'` and confirm the cannon's `heading` aims at the cannon-near ant. Switch to `'first'` and confirm the heading shifts to aim at the cake-near ant. (This proves the targeting mode is wired into the cone-DoT path, not just the projectile path.)
 12. **Active mode highlighted.** Click each mode button in turn, confirm the 2 px border appears on the clicked button and on no other.
 13. **Mode label updates.** After each click, confirm the "Targeting: \<Name\>" label below the button row matches.
 14. **Target line draws when target exists.** Select a cannon with an in-range ant. Confirm a faint dashed white line is drawn from cannon to ant, and a 4 px square reticle on the ant.
