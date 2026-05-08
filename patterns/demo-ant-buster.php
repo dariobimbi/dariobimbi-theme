@@ -98,7 +98,9 @@ body.has-ant-buster-page {
   // regex — splitting case avoids the `||` operator, which gets HTML-encoded
   // inside inline scripts in this theme.
   var DEBUG = /[?&]debug=1/.test(location.search);
-  var DEBUG_KINDS = ['worker', 'carrier', 'scout', 'soldier', 'tank', 'splitter', 'phase', 'bomber', 'queen'];
+  var DEBUG_KINDS = ['worker', 'carrier', 'scout', 'soldier', 'tank',
+                     'splitter', 'mini_splitter', 'phase', 'bomber',
+                     'queen', 'king'];
   var debugCycleIdx = 0;
 
   // === GAME STATE ===
@@ -118,6 +120,7 @@ body.has-ant-buster-page {
     projectiles: [],
     effects: [],              // transient visual effects (e.g. Bomber AoE flash); see updateEffects
     lightningBolts: [],       // Tesla arc-jump polylines; each { points: [{x,y}], expiresAt: number }
+    spawnJobs: [],            // periodic spawn callbacks (King's worker drip — Plan 3 Task 31)
     slices: [],               // fallen cake slices on the ground (Task 23); 8s timeout returns to cake
     sprites: {},              // populated in Task 4
     gold: 150,
@@ -125,7 +128,7 @@ body.has-ant-buster-page {
     waveState: 'prep',        // 'prep' | 'wave' | 'won' | 'lost'
     prepRemaining: 30,        // seconds remaining in current prep window
     spawner: { groupIndex: 0, spawnedInGroup: 0, nextSpawnAt: 0, queueDone: false },
-    banner: { active: false, text: '', startedAt: 0, duration: 2.5, isBoss: false },
+    banner: { active: false, text: '', startedAt: 0, duration: 2.5, isBoss: false, isFinal: false },
     screenshake: { magnitude: 0, decay: 0 },
     paused: false,
     speed: 1
@@ -142,13 +145,20 @@ body.has-ant-buster-page {
     return true;
   }
 
-  // Show a wave-intro banner. Duration is longer for boss waves.
-  function showBanner(text, isBoss) {
+  // Show a wave-intro banner. Duration scales up for bosses, longer still
+  // for the final wave (Plan 3 Task 32) so the FINAL WAVE: THE KING text
+  // gets enough screen time to register before the King strolls onto the field.
+  function showBanner(text, isBoss, isFinal) {
     game.banner.active = true;
     game.banner.text = text;
     game.banner.startedAt = game.time;
-    game.banner.duration = isBoss ? 3 : 2.5;
+    if (isFinal) {
+      game.banner.duration = 4;
+    } else {
+      game.banner.duration = isBoss ? 3 : 2.5;
+    }
     game.banner.isBoss = isBoss;
+    game.banner.isFinal = !!isFinal;
   }
 
   // === CANVAS SETUP ===
@@ -876,6 +886,28 @@ body.has-ant-buster-page {
     return c;
   }
 
+  // King — final-wave boss (Plan 3 Task 29). 32x32 dark navy body with brown
+  // legs, a yellow three-spike crown over a dark band, and a red gem on the
+  // chest so the ant reads as a regal threat at any zoom level.
+  function makeKingSprite() {
+    var c = makeCanvas(32, 32);
+    var x = c.getContext('2d');
+    x.fillStyle = '#262b44';
+    x.fillRect(8, 8, 16, 22);                    // body
+    x.fillStyle = '#7a3a1a';
+    x.fillRect(6, 12, 4, 4); x.fillRect(22, 12, 4, 4);   // legs upper
+    x.fillRect(6, 20, 4, 4); x.fillRect(22, 20, 4, 4);   // legs lower
+    x.fillStyle = '#fee761';
+    x.fillRect(11, 4, 2, 4);                     // crown spike L
+    x.fillRect(15, 2, 2, 6);                     // crown spike center
+    x.fillRect(19, 4, 2, 4);                     // crown spike R
+    x.fillStyle = '#3a2a0a';
+    x.fillRect(11, 8, 10, 2);                    // crown band
+    x.fillStyle = '#e43b44';
+    x.fillRect(13, 16, 6, 6);                    // chest gem
+    return c;
+  }
+
   game.sprites = {
     worker: makeWorkerSprite(),
     soldier: makeSoldierSprite(),
@@ -886,6 +918,7 @@ body.has-ant-buster-page {
     phase: makePhase(),
     bomber: makeBomber(),
     queen: makeQueen(),
+    king: makeKingSprite(),
     splat: makeAntSplat(),
     cannonBase: makeCannonBase(),
     cannonTurret: makeCannonTurret(),         // kept for backward refs; lookups now go through turrets[kind]
@@ -1437,7 +1470,11 @@ body.has-ant-buster-page {
     if (bt > game.banner.duration - 0.5) { alpha = (game.banner.duration - bt) / 0.5; }
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.fillStyle = game.banner.isBoss ? '#a44' : '#3a4466';
+    if (game.banner.isFinal) {
+      ctx.fillStyle = '#7a1a1a';
+    } else {
+      ctx.fillStyle = game.banner.isBoss ? '#a44' : '#3a4466';
+    }
     ctx.fillRect(WIDTH / 2 - 48, 36, 96, 16);
     ctx.fillStyle = '#fee761';
     ctx.font = '10px monospace';
@@ -1590,6 +1627,20 @@ body.has-ant-buster-page {
   // (per-ant `effects` map) is wired in Task 4 — for now it just exists, empty.
   // barStyle (optional): { width, height, color, borderColor, persistent }.
   // Default = damage-triggered 16x2 red bar. Override per-kind for boss escalation.
+
+  // Plan 3 Task 30 — factory for King's threshold-summon hook. Returns a
+  // closure that spawns N Soldiers around the King at HP-threshold crossings.
+  function spawnSoldiersAtKing(count) {
+    return function(king) {
+      for (var i = 0; i < count; i++) {
+        var ang = Math.random() * Math.PI * 2;
+        var dx = Math.cos(ang) * 10;
+        var dy = Math.sin(ang) * 10;
+        spawnAntAt('soldier', king.x + dx, king.y + dy, 'threshold');
+      }
+    };
+  }
+
   var ANT_KINDS = {
     worker: {
       name: 'Worker',
@@ -1614,7 +1665,7 @@ body.has-ant-buster-page {
       name: 'Carrier',
       hp: 15,
       speed: 30,
-      carryingSpeedMult: 0.7,
+      carryingSpeedMult: 1.5,    // Plan 3 Task 33 — flees at 45 px/s once a slice is grabbed (panic sprint)
       gold: 4,
       alignment: 0.2,
       jitterRate: 4.0,
@@ -1806,6 +1857,46 @@ body.has-ant-buster-page {
           spawnAntAt('worker', ant.x + Math.cos(ang) * 12, ant.y + Math.sin(ang) * 12, 'queen');
         }
       }
+    },
+    // King — final-wave boss (Plan 3 Tasks 29-31). Slow regal sprite with a
+    // persistent dark-red HP bar so the threat reads from spawn. onSpawn
+    // registers a periodic worker drip from (10, 320); onHpThresholds
+    // summons 4 Soldiers at 75/50/25% HP. canPickup=false so the King ignores
+    // the cake — only the drip-workers can finish a run.
+    king: {
+      name: 'King',
+      hp: 3000,
+      speed: 10,
+      gold: 200,
+      alignment: 0.4,
+      jitterRate: 1.0,
+      wanderFreqMin: 0.1, wanderFreqMax: 0.2,
+      wanderAmpMin: 0.2, wanderAmpMax: 0.4,
+      spriteKey: 'king',
+      spriteW: 32, spriteH: 32,
+      carryingSpeedMult: 1,        // unused (canPickup=false) but keeps the schema uniform
+      slowResist: 0.5,
+      damageMult: 1,
+      pierceMult: 1,
+      canPickup: false,
+      armor: 0.5,
+      barStyle: { width: 60, height: 4, color: '#d04020', borderColor: '#fff', persistent: true },
+      onHpThresholds: [
+        { at: 0.75, action: spawnSoldiersAtKing(4) },
+        { at: 0.50, action: spawnSoldiersAtKing(4) },
+        { at: 0.25, action: spawnSoldiersAtKing(4) }
+      ],
+      onSpawn: function(king) {
+        game.spawnJobs.push({
+          interval: 2.5,
+          lastFiredAt: game.time,
+          owner: king,
+          fn: function() {
+            spawnAntAt('worker', 10, 320, 'drip', { x: 10, y: 320 });
+          }
+        });
+      },
+      onDeath: null
     }
   };
 
@@ -1907,6 +1998,7 @@ body.has-ant-buster-page {
       isRevealed: false
     };
     game.ants.push(ant);
+    if (k.onSpawn) { k.onSpawn(ant); }
     return ant;
   }
 
@@ -3013,6 +3105,23 @@ body.has-ant-buster-page {
       dmg = dmg * (1 - armor);
     }
     ant.hp = ant.hp - dmg;
+    // Threshold-summon hook (Plan 3 Task 30 — King). Each entry fires once
+    // when HP drops past `at` (a fraction of maxHp). firedThresholds is
+    // initialized in spawnAnt so the keyed write here is safe even on the
+    // first crossing. Nested ifs to avoid inline-script `&&`.
+    if (k.onHpThresholds) {
+      var pct = ant.hp / ant.maxHp;
+      for (var ti = 0; ti < k.onHpThresholds.length; ti++) {
+        var thr = k.onHpThresholds[ti];
+        var key = String(thr.at);
+        if (!ant.firedThresholds[key]) {
+          if (pct < thr.at) {
+            ant.firedThresholds[key] = true;
+            thr.action(ant);
+          }
+        }
+      }
+    }
   }
 
   // Centralized kill handling. Used by both projectile collision and beam tick
@@ -3395,8 +3504,10 @@ body.has-ant-buster-page {
       { type: 'tank',    count: 8,  interval: 1.8, delay: 0 },
       { type: 'carrier', count: 12, interval: 0.7, delay: 1 },
       { type: 'bomber',  count: 8,  interval: 1.2, delay: 1 }
+    ]},
+    { number: 25, prepTime: 30, isBoss: true, bannerText: 'FINAL WAVE: THE KING', spawns: [
+      { type: 'king', count: 1, interval: 0, delay: 0 }
     ]}
-    // wave 25 (FINAL WAVE: THE KING) added in Task 32 once King is implemented
   ];
 
   // Resolve a wave's prep duration: explicit prepTime wins, else default by
@@ -3419,7 +3530,7 @@ body.has-ant-buster-page {
         game.spawner.nextSpawnAt = game.time + WAVES[game.waveIndex].spawns[0].delay;
         game.spawner.queueDone = false;
         var wv = WAVES[game.waveIndex];
-        showBanner(wv.bannerText, !!wv.isBoss);
+        showBanner(wv.bannerText, !!wv.isBoss, wv.number === 25);
       }
       return;
     }
@@ -3481,6 +3592,7 @@ body.has-ant-buster-page {
     game.cannons = [];
     game.projectiles = [];
     game.effects = [];
+    game.spawnJobs = [];
     game.slices = [];
     game.gold = 150;
     game.waveIndex = 0;
@@ -3495,6 +3607,7 @@ body.has-ant-buster-page {
     game.banner.startedAt = 0;
     game.banner.duration = 2.5;
     game.banner.isBoss = false;
+    game.banner.isFinal = false;
     game.screenshake.magnitude = 0;
     game.screenshake.decay = 0;
     game.paused = false;
@@ -3719,6 +3832,28 @@ body.has-ant-buster-page {
     game.time += dt;
     var simDt = dt * game.speed;
     updateWaveState(dt);
+    // Periodic spawn jobs (Plan 3 Task 31 — King's worker drip). Each job
+    // fires on its own interval and is owned by an ant; jobs whose owners
+    // have died are pruned out. Nested ifs to avoid inline-script `&&`.
+    for (var ji = 0; ji < game.spawnJobs.length; ji++) {
+      var job = game.spawnJobs[ji];
+      if (job.owner) {
+        if (job.owner.dead) { continue; }
+      }
+      if (game.time - job.lastFiredAt >= job.interval) {
+        job.lastFiredAt = game.time;
+        job.fn();
+      }
+    }
+    var keptJobs = [];
+    for (var jj = 0; jj < game.spawnJobs.length; jj++) {
+      var keep = true;
+      if (game.spawnJobs[jj].owner) {
+        if (game.spawnJobs[jj].owner.dead) { keep = false; }
+      }
+      if (keep) { keptJobs.push(game.spawnJobs[jj]); }
+    }
+    game.spawnJobs = keptJobs;
     updateAnts(simDt);
     updateCannons(simDt);
     updateProjectiles(simDt);
@@ -3799,6 +3934,7 @@ body.has-ant-buster-page {
   window.__abUi = ui;
   window.__abStatusKinds = STATUS_KINDS;
   window.__abApplyStatus = applyStatus;
+  window.__abApplyDamage = applyDamage;
   window.__abWaves = WAVES;
 })();
 </script>
