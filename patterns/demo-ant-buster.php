@@ -420,6 +420,26 @@ body.has-ant-buster-page {
     return c;
   }
 
+  function makeCannonTurretSonicPulse() {
+    // Double tier-3 (knockback + stun). Yellow horn-shaped emitter with a
+    // dark inner cone — reads as a sonic horn / megaphone, distinct from
+    // the chemical sprayers (Toxin / Plague) and the icy variants.
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    x.fillStyle = '#888822';
+    x.fillRect(8, 10, 4, 8);                    // dark stem
+    x.fillStyle = '#cccc3a';
+    x.fillRect(6, 4, 8, 7);                     // wide horn body
+    x.fillStyle = '#eedd44';
+    x.fillRect(5, 0, 10, 5);                    // flared bell mouth
+    x.fillStyle = '#3a3a14';
+    x.fillRect(7, 1, 6, 3);                     // dark inner cone
+    x.fillStyle = '#fff080';
+    x.fillRect(7, 6, 1, 4);                     // horn highlight left
+    x.fillRect(12, 6, 1, 4);                    // horn highlight right
+    return c;
+  }
+
   function makeCannonTurretPlague() {
     // Double tier-3 (poison + spread on death). Sickly bright-green barrel
     // with a bulbous reservoir at the breech — reads as the bigger sibling
@@ -878,6 +898,7 @@ body.has-ant-buster-page {
       minigun: makeCannonTurretMinigun(),
       toxin: makeCannonTurretToxin(),
       plague: makeCannonTurretPlague(),
+      sonic_pulse: makeCannonTurretSonicPulse(),
       frost: makeCannonTurretFrost(),
       glacier: makeCannonTurretGlacier(),
       cryo: makeCannonTurretCryo()
@@ -2479,8 +2500,7 @@ body.has-ant-buster-page {
       family: 'double',
       tier: 2,
       statusOnHit: { kind: 'poison', magnitude: 1, duration: 5 },   // 1 dps over 5s = 5 dmg DoT
-      // upgradesTo: Task 26 will append 'sonic_pulse'
-      upgradesTo: ['plague']
+      upgradesTo: ['plague', 'sonic_pulse']
     },
     cryo: {
       name: 'Cryo',
@@ -2511,6 +2531,24 @@ body.has-ant-buster-page {
       // ants within 30 px via STATUS_KINDS.poison.onTargetDeath. 2.5 dps over
       // 6s = 15 dmg per stack.
       statusOnHit: { kind: 'poison', magnitude: 2.5, duration: 6, spreads: true },
+      upgradesTo: []
+    },
+    sonic_pulse: {
+      name: 'Sonic Pulse',
+      cost: 90,
+      damage: 5,
+      fireRate: 0.8,
+      range: 100,
+      projectileSpeed: 240,
+      family: 'double',
+      tier: 3,
+      // statusOnHit array: knockback (one-shot 30 px backward shove) +
+      // stun (0.4s zero-movement). Array form is handled by the
+      // projectile-collision pathway's wrap-and-iterate.
+      statusOnHit: [
+        { kind: 'knockback', magnitude: 30, duration: 0 },
+        { kind: 'stun', magnitude: 1, duration: 0.4 }
+      ],
       upgradesTo: []
     },
     frost: {
@@ -3075,21 +3113,28 @@ body.has-ant-buster-page {
         if (dx * dx + dy * dy < 6 * 6) {
           applyDamage(a, p.damage, p.armorPierce, p.sourceCannon);
           if (p.statusOnHit) {
-            var s = p.statusOnHit;
-            applyStatus(a, s.kind, s.magnitude, s.duration, 'projectile');
-            // Tag-after-apply pattern: extra fields (Cryo's damageAmp,
-            // Plague's spreads) live on the cannon's statusOnHit config and
-            // get stamped onto the just-applied effect here, so applyStatus
-            // itself stays lean. Future emitters carry their own tags without
-            // any framework change.
-            if (s.damageAmp) {
-              if (a.effects[s.kind]) {
-                a.effects[s.kind].damageAmp = s.damageAmp;
+            // statusOnHit is one effect descriptor or an array of them. Sonic
+            // Pulse uses an array (knockback + stun in one volley); single-
+            // effect cannons stay backwards compatible via the wrap-in-array.
+            var slist = p.statusOnHit;
+            if (!Array.isArray(slist)) { slist = [slist]; }
+            for (var si = 0; si < slist.length; si++) {
+              var s = slist[si];
+              applyStatus(a, s.kind, s.magnitude, s.duration, 'projectile');
+              // Tag-after-apply pattern: extra fields (Cryo's damageAmp,
+              // Plague's spreads) live on the cannon's statusOnHit config and
+              // get stamped onto the just-applied effect here, so applyStatus
+              // itself stays lean. Future emitters carry their own tags
+              // without any framework change.
+              if (s.damageAmp) {
+                if (a.effects[s.kind]) {
+                  a.effects[s.kind].damageAmp = s.damageAmp;
+                }
               }
-            }
-            if (s.spreads) {
-              if (a.effects[s.kind]) {
-                a.effects[s.kind].spreads = true;
+              if (s.spreads) {
+                if (a.effects[s.kind]) {
+                  a.effects[s.kind].spreads = true;
+                }
               }
             }
           }
@@ -3195,41 +3240,56 @@ body.has-ant-buster-page {
   // begins), a `bonus` (gold awarded on clear), and a list of spawn `groups`.
   // Each group spawns `count` ants of `type`, one every `interval` seconds,
   // starting `delay` seconds after the previous group finished.
+  // Prep-time defaults per Plan 3 spec §2.3: 20s for regular waves, 30s for
+  // boss waves (5/10/15/20/25). Waves can override via an explicit prepTime
+  // field (wave 1 does this to keep the spec's first-run 30s breather).
+  // Bonus formula is now `20 + wave.number` (replaces Plan 2's hand-tuned
+  // values); deleted bonus fields here are intentional, not lost data.
+  var DEFAULT_PREP_REGULAR = 20;
+  var DEFAULT_PREP_BOSS = 30;
+
   var WAVES = [
     {
       number: 1,
-      prep: 30,
-      bonus: 21,
+      prepTime: 30,           // explicit — wave 1 keeps spec's 30s opener
       spawns: [
         { type: 'worker', count: 8, interval: 1.0, delay: 0 }
       ]
     }
   ];
   WAVES.push({
-    number: 2, prep: 20, bonus: 30,
+    number: 2,
     spawns: [{ type: 'worker', count: 12, interval: 0.8, delay: 0 }]
   });
   WAVES.push({
-    number: 3, prep: 20, bonus: 35,
+    number: 3,
     spawns: [
       { type: 'worker', count: 6, interval: 0.7, delay: 0 },
       { type: 'worker', count: 6, interval: 0.7, delay: 4 }
     ]
   });
   WAVES.push({
-    number: 4, prep: 20, bonus: 45,
+    number: 4,
     spawns: [
       { type: 'worker', count: 10, interval: 0.7, delay: 0 },
       { type: 'scout', count: 4, interval: 1.0, delay: 1.5 }
     ]
   });
   WAVES.push({
-    number: 5, prep: 30, bonus: 75, boss: true,
+    number: 5, boss: true,
     spawns: [
       { type: 'queen', count: 1, interval: 1, delay: 0 },
       { type: 'worker', count: 8, interval: 0.8, delay: 2 }
     ]
   });
+
+  // Resolve a wave's prep duration: explicit prepTime wins, else default by
+  // boss flag. Used both by updateWaveState's prep transition and resetGame.
+  function wavePrepDuration(wv) {
+    if (wv.prepTime) { return wv.prepTime; }
+    if (wv.boss) { return DEFAULT_PREP_BOSS; }
+    return DEFAULT_PREP_REGULAR;
+  }
 
   // Spawner state machine: prep -> wave -> (prep | won) ; lost is set by the
   // cake-loss path. Reads game.time for spawn scheduling.
@@ -3273,13 +3333,17 @@ body.has-ant-buster-page {
           if (!game.ants[i].dead) { alive = alive + 1; }
         }
         if (alive === 0) {
-          game.gold = game.gold + wv.bonus;
+          // Plan 3 spec §2.3: wave-completion bonus = 20 + wave.number.
+          // Replaces Plan 2's hand-tuned bonus field (wave 5 was 75g, now 25g —
+          // intentional rebalance to make the 21-cannon roster's choices feel
+          // meaningful in the late-game economy).
+          game.gold = game.gold + (20 + wv.number);
           if (game.waveIndex + 1 >= WAVES.length) {
             game.waveState = 'won';
           } else {
             game.waveIndex = game.waveIndex + 1;
             game.waveState = 'prep';
-            game.prepRemaining = WAVES[game.waveIndex].prep;
+            game.prepRemaining = wavePrepDuration(WAVES[game.waveIndex]);
           }
         }
       }
@@ -3299,7 +3363,7 @@ body.has-ant-buster-page {
     game.gold = 150;
     game.waveIndex = 0;
     game.waveState = 'prep';
-    game.prepRemaining = WAVES[0].prep;
+    game.prepRemaining = wavePrepDuration(WAVES[0]);
     game.spawner.groupIndex = 0;
     game.spawner.spawnedInGroup = 0;
     game.spawner.nextSpawnAt = 0;
