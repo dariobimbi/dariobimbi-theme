@@ -111,7 +111,8 @@ body.has-ant-buster-page {
   // state machine. The render and input layers read whichever flag is relevant.
   var game = {
     state: 'idle',            // 'idle' | 'playing'
-    time: 0,                  // seconds since game start
+    time: 0,                  // seconds since game start (real-time, ignores speed multiplier)
+    simTime: 0,               // simulated seconds (scales with game.speed); used for slice timeout
     accumulator: 0,           // for fixed-timestep
     cake: { x: 352, y: 80, slices: 8, lost: 0 },
     anthill: { x: 40, y: 300 },
@@ -4044,7 +4045,7 @@ body.has-ant-buster-page {
     // a life deduction (updateSlices). Cake accounting: kill->drop is neutral on cake.slices,
     // timeout refunds it, ground pickup just transfers ownership.
     if (ant.carrying) {
-      game.slices.push({ x: ant.x, y: ant.y, droppedAt: game.time, claimedBy: null });
+      game.slices.push({ x: ant.x, y: ant.y, droppedAt: game.simTime, claimedBy: null });
       ant.carrying = false;
     }
     if (killer) {
@@ -4706,6 +4707,7 @@ body.has-ant-buster-page {
   function resetGame() {
     game.state = 'playing';
     game.time = 0;
+    game.simTime = 0;
     game.cake.slices = 8;
     game.cake.lost = 0;
     game.ants = [];
@@ -4924,13 +4926,16 @@ body.has-ant-buster-page {
   // Task 23: tick fallen-slice timeouts. After 8s of nobody picking up a dropped
   // slice, it snaps back to the cake without a life deduction (the player is not
   // penalized for an enemy that died mid-carry). dt is unused — we compare against
-  // game.time which advances in update() — but kept in the signature for parity
+  // game.simTime which advances in update() — but kept in the signature for parity
   // with the other update* functions.
   function updateSlices(dt) {
     var kept = [];
     for (var i = 0; i < game.slices.length; i++) {
       var s = game.slices[i];
-      var age = game.time - s.droppedAt;
+      // Plan 4 Task 26 — read simTime so 8s "feels" like 8 simulation seconds
+      // at any speed multiplier. Slices dropped from killAnt also stamp
+      // droppedAt: game.simTime, so the diff stays consistent.
+      var age = game.simTime - s.droppedAt;
       if (age >= 8) {
         game.cake.slices = game.cake.slices + 1;
         continue;
@@ -4953,6 +4958,12 @@ body.has-ant-buster-page {
     }
     game.time += dt;
     var simDt = dt * game.speed;
+    // Plan 4 Task 26 — simulated-time accumulator. Slice timeout (and any
+    // future age-based mechanic that should "feel" the speed multiplier)
+    // reads game.simTime so an 8-second slice still ages 8 simulated seconds
+    // at 0.5x or 2x speed. game.time stays on the real-world clock for
+    // screenshake decay and unlock-pulse animations.
+    game.simTime = game.simTime + simDt;
     updateWaveState(dt);
     // Periodic spawn jobs (Plan 3 Task 31 — King's worker drip). Each job
     // fires on its own interval and is owned by an ant; jobs whose owners
