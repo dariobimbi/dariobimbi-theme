@@ -3902,11 +3902,20 @@ body.has-ant-buster-page {
           if (sk) {
             if (sk.splash) {
               applySplash(p.x, p.y, sk.splash.radius, p.damage * sk.splash.splashMult, sk.splash.falloff, p.sourceCannon);
-              // Screenshake on splash impact (Plan 3 — Shockwave). Direct hits
-              // without splash never trigger shake. Nested ifs avoid the and-operator.
-              if (sk.screenshake) {
-                game.screenshake.magnitude = sk.screenshake.magnitude;
-                game.screenshake.decay = sk.screenshake.decay;
+              // Screenshake on splash impact (Plan 3 — Shockwave; Plan 4 —
+              // Earthshaker, Annihilator). Direct hits without splash never
+              // trigger shake. Plan 4 prefers the flat screenShakeMag number
+              // (default decay 12); legacy screenshake object kept for
+              // Shockwave's tuned 3-magnitude / 12-decay snap. Nested ifs
+              // avoid the and-operator.
+              if (sk.screenShakeMag) {
+                game.screenshake.magnitude = sk.screenShakeMag;
+                game.screenshake.decay = 12;
+              } else {
+                if (sk.screenshake) {
+                  game.screenshake.magnitude = sk.screenshake.magnitude;
+                  game.screenshake.decay = sk.screenshake.decay;
+                }
               }
             }
           }
