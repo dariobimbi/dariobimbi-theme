@@ -5046,6 +5046,40 @@ body.has-ant-buster-page {
         debugCycleIdx = debugCycleIdx + 1;
         return;
       }
+      // Plan 4 — ?debug=1 G: toggle godTierUnlocked. When toggling true,
+      // also stamps godTierUnlockPulseStart so the panel-button pulse fires
+      // for visual testing. Branched two ifs to avoid the inline-script
+      // and-operator (CLAUDE.md note on || encoding).
+      var keyG = false;
+      if (e.key === 'g') { keyG = true; }
+      if (e.key === 'G') { keyG = true; }
+      if (keyG) {
+        game.godTierUnlocked = !game.godTierUnlocked;
+        if (game.godTierUnlocked) {
+          game.godTierUnlockPulseStart = game.time;
+        }
+        return;
+      }
+      // Plan 4 — ?debug=1 W: soft-reset to wave 16 prep with god-tier
+      // already unlocked. Skips the 15-wave grind so King-fight tuning
+      // (post-implementation playtest, spec §9) doesn't require a 20-min
+      // run-up every iteration. Field names align with resetGame.
+      var keyW = false;
+      if (e.key === 'w') { keyW = true; }
+      if (e.key === 'W') { keyW = true; }
+      if (keyW) {
+        game.ants = [];
+        game.projectiles = [];
+        game.lightningBolts = [];
+        game.effects = [];
+        game.spawnJobs = [];
+        game.waveIndex = 15;
+        game.waveState = 'prep';
+        game.prepRemaining = wavePrepDuration(WAVES[game.waveIndex]);
+        game.godTierUnlocked = true;
+        game.godTierUnlockPulseStart = game.time;
+        return;
+      }
     }
   });
 
