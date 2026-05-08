@@ -1263,6 +1263,28 @@ body.has-ant-buster-page {
         ctx.drawImage(sprite, Math.round(a.x - k.spriteW / 2), Math.round(a.y - k.spriteH / 2));
       }
       if (!a.dead) {
+        // Plan 4 — Biohazard infected outline. Bright cyan pulse around any
+        // ant whose poison effect carries damageAmp >= 1.25 (Biohazard's
+        // signature). Identifies the +25% priority target at a glance,
+        // distinct from poison's existing green tint. Sin-based alpha pulse
+        // (period ~0.6s); ~2px stroke width on top of the ant sprite.
+        if (a.effects) {
+          if (a.effects.poison) {
+            if (a.effects.poison.damageAmp) {
+              if (a.effects.poison.damageAmp >= 1.25) {
+                var biAlpha = 0.65 + 0.25 * Math.sin(game.time * 10);
+                ctx.save();
+                ctx.globalAlpha = biAlpha;
+                ctx.strokeStyle = '#00ffff';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(a.x, a.y, 10, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+              }
+            }
+          }
+        }
         if (a.carrying) {
           // Crumb sub-step: tiny orange dot above the ant body.
           ctx.fillStyle = '#feae34';
