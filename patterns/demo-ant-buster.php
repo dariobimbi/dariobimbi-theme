@@ -1135,13 +1135,82 @@ body.has-ant-buster-page {
     ui.selectedCannon = null;
   }
 
+  // Plan 7 — Targeting row: 5 buttons (C, F, L, S, W) + label below.
+  // Returns the y-coordinate immediately after the row, so drawTowerPanel
+  // can push the upgrade buttons down by the row's vertical extent.
+  // Sets ui.targetingRects to a 5-array of hit-test rects in mode order:
+  //   [closest, first, last, strongest, weakest].
+  function drawTargetingRow(c, px, py) {
+    var def = CANNON_KINDS[c.kind];
+    // Aura cannons (MP-N etc.) don't call findTarget, so the row is omitted.
+    // Cone-DoT (Plasma Torch) and beam (Glacier, Solar Lance) DO call findTarget
+    // and use targeting modes meaningfully, so they receive the row.
+    if (def.aura) {
+      ui.targetingRects = [];
+      return py;
+    }
+
+    var modes = ['closest', 'first', 'last', 'strongest', 'weakest'];
+    var glyphs = ['C', 'F', 'L', 'S', 'W'];
+    var modeNames = ['Closest', 'First', 'Last', 'Strongest', 'Weakest'];
+    var activeColors = ['#3a4a8c', '#9a7820', '#3a3a3a', '#7a2020', '#7a2040'];
+    var inactiveBg = '#1a1a28';
+    var btnW = 22;
+    var btnH = 22;
+    var gap = 4;
+    var rowY = py;
+
+    var active = c.targetingMode;
+    if (!active) { active = 'closest'; }
+
+    ui.targetingRects = [];
+    for (var i = 0; i < 5; i++) {
+      var bx = px + i * (btnW + gap);
+      var by = rowY;
+      var isActive = (modes[i] === active);
+
+      if (isActive) {
+        ctx.fillStyle = activeColors[i];
+      } else {
+        ctx.fillStyle = inactiveBg;
+      }
+      ctx.fillRect(bx, by, btnW, btnH);
+
+      if (isActive) {
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(bx + 1, by + 1, btnW - 2, btnH - 2);
+        ctx.lineWidth = 1;
+      }
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 12px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(glyphs[i], bx + btnW / 2, by + btnH / 2 + 4);
+      ctx.textAlign = 'left';
+
+      ui.targetingRects.push({ x: bx, y: by, w: btnW, h: btnH });
+    }
+
+    var labelY = rowY + btnH + 12;
+    var activeIdx = 0;
+    for (var li = 0; li < modes.length; li++) {
+      if (modes[li] === active) { activeIdx = li; break; }
+    }
+    ctx.fillStyle = '#cccccc';
+    ctx.font = '10px monospace';
+    ctx.fillText('Targeting: ' + modeNames[activeIdx], px, labelY);
+
+    return labelY + 6;
+  }
+
   function drawTowerPanel(c) {
     var sk = CANNON_KINDS[c.kind];
     var px = PLAYFIELD_W + 8;
     var py = 32;
     var pw = SHOP_W - 16;
     ctx.fillStyle = '#262b44';
-    ctx.fillRect(px, py, pw, 200);
+    ctx.fillRect(px, py, pw, 232);  // Plan 7 — +32 to fit targeting row
     ctx.fillStyle = '#fee761';
     ctx.font = '10px monospace';
     ctx.textAlign = 'left';
@@ -1154,6 +1223,12 @@ body.has-ant-buster-page {
     if (c.kills) { killCount = c.kills; } else { killCount = 0; }
     ctx.fillText('KILLS ' + killCount, px + 6, py + 66);
 
+    // Plan 7 — Targeting row sits between stats and upgrades. Returns the
+    // y-coordinate where the next element can start. For aura cannons the row
+    // is omitted and the function returns the y it received, so the upgrade
+    // base-Y clamp below preserves the original layout.
+    var afterTargetingY = drawTargetingRow(c, px + 6, py + 78);
+
     // Upgrade buttons (up to 3) — only present when sk.upgradesTo is non-empty.
     // Base cannons offer 3 mid options, mid cannons offer 2 finals, finals
     // offer 1 god-tier (Plan 4). God-tier buttons render at 50% alpha with a
@@ -1162,10 +1237,15 @@ body.has-ant-buster-page {
     var upgrades = sk.upgradesTo;
     if (!upgrades) { upgrades = []; }
     var hoveredLockedRect = null;
+    // Plan 7 — upgradeBaseY shifts to accommodate the targeting row. For aura
+    // cannons (no row), afterTargetingY equals py + 78, which is below py + 90,
+    // so the clamp keeps the original layout.
+    var upgradeBaseY = afterTargetingY;
+    if (upgradeBaseY < py + 90) { upgradeBaseY = py + 90; }
     for (var i = 0; i < upgrades.length; i++) {
       var uk = upgrades[i];
       var udef = CANNON_KINDS[uk];
-      var by = py + 90 + i * 22;
+      var by = upgradeBaseY + i * 22;
       var bx = px + 6;
       var bw = pw - 12;
       var bh = 18;
@@ -1248,7 +1328,7 @@ body.has-ant-buster-page {
 
     // Sell button — pinned near the bottom of the panel rect.
     var refund = sellRefund(c);
-    var sy = py + 200 - 26;
+    var sy = py + 232 - 26;  // Plan 7 — panel height bumped to 232
     ctx.fillStyle = '#a44';
     ctx.fillRect(px + 6, sy, pw - 12, 18);
     ctx.fillStyle = '#fee761';
@@ -1940,6 +2020,7 @@ body.has-ant-buster-page {
     drawCannonBases();         // 6. static cannon bases (under turrets/ants)
     drawAnts();                // 7. ants, sorted top-down by y
     drawShatterParticles();    // 7b. cyan shatter particles (Plan 6 Brittle)
+    drawTargetingOverlay();    // 7c. selected-cannon target line + reticle (Plan 7)
     drawCannonTurrets();       // 8. cannon turrets + muzzle/disable indicators
     drawProjectiles();         // 9a. projectiles
     drawBeams();               // 9b. beam lines (Glacier, Lance)
@@ -2413,6 +2494,31 @@ body.has-ant-buster-page {
       ctx.globalAlpha = alpha;
       ctx.fillRect(Math.round(p.x) - 1, Math.round(p.y) - 1, 2, 2);
     }
+    ctx.restore();
+  }
+
+  // Plan 7 — Targeting overlay. When a cannon is selected, draws a faint
+  // dashed white line from the cannon to its current target and a 4 px
+  // reticle on the target. Gated on selectedCannon non-null and the cannon
+  // having a live target.
+  function drawTargetingOverlay() {
+    if (!ui.selectedCannon) { return; }
+    var c = ui.selectedCannon;
+    if (!c.target) { return; }
+    if (c.target.dead) { return; }
+
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(c.x, c.y);
+    ctx.lineTo(c.target.x, c.target.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.fillRect(Math.round(c.target.x) - 2, Math.round(c.target.y) - 2, 4, 4);
     ctx.restore();
   }
 
@@ -3597,7 +3703,8 @@ body.has-ant-buster-page {
       target: null,
       kills: 0,
       disabled: false,
-      disabledUntil: 0
+      disabledUntil: 0,
+      targetingMode: 'closest'  // Plan 7 — per-cannon targeting dial
     });
     return true;
   }
@@ -3605,9 +3712,13 @@ body.has-ant-buster-page {
   function findTarget(cannon) {
     var def = CANNON_KINDS[cannon.kind];
     var rangeSq = def.range * def.range;
-    var revealedTarget = null;
-    var nearest = null;
-    var nearestDistSq = rangeSq;
+    var mode = cannon.targetingMode;
+    if (!mode) { mode = 'closest'; }
+
+    // Filter pass: gather candidates with cached distSq, flag if any revealed.
+    // Avoids and-operator chains by using nested ifs (CLAUDE.md inline-script gotcha).
+    var candidates = [];
+    var anyRevealed = false;
     for (var i = 0; i < game.ants.length; i++) {
       var a = game.ants[i];
       if (a.dead) { continue; }
@@ -3616,18 +3727,47 @@ body.has-ant-buster-page {
       var dy = a.y - cannon.y;
       var distSq = dx * dx + dy * dy;
       if (distSq > rangeSq) { continue; }
-      if (a.isRevealed) {
-        if (!revealedTarget) {
-          revealedTarget = a;
-        }
-      }
-      if (distSq < nearestDistSq) {
-        nearest = a;
-        nearestDistSq = distSq;
+      candidates.push({ ant: a, distSq: distSq });
+      if (a.isRevealed) { anyRevealed = true; }
+    }
+    if (candidates.length === 0) { return null; }
+
+    // Stealth filter: if any revealed, keep only revealed ants. Preserves the
+    // existing Hawkeye apex-priority while letting the mode pick within that pool.
+    var pool = candidates;
+    if (anyRevealed) {
+      pool = [];
+      for (var j = 0; j < candidates.length; j++) {
+        if (candidates[j].ant.isRevealed) { pool.push(candidates[j]); }
       }
     }
-    if (revealedTarget) { return revealedTarget; }
-    return nearest;
+
+    // Pick pass: apply the targeting mode to the active pool.
+    var best = pool[0];
+    for (var k = 1; k < pool.length; k++) {
+      var cur = pool[k];
+      if (mode === 'closest') {
+        if (cur.distSq < best.distSq) { best = cur; }
+      } else if (mode === 'strongest') {
+        if (cur.ant.hp > best.ant.hp) { best = cur; }
+      } else if (mode === 'weakest') {
+        if (cur.ant.hp < best.ant.hp) { best = cur; }
+      } else {
+        // first or last: compare squared distance to cake.
+        var ccdx = cur.ant.x - game.cake.x;
+        var ccdy = cur.ant.y - game.cake.y;
+        var bcdx = best.ant.x - game.cake.x;
+        var bcdy = best.ant.y - game.cake.y;
+        var cToCake = ccdx * ccdx + ccdy * ccdy;
+        var bToCake = bcdx * bcdx + bcdy * bcdy;
+        if (mode === 'first') {
+          if (cToCake < bToCake) { best = cur; }
+        } else if (mode === 'last') {
+          if (cToCake > bToCake) { best = cur; }
+        }
+      }
+    }
+    return best.ant;
   }
 
   // Cone-DoT primitive (Plan 3 — Plasma Torch and future cone-DoT cannons).
@@ -4881,6 +5021,7 @@ body.has-ant-buster-page {
     ui.upgradeRects[2] = null;
     ui.hoveredUpgrade = null;
     ui.sellRect = null;
+    ui.targetingRects = [];   // Plan 7 — clear targeting hit-test rects on restart
     ui.shopRects = [];
   }
 
@@ -4897,6 +5038,7 @@ body.has-ant-buster-page {
     upgradeRects: [null, null, null], // up-to-3 upgrade buttons (3 for base, 2 for mid, 0 for final)
     hoveredUpgrade: null,   // when hovering an upgrade button, the target kind key (for range preview)
     sellRect: null,         // sell button in the tower panel
+    targetingRects: [],     // Plan 7 — five mode-button rects (or empty for aura cannons)
     shopRects: []           // populated by drawShop; one rect per shop card
   };
 
@@ -4964,9 +5106,24 @@ body.has-ant-buster-page {
         }
       }
       // Click inside the right-column panel while a cannon is selected — test
-      // the upgrade buttons (up to 3) then the sell button.
+      // the targeting buttons first (Plan 7), then upgrade buttons (up to 3),
+      // then the sell button.
       if (ui.selectedCannon) {
         if (p.x >= PLAYFIELD_W) {
+          // Plan 7 — Targeting row hit-test. Mode strings are positional and
+          // must match the order in drawTargetingRow's `modes` array.
+          if (ui.targetingRects) {
+            var tModes = ['closest', 'first', 'last', 'strongest', 'weakest'];
+            for (var ti = 0; ti < ui.targetingRects.length; ti++) {
+              var trec = ui.targetingRects[ti];
+              if (trec) {
+                if (inRect(p, trec)) {
+                  ui.selectedCannon.targetingMode = tModes[ti];
+                  return;
+                }
+              }
+            }
+          }
           for (var ri = 0; ri < ui.upgradeRects.length; ri++) {
             var ur = ui.upgradeRects[ri];
             if (ur) {
