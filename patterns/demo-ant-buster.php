@@ -1248,6 +1248,26 @@ body.has-ant-buster-page {
     }
   }
 
+  // Plan 4 — god-tier halo. Renders a soft pulsing gold disc under any cannon
+  // whose def.tier === 'god'. Drawn between auras and bases so the halo sits
+  // beneath the round base sprite without bleeding over the turret.
+  // Period ~2s (sin of game.time * PI), alpha range 0.30 to 0.60.
+  function drawGodTierHalos() {
+    for (var i = 0; i < game.cannons.length; i++) {
+      var c = game.cannons[i];
+      var def = CANNON_KINDS[c.kind];
+      if (def.tier !== 'god') { continue; }
+      var alpha = 0.45 + 0.15 * Math.sin(game.time * Math.PI);
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = '#fee761';
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, 22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
   // Layer 6: static cannon bases. Split from the turret pass so the round bases
   // sit under ants while the turrets read on top.
   function drawCannonBases() {
@@ -1764,6 +1784,7 @@ body.has-ant-buster-page {
     if (ui.selectedCannon) { drawRangeCircle(ui.selectedCannon); } // 5. range circle
     drawConeDots();            // 5b. cone-DoT overlay (under bases/ants)
     drawCannonAuras();         // 5c. persistent radial auras (Blizzard MP-N)
+    drawGodTierHalos();        // 5d. pulsing gold halo under T3 god-tier turrets
     drawCannonBases();         // 6. static cannon bases (under turrets/ants)
     drawAnts();                // 7. ants, sorted top-down by y
     drawCannonTurrets();       // 8. cannon turrets + muzzle/disable indicators
