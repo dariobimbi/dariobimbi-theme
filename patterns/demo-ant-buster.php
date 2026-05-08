@@ -201,6 +201,29 @@ body.has-ant-buster-page {
     return c;
   }
 
+  function makeRoyalGuardSprite() {
+    var c = makeCanvas(16, 16);
+    var x = c.getContext('2d');
+    x.fillStyle = '#3a4466';
+    x.beginPath();
+    x.ellipse(8, 8, 5, 4, 0, 0, Math.PI * 2);   // body — same as worker
+    x.fill();
+    x.fillStyle = '#2c3a8c';
+    x.fillRect(6, 7, 2, 2);                     // royal-blue accent (left shoulder)
+    x.fillRect(9, 7, 2, 2);                     // royal-blue accent (right shoulder)
+    x.fillStyle = '#262b44';
+    x.fillRect(7, 3, 2, 2);                     // head
+    x.fillStyle = '#fee761';
+    x.fillRect(6, 1, 4, 1);                     // crown base, forward of head
+    x.fillRect(6, 0, 1, 1);                     // crown spike L
+    x.fillRect(8, 0, 1, 1);                     // crown spike center
+    x.fillRect(9, 0, 1, 1);                     // crown spike R (intentional 3-spike pattern)
+    x.fillStyle = '#181425';
+    x.fillRect(7, 1, 1, 1);                     // antenna L (shorter, crown takes the upper space)
+    x.fillRect(8, 1, 1, 1);                     // antenna R
+    return c;
+  }
+
   function makeSoldierSprite() {
     var c = makeCanvas(16, 16);
     var x = c.getContext('2d');
@@ -354,6 +377,16 @@ body.has-ant-buster-page {
     var c = makeCanvas(16, 16);
     var x = c.getContext('2d');
     x.fillStyle = '#262b44';
+    x.fillRect(4, 7, 8, 3);
+    x.fillRect(5, 6, 6, 1);
+    x.fillRect(5, 10, 6, 1);
+    return c;
+  }
+
+  function makeRoyalGuardSplat() {
+    var c = makeCanvas(16, 16);
+    var x = c.getContext('2d');
+    x.fillStyle = '#2c3a8c';
     x.fillRect(4, 7, 8, 3);
     x.fillRect(5, 6, 6, 1);
     x.fillRect(5, 10, 6, 1);
@@ -971,6 +1004,7 @@ body.has-ant-buster-page {
 
   game.sprites = {
     worker: makeWorkerSprite(),
+    royal_guard: makeRoyalGuardSprite(),
     soldier: makeSoldierSprite(),
     scout: makeScout(),
     tank: makeTank(),
@@ -981,6 +1015,7 @@ body.has-ant-buster-page {
     queen: makeQueen(),
     king: makeKingSprite(),
     splat: makeAntSplat(),
+    royalGuardSplat: makeRoyalGuardSplat(),
     cannonBase: makeCannonBase(),
     cannonTurret: makeCannonTurret(),         // kept for backward refs; lookups now go through turrets[kind]
     turrets: {
