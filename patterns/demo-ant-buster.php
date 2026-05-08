@@ -622,6 +622,24 @@ body.has-ant-buster-page {
     return c;
   }
 
+  function makeCannonTurretLance() {
+    // Quick tier-3 (continuous beam, direct damage). Cyan emitter with a
+    // crystalline lens at the muzzle - reads as an energy projector, distinct
+    // from Sharpshooter's scoped rifle and Glacier's icy fins.
+    var c = makeCanvas(28, 28);
+    var x = c.getContext('2d');
+    x.fillStyle = '#1a4a4a';
+    x.fillRect(9, 11, 10, 9);                   // dark base
+    x.fillStyle = '#3acccc';
+    x.fillRect(2, 12, 23, 3);                   // long cyan barrel
+    x.fillStyle = '#84e8e8';
+    x.fillRect(0, 11, 4, 5);                    // wider lens emitter at muzzle
+    x.fillStyle = '#e4ffff';
+    x.fillRect(1, 13, 1, 1);                    // lens glint
+    x.fillRect(10, 13, 12, 1);                  // inner barrel highlight
+    return c;
+  }
+
   function makeCake(slices) {
     var c = makeCanvas(32, 32);
     var x = c.getContext('2d');
@@ -697,6 +715,7 @@ body.has-ant-buster-page {
       vulcan: makeCannonTurretVulcan(),
       plasma_torch: makeCannonTurretPlasmaTorch(),
       sharpshooter: makeCannonTurretSharpshooter(),
+      lance: makeCannonTurretLance(),
       marksman: makeCannonTurretMarksman(),
       spotter: makeCannonTurretSpotter(),
       twingun: makeCannonTurretTwinGun(),
@@ -1065,8 +1084,12 @@ body.has-ant-buster-page {
       if (bdef.beam) {
         if (bc.beamTarget) {
           if (!bc.beamTarget.dead) {
-            ctx.strokeStyle = '#a4d4ff';
-            ctx.lineWidth = 2;
+            var bcolor = bdef.beam.color;
+            if (!bcolor) { bcolor = '#a4d4ff'; }
+            var blw = bdef.beam.lineWidth;
+            if (!blw) { blw = 2; }
+            ctx.strokeStyle = bcolor;
+            ctx.lineWidth = blw;
             ctx.beginPath();
             ctx.moveTo(bc.x, bc.y);
             ctx.lineTo(bc.beamTarget.x, bc.beamTarget.y);
@@ -2079,8 +2102,7 @@ body.has-ant-buster-page {
         if (target.hp >= target.maxHp - 0.001) { return 1.5; }
         return 1;
       },
-      // upgradesTo: ['sharpshooter', 'lance'] — Task 17 will append 'lance'
-      upgradesTo: ['sharpshooter']
+      upgradesTo: ['sharpshooter', 'lance']
     },
     spotter: {
       name: 'Spotter',
@@ -2143,6 +2165,23 @@ body.has-ant-buster-page {
       },
       upgradesTo: []
     },
+    lance: {
+      name: 'Lance',
+      cost: 110,
+      damage: 0,                 // beam cannons deal damage via beam.tickDamage
+      fireRate: 0,
+      range: 250,
+      projectileSpeed: 0,
+      family: 'quick',
+      tier: 3,
+      beam: {
+        tickDamage: 4,           // 4 dps continuous; integrated as tickDamage * dt
+        statusOnTick: null,      // direct damage only, no status
+        color: '#3acccc',        // saturated cyan, distinct from Glacier's pale ice
+        lineWidth: 1.5           // tighter than Glacier's 2 — reads as a precision lance
+      },
+      upgradesTo: []
+    },
     twingun: {
       name: 'Twin Gun',
       cost: 75,
@@ -2175,9 +2214,12 @@ body.has-ant-buster-page {
       range: 130,
       family: 'status',
       tier: 3,
-      beam: true,
-      beamDamagePerSec: 1,
-      statusOnBeam: { kind: 'slow', magnitude: 0.5, duration: 1 },
+      beam: {
+        tickDamage: 1,
+        statusOnTick: { kind: 'slow', magnitude: 0.5, duration: 1 },
+        color: '#a4d4ff',
+        lineWidth: 2
+      },
       upgradesTo: []
     }
   };
@@ -2323,9 +2365,11 @@ body.has-ant-buster-page {
         }
       }
 
-      // Beam cannons (Glacier and any future beam emitter): per-tick damage +
-      // status refresh, no projectile fired. Status refresh sets duration to
-      // ~1s each tick so the slow naturally lingers ~1s after disconnect.
+      // Beam cannons (Glacier, Lance, and any future beam emitter): per-tick
+      // damage + status refresh, no projectile fired. Status refresh sets
+      // duration to ~1s each tick so the status naturally lingers ~1s after
+      // disconnect. Glacier emits status with light damage; Lance deals direct
+      // damage with no status; the same code path supports both via def.beam.
       if (def.beam) {
         var btarget = findTarget(c);
         c.target = btarget;
@@ -2334,12 +2378,14 @@ body.has-ant-buster-page {
           continue;
         }
         c.heading = angleTowards(c.x, c.y, btarget.x, btarget.y);
-        applyDamage(btarget, def.beamDamagePerSec * dt, false, c);
-        if (btarget.hp <= 0) {
-          killAnt(btarget, c);
+        if (def.beam.tickDamage > 0) {
+          applyDamage(btarget, def.beam.tickDamage * dt, !!def.armorPierce, c);
+          if (btarget.hp <= 0) {
+            killAnt(btarget, c);
+          }
         }
-        if (def.statusOnBeam) {
-          var sb = def.statusOnBeam;
+        if (def.beam.statusOnTick) {
+          var sb = def.beam.statusOnTick;
           applyStatus(btarget, sb.kind, sb.magnitude, sb.duration, 'beam');
         }
         c.beamTarget = btarget;
