@@ -3606,9 +3606,13 @@ body.has-ant-buster-page {
   function findTarget(cannon) {
     var def = CANNON_KINDS[cannon.kind];
     var rangeSq = def.range * def.range;
-    var revealedTarget = null;
-    var nearest = null;
-    var nearestDistSq = rangeSq;
+    var mode = cannon.targetingMode;
+    if (!mode) { mode = 'closest'; }
+
+    // Filter pass: gather candidates with cached distSq, flag if any revealed.
+    // Avoids and-operator chains by using nested ifs (CLAUDE.md inline-script gotcha).
+    var candidates = [];
+    var anyRevealed = false;
     for (var i = 0; i < game.ants.length; i++) {
       var a = game.ants[i];
       if (a.dead) { continue; }
@@ -3617,18 +3621,47 @@ body.has-ant-buster-page {
       var dy = a.y - cannon.y;
       var distSq = dx * dx + dy * dy;
       if (distSq > rangeSq) { continue; }
-      if (a.isRevealed) {
-        if (!revealedTarget) {
-          revealedTarget = a;
-        }
-      }
-      if (distSq < nearestDistSq) {
-        nearest = a;
-        nearestDistSq = distSq;
+      candidates.push({ ant: a, distSq: distSq });
+      if (a.isRevealed) { anyRevealed = true; }
+    }
+    if (candidates.length === 0) { return null; }
+
+    // Stealth filter: if any revealed, keep only revealed ants. Preserves the
+    // existing Hawkeye apex-priority while letting the mode pick within that pool.
+    var pool = candidates;
+    if (anyRevealed) {
+      pool = [];
+      for (var j = 0; j < candidates.length; j++) {
+        if (candidates[j].ant.isRevealed) { pool.push(candidates[j]); }
       }
     }
-    if (revealedTarget) { return revealedTarget; }
-    return nearest;
+
+    // Pick pass: apply the targeting mode to the active pool.
+    var best = pool[0];
+    for (var k = 1; k < pool.length; k++) {
+      var cur = pool[k];
+      if (mode === 'closest') {
+        if (cur.distSq < best.distSq) { best = cur; }
+      } else if (mode === 'strongest') {
+        if (cur.ant.hp > best.ant.hp) { best = cur; }
+      } else if (mode === 'weakest') {
+        if (cur.ant.hp < best.ant.hp) { best = cur; }
+      } else {
+        // first or last: compare squared distance to cake.
+        var ccdx = cur.ant.x - game.cake.x;
+        var ccdy = cur.ant.y - game.cake.y;
+        var bcdx = best.ant.x - game.cake.x;
+        var bcdy = best.ant.y - game.cake.y;
+        var cToCake = ccdx * ccdx + ccdy * ccdy;
+        var bToCake = bcdx * bcdx + bcdy * bcdy;
+        if (mode === 'first') {
+          if (cToCake < bToCake) { best = cur; }
+        } else if (mode === 'last') {
+          if (cToCake > bToCake) { best = cur; }
+        }
+      }
+    }
+    return best.ant;
   }
 
   // Cone-DoT primitive (Plan 3 — Plasma Torch and future cone-DoT cannons).
