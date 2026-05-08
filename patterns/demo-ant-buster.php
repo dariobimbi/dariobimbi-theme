@@ -829,6 +829,59 @@ body.has-ant-buster-page {
     return c;
   }
 
+  // === Pink Rubber Family (Plan 4 — Bucket B) ===
+  function makeCannonTurretPinkPea() {
+    // Base tier — small bright-pink turret with a short stubby barrel.
+    // Reads as a casual / approachable family alongside Howitzer / Repeater.
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    x.fillStyle = '#d24a8a';
+    x.fillRect(8, 4, 4, 12);                    // pink barrel (rotated at draw time)
+    x.fillStyle = '#ff69b4';
+    x.fillRect(7, 2, 6, 3);                     // bright pink barrel tip
+    x.fillStyle = '#ff8fc4';
+    x.fillRect(8, 4, 4, 1);                     // highlight strip
+    return c;
+  }
+
+  function makeCannonTurretBouncyBubble() {
+    // Mid tier — chunkier pink turret, slightly larger, with a bubble-tip
+    // barrel that hints at the larger projectile. Reads as a step up from
+    // Pink Pea without changing family identity.
+    var c = makeCanvas(24, 24);
+    var x = c.getContext('2d');
+    x.fillStyle = '#c83a7a';
+    x.fillRect(10, 6, 4, 12);                   // dark-pink base barrel
+    x.fillStyle = '#ff5fa0';
+    x.fillRect(9, 4, 6, 4);                     // mid-pink barrel section
+    x.fillStyle = '#ff8fc4';
+    x.fillRect(8, 1, 8, 4);                     // bubble-tip ring (lighter pink)
+    x.fillStyle = '#ffd6ec';
+    x.fillRect(10, 2, 4, 2);                    // bubble highlight
+    return c;
+  }
+
+  function makeCannonTurretRubberWreckingBall() {
+    // Final tier — big heavy pink turret with a wrecking-ball motif. Chains
+    // hint at the weight of the projectile, dark pink reads as the family's
+    // capstone. Largest sprite of the three.
+    var c = makeCanvas(28, 28);
+    var x = c.getContext('2d');
+    x.fillStyle = '#a02864';
+    x.fillRect(11, 8, 6, 14);                   // heavy dark-pink base
+    x.fillStyle = '#c83a7a';
+    x.fillRect(9, 6, 10, 6);                    // wide breech
+    x.fillStyle = '#ff1493';
+    x.fillRect(10, 0, 8, 8);                    // bright-pink wrecking-ball muzzle
+    x.fillStyle = '#181425';
+    x.fillRect(13, 8, 2, 1);                    // chain link 1 (dark)
+    x.fillRect(13, 11, 2, 1);                   // chain link 2
+    x.fillRect(13, 14, 2, 1);                   // chain link 3
+    x.fillStyle = '#ff8fc4';
+    x.fillRect(11, 1, 2, 2);                    // muzzle highlight
+    return c;
+  }
+
   function makeCake(slices) {
     var c = makeCanvas(48, 48);
     var x = c.getContext('2d');
@@ -959,7 +1012,11 @@ body.has-ant-buster-page {
       sonic_pulse: makeCannonTurretSonicPulse(),
       frost: makeCannonTurretFrost(),
       glacier: makeCannonTurretGlacier(),
-      cryo: makeCannonTurretCryo()
+      cryo: makeCannonTurretCryo(),
+      // Plan 4 — Pink Rubber Family (Bucket B). Linear chain, no T3 god.
+      pink_pea: makeCannonTurretPinkPea(),
+      bouncy_bubble: makeCannonTurretBouncyBubble(),
+      rubber_wrecking_ball: makeCannonTurretRubberWreckingBall()
     },
     anthill: makeAnthill(),
     projectile: makeProjectile()
@@ -2753,6 +2810,60 @@ body.has-ant-buster-page {
         color: '#a4d4ff',
         lineWidth: 2
       },
+      upgradesTo: []
+    },
+
+    // === Pink Rubber Family (Plan 4 — Bucket G carryover from Plan 3 §9) ===
+    // Linear chain (no fork at mid). MP-L bouncing-retarget primitive (Task 6).
+    // visualScale + statusOnFirstHit fields (Task 7). No T3 god-tier — the
+    // family stays "casual / approachable" by design.
+    pink_pea: {
+      name: 'Pink Pea',
+      cost: 50,
+      damage: 5,
+      fireRate: 0.8,
+      range: 130,
+      projectileSpeed: 220,
+      family: 'rubber',
+      tier: 'base',
+      bouncesRemaining: 1,
+      bounceRadius: 50,
+      damageDecay: 0.8,
+      visualScale: 1.0,
+      upgradesTo: ['bouncy_bubble']
+    },
+    bouncy_bubble: {
+      name: 'Bouncy Bubble',
+      cost: 80,
+      damage: 12,
+      fireRate: 0.6,
+      range: 160,
+      projectileSpeed: 240,
+      family: 'rubber',
+      tier: 'mid',
+      bouncesRemaining: 2,
+      bounceRadius: 60,
+      damageDecay: 0.8,
+      visualScale: 1.5,
+      upgradesTo: ['rubber_wrecking_ball']
+    },
+    rubber_wrecking_ball: {
+      name: 'Rubber Wrecking Ball',
+      cost: 120,
+      damage: 30,
+      fireRate: 0.4,
+      range: 180,
+      projectileSpeed: 200,
+      family: 'rubber',
+      tier: 'final',
+      bouncesRemaining: 4,
+      bounceRadius: 70,
+      damageDecay: 0.8,
+      visualScale: 2.5,
+      // First-hit-only knockback. Bounce targets take damage but no status
+      // (prevents pinball chaos). Magnitude 30 px, duration 0 (instant
+      // displacement, no follow-on tick).
+      statusOnFirstHit: { kind: 'knockback', magnitude: 30, duration: 0 },
       upgradesTo: []
     }
   };
