@@ -1400,7 +1400,11 @@ body.has-ant-buster-page {
         // Delivered ants vanish silently. Only killed ants splat. Nested ifs avoid
         // the AND operator (gets HTML-encoded inside inline scripts in this theme).
         if (a.deliveredAt === 0) {
-          sprite = game.sprites.splat;
+          if (a.kind === 'royal_guard') {
+            sprite = game.sprites.royalGuardSplat;
+          } else {
+            sprite = game.sprites.splat;
+          }
         } else {
           continue;
         }
