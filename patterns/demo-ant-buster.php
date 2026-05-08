@@ -2738,7 +2738,7 @@ body.has-ant-buster-page {
       family: 'quick',
       tier: 'final',
       spoolUp: 0.5,
-      upgradesTo: []
+      upgradesTo: ['hailstorm']
     },
     plasma_torch: {
       name: 'Plasma Torch',
@@ -2755,7 +2755,7 @@ body.has-ant-buster-page {
         tickDamage: 10,
         statusOnTick: { kind: 'burn', magnitude: 1, duration: 2 }
       },
-      upgradesTo: []
+      upgradesTo: ['phoenix']
     },
     sharpshooter: {
       name: 'Sharpshooter',
@@ -2774,7 +2774,7 @@ body.has-ant-buster-page {
         if (target.hp >= target.maxHp - 0.001) { return 1.5; }
         return 1;
       },
-      upgradesTo: []
+      upgradesTo: ['reaper']
     },
     lance: {
       name: 'Lance',
@@ -2791,7 +2791,7 @@ body.has-ant-buster-page {
         color: '#3acccc',        // saturated cyan, distinct from Glacier's pale ice
         lineWidth: 1.5           // tighter than Glacier's 2 — reads as a precision lance
       },
-      upgradesTo: []
+      upgradesTo: ['solar_lance']
     },
     phantom: {
       name: 'Phantom',
@@ -2808,7 +2808,7 @@ body.has-ant-buster-page {
         if (target.kind === 'queen') { return 2; }
         return 1;
       },
-      upgradesTo: []
+      upgradesTo: ['hawkeye']
     },
     tesla: {
       name: 'Tesla',
@@ -2820,7 +2820,7 @@ body.has-ant-buster-page {
       family: 'quick',
       tier: 'final',
       teslaArc: { jumps: 3, range: 60, falloff: 0.5 },
-      upgradesTo: []
+      upgradesTo: ['stormcaller']
     },
     twingun: {
       name: 'Twin Gun',
@@ -3120,6 +3120,121 @@ body.has-ant-buster-page {
       statusOnHit: { kind: 'stun', magnitude: 1, duration: 0.6 },
       flashScale: 1.7,
       screenShakeMag: 8,
+      upgradesTo: []
+    },
+
+    // === QUICK FAMILY GOD-TIER (Plan 4 — Bucket E, Task 20) ===
+    // Six T3 rows for the Quick lineage. Phoenix uses the burn.onExpire spread
+    // hook from Task 4. Reaper and Hawkeye carry damageModifier functions that
+    // ride on top of any sourceCannon-keyed multiplier in applyDamage.
+    hailstorm: {
+      name: 'Hailstorm',
+      cost: 250,
+      damage: 4,
+      fireRate: 14,
+      range: 160,
+      projectileSpeed: 360,
+      family: 'quick',
+      tier: 'god',
+      spoolUp: 0.5,
+      aimJitter: 0,
+      flashScale: 1.7,
+      upgradesTo: []
+    },
+    phoenix: {
+      name: 'Phoenix',
+      cost: 260,
+      damage: 0,
+      fireRate: 0,
+      range: 80,
+      projectileSpeed: 0,
+      family: 'quick',
+      tier: 'god',
+      coneDot: {
+        range: 80,
+        angleDeg: 70,
+        tickDamage: 12,
+        // spreads on burn — Task 4's burn.onExpire hook fires the Phoenix
+        // chain when the burn duration runs out, not on death.
+        statusOnTick: { kind: 'burn', magnitude: 3, duration: 3, spreads: true }
+      },
+      flashScale: 1.7,
+      upgradesTo: []
+    },
+    reaper: {
+      name: 'Reaper',
+      cost: 280,
+      damage: 60,
+      fireRate: 0.5,
+      range: 380,
+      projectileSpeed: 360,
+      family: 'quick',
+      tier: 'god',
+      damageModifier: function (target, sourceCannon) {
+        // Instakill Worker and Scout. +100% vs full-HP everything else.
+        // Nested ifs avoid the inline-script and-operator (CLAUDE.md note).
+        if (target.kind === 'worker') { return 999; }
+        if (target.kind === 'scout') { return 999; }
+        if (target.hp >= target.maxHp - 0.001) { return 2; }
+        return 1;
+      },
+      flashScale: 1.7,
+      upgradesTo: []
+    },
+    solar_lance: {
+      name: 'Solar Lance',
+      cost: 290,
+      damage: 0,
+      fireRate: 0,
+      range: 280,
+      projectileSpeed: 0,
+      family: 'quick',
+      tier: 'god',
+      // beam: object form so Plan 3's existing beam pathway picks it up.
+      // beamPierce reads from the def root (Task 12 — MP-O cylinder math).
+      beam: {
+        tickDamage: 8,
+        statusOnTick: null,
+        color: '#ffd75e',
+        lineWidth: 3
+      },
+      beamPierce: 2,
+      flashScale: 1.7,
+      upgradesTo: []
+    },
+    hawkeye: {
+      name: 'Hawkeye',
+      cost: 300,
+      damage: 80,
+      fireRate: 0.3,
+      range: 600,
+      projectileSpeed: 400,
+      family: 'quick',
+      tier: 'god',
+      // minRange documented for future "ranger does not fire on adjacent ants"
+      // hooks — currently a no-op since no targeting code reads it.
+      minRange: 0,
+      damageModifier: function (target, sourceCannon) {
+        if (target.kind === 'queen') { return 3; }
+        return 1;
+      },
+      flashScale: 1.7,
+      upgradesTo: []
+    },
+    stormcaller: {
+      name: 'Stormcaller',
+      cost: 280,
+      damage: 18,
+      fireRate: 1,
+      range: 240,
+      projectileSpeed: 360,
+      family: 'quick',
+      tier: 'god',
+      // Plan 4 plan literally said falloff: 1, but the Tesla math is
+      // dmg * (1 - falloff), so falloff: 1 would deal zero on every hop.
+      // Spec intent is "no falloff, full damage every jump" = falloff: 0.
+      teslaArc: { jumps: 6, range: 80, falloff: 0 },
+      flashScale: 1.7,
       upgradesTo: []
     }
   };
