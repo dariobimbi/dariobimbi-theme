@@ -4087,7 +4087,7 @@ body.has-ant-buster-page {
   // Plan 3: optional `sourceCannon` lets the per-cannon `damageModifier` hook
   // multiply damage (Marksman, Sharpshooter, Phantom). Falls through cleanly
   // when sourceCannon is omitted (existing call sites stay 3-arg compatible).
-  function applyDamage(ant, amount, armorPierce, sourceCannon) {
+  function applyDamage(ant, amount, armorPierce, sourceCannon, isDirectHit) {
     var k = ANT_KINDS[ant.kind];
     var dmg = amount;
     if (sourceCannon) {
@@ -4116,6 +4116,25 @@ body.has-ant-buster-page {
       if (ant.effects.poison) {
         var pamp = ant.effects.poison.damageAmp;
         if (pamp) { dmg = dmg * pamp; }
+      }
+    }
+    // Plan 6: Brittle synergy. Heavy-family direct hit on a frozen ant deals
+    // 2x damage on top of any existing freeze.damageAmp (composes multiplicatively),
+    // consumes the freeze status, and spawns a cyan shatter visual. Direct hit
+    // only — splash, beam, aura, and chain-link calls leave isDirectHit unset.
+    // Nested ifs to dodge the inline-script and-operator encoding gotcha.
+    if (isDirectHit) {
+      if (sourceCannon) {
+        var sk2 = CANNON_KINDS[sourceCannon.kind];
+        if (sk2.family === 'heavy') {
+          if (ant.effects) {
+            if (ant.effects.freeze) {
+              dmg = dmg * 2;
+              delete ant.effects.freeze;
+              spawnShatterParticles(ant.x, ant.y);
+            }
+          }
+        }
       }
     }
     if (!armorPierce) {
