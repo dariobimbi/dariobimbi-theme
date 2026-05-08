@@ -2020,6 +2020,7 @@ body.has-ant-buster-page {
     drawCannonBases();         // 6. static cannon bases (under turrets/ants)
     drawAnts();                // 7. ants, sorted top-down by y
     drawShatterParticles();    // 7b. cyan shatter particles (Plan 6 Brittle)
+    drawTargetingOverlay();    // 7c. selected-cannon target line + reticle (Plan 7)
     drawCannonTurrets();       // 8. cannon turrets + muzzle/disable indicators
     drawProjectiles();         // 9a. projectiles
     drawBeams();               // 9b. beam lines (Glacier, Lance)
@@ -2493,6 +2494,31 @@ body.has-ant-buster-page {
       ctx.globalAlpha = alpha;
       ctx.fillRect(Math.round(p.x) - 1, Math.round(p.y) - 1, 2, 2);
     }
+    ctx.restore();
+  }
+
+  // Plan 7 — Targeting overlay. When a cannon is selected, draws a faint
+  // dashed white line from the cannon to its current target and a 4 px
+  // reticle on the target. Gated on selectedCannon non-null and the cannon
+  // having a live target.
+  function drawTargetingOverlay() {
+    if (!ui.selectedCannon) { return; }
+    var c = ui.selectedCannon;
+    if (!c.target) { return; }
+    if (c.target.dead) { return; }
+
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(c.x, c.y);
+    ctx.lineTo(c.target.x, c.target.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.fillRect(Math.round(c.target.x) - 2, Math.round(c.target.y) - 2, 4, 4);
     ctx.restore();
   }
 
