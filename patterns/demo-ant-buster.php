@@ -420,6 +420,22 @@ body.has-ant-buster-page {
     return c;
   }
 
+  function makeCannonTurretTripleThreat() {
+    // Double tier-2 (3-barrel volley). Brighter magenta than Twin Gun, with a
+    // third center barrel reading clearly as "Twin Gun's bigger sibling".
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    x.fillStyle = '#aa3aaa';
+    x.fillRect(4, 5, 3, 11);                    // left barrel
+    x.fillRect(8, 4, 3, 12);                    // center barrel (slightly longer)
+    x.fillRect(13, 5, 3, 11);                   // right barrel
+    x.fillStyle = '#7d1a7d';
+    x.fillRect(3, 3, 4, 3);                     // left tip
+    x.fillRect(7, 2, 4, 3);                     // center tip
+    x.fillRect(13, 3, 4, 3);                    // right tip
+    return c;
+  }
+
   function makeCannonTurretFrost() {
     var c = makeCanvas(20, 20);
     var x = c.getContext('2d');
@@ -760,6 +776,7 @@ body.has-ant-buster-page {
       marksman: makeCannonTurretMarksman(),
       spotter: makeCannonTurretSpotter(),
       twingun: makeCannonTurretTwinGun(),
+      triple_threat: makeCannonTurretTripleThreat(),
       frost: makeCannonTurretFrost(),
       glacier: makeCannonTurretGlacier()
     },
@@ -2286,7 +2303,22 @@ body.has-ant-buster-page {
       family: 'status',
       tier: 1,
       barrels: 2,            // multi-barrel volley logic landed in Task 13
-      upgradesTo: ['frost']
+      // upgradesTo: Task 23 will append 'toxin'
+      upgradesTo: ['triple_threat', 'frost']
+    },
+    triple_threat: {
+      name: 'Triple Threat',
+      cost: 70,
+      damage: 2,
+      fireRate: 1,
+      range: 110,
+      projectileSpeed: 240,
+      family: 'double',
+      tier: 2,
+      barrels: 3,
+      spread: 0.10,          // ~5.7 deg per step — wider than Twin Gun's default
+      // upgradesTo: ['buckshot', 'minigun'] — populated by Tasks 21/22
+      upgradesTo: []
     },
     frost: {
       name: 'Frost',
@@ -2590,7 +2622,7 @@ body.has-ant-buster-page {
     if (!n) { n = 1; }
     var statusOnHit = def.statusOnHit;
     if (!statusOnHit) { statusOnHit = null; }
-    var spread = 0.06;                          // ~3.4 deg per step
+    var spread = def.spread ? def.spread : 0.06;   // per-step radian offset; ~3.4 deg default (Twin Gun)
     for (var i = 0; i < n; i++) {
       var off;
       if (n === 1) {
