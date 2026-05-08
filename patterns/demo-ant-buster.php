@@ -420,6 +420,25 @@ body.has-ant-buster-page {
     return c;
   }
 
+  function makeCannonTurretCryo() {
+    // Double tier-3 (freeze + damage amp). Pale ice-blue body with sharper
+    // crystalline accents than Frost's softer fins; the brighter cyan tip
+    // hints at the +50% damage amplification while frozen.
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    x.fillStyle = '#80c0ff';
+    x.fillRect(7, 4, 6, 14);                    // ice-blue body
+    x.fillStyle = '#3080d0';
+    x.fillRect(6, 2, 8, 3);                     // darker tip
+    x.fillStyle = '#c8e8ff';
+    x.fillRect(5, 8, 2, 3);                     // crystal facet left
+    x.fillRect(13, 8, 2, 3);                    // crystal facet right
+    x.fillStyle = '#ffffff';
+    x.fillRect(8, 0, 4, 1);                     // sparkle highlight
+    x.fillRect(9, 6, 2, 4);                     // inner barrel highlight
+    return c;
+  }
+
   function makeCannonTurretToxin() {
     // Double tier-2 (poison DoT). Bright green barrel with darker venom drips
     // along the lower edge — reads as a chemical sprayer, distinct from
@@ -838,7 +857,8 @@ body.has-ant-buster-page {
       minigun: makeCannonTurretMinigun(),
       toxin: makeCannonTurretToxin(),
       frost: makeCannonTurretFrost(),
-      glacier: makeCannonTurretGlacier()
+      glacier: makeCannonTurretGlacier(),
+      cryo: makeCannonTurretCryo()
     },
     anthill: makeAnthill(),
     projectile: makeProjectile()
@@ -2416,6 +2436,21 @@ body.has-ant-buster-page {
       // upgradesTo: ['plague', 'sonic_pulse'] — populated by Tasks 25/26
       upgradesTo: []
     },
+    cryo: {
+      name: 'Cryo',
+      cost: 110,
+      damage: 3,
+      fireRate: 1,
+      range: 110,
+      projectileSpeed: 220,
+      family: 'double',
+      tier: 3,
+      // damageAmp tag on the freeze effect: subsequent damage from any cannon
+      // lands +50% while the 0.8s freeze is active. See Step 2 stamp pattern
+      // and applyDamage's freeze.damageAmp read.
+      statusOnHit: { kind: 'freeze', magnitude: 1, duration: 0.8, damageAmp: 1.5 },
+      upgradesTo: []
+    },
     frost: {
       name: 'Frost',
       cost: 75,
@@ -2426,7 +2461,7 @@ body.has-ant-buster-page {
       family: 'status',
       tier: 2,
       statusOnHit: { kind: 'slow', magnitude: 0.3, duration: 2 },
-      upgradesTo: ['glacier']
+      upgradesTo: ['glacier', 'cryo']
     },
     glacier: {
       name: 'Glacier',
@@ -2834,6 +2869,17 @@ body.has-ant-buster-page {
         dmg = dmg * sk.damageModifier(ant, sourceCannon);
       }
     }
+    // Freeze damage amplification (Plan 3 — Cryo). When a freeze effect was
+    // applied with a damageAmp tag (stamped on after applyStatus by the
+    // projectile-collision pathway), every subsequent damage tick lands +N%
+    // until the freeze expires. Independent of which cannon does the damage —
+    // any follow-up hit benefits. Nested ifs to avoid inline-script `&&`.
+    if (ant.effects) {
+      if (ant.effects.freeze) {
+        var amp = ant.effects.freeze.damageAmp;
+        if (amp) { dmg = dmg * amp; }
+      }
+    }
     if (!armorPierce) {
       var armor = k.armor;
       if (!armor) { armor = 0; }
@@ -2958,6 +3004,16 @@ body.has-ant-buster-page {
           if (p.statusOnHit) {
             var s = p.statusOnHit;
             applyStatus(a, s.kind, s.magnitude, s.duration, 'projectile');
+            // Tag-after-apply pattern: extra fields like damageAmp (Cryo's
+            // +50% during freeze) live on the cannon's statusOnHit config and
+            // get stamped onto the just-applied effect here, so applyStatus
+            // itself stays lean. Future emitters carry their own amp without
+            // any framework change.
+            if (s.damageAmp) {
+              if (a.effects[s.kind]) {
+                a.effects[s.kind].damageAmp = s.damageAmp;
+              }
+            }
           }
           // Splash trigger (Plan 3 — Mortar, Hellfire, Demolisher, Sonic Pulse).
           // Runs before the carrier kill check so the radius scan sees
