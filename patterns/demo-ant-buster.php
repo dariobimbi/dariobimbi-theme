@@ -1441,6 +1441,12 @@ body.has-ant-buster-page {
   function drawProjectiles() {
     for (var pi = 0; pi < game.projectiles.length; pi++) {
       var p = game.projectiles[pi];
+      // Plan 4 — barrelStagger. Dormant shells sit invisible at spawn until
+      // their activation time. Skips render entirely; the visual cost is one
+      // ctx.drawImage avoided.
+      if (p.dormantUntil) {
+        if (game.time < p.dormantUntil) { continue; }
+      }
       var arcOffset = 0;
       if (p.arcing) {
         var t;
@@ -2582,7 +2588,7 @@ body.has-ant-buster-page {
       tier: 'final',
       linePierce: 999,    // unlimited — pre-Plan-3 Railgun semantics
       armorPierce: true,
-      upgradesTo: []
+      upgradesTo: ['particle_cannon']
     },
     mortar: {
       name: 'Mortar',
@@ -2608,7 +2614,7 @@ body.has-ant-buster-page {
       tier: 'final',
       homing: { turnRate: 4.0 },
       splash: { radius: 30, falloff: 0.4, splashMult: 0.4 },
-      upgradesTo: []
+      upgradesTo: ['cluster_strike']
     },
     demolisher: {
       name: 'Demolisher',
@@ -2620,7 +2626,7 @@ body.has-ant-buster-page {
       family: 'heavy',
       tier: 'final',
       armorPierce: true,
-      upgradesTo: []
+      upgradesTo: ['annihilator']
     },
     hellfire: {
       name: 'Hellfire',
@@ -2633,7 +2639,7 @@ body.has-ant-buster-page {
       tier: 'final',
       splash: { radius: 60, falloff: 0.4, splashMult: 0.67 },
       arc: { height: 32, travelTime: 0.7 },
-      upgradesTo: []
+      upgradesTo: ['saturation']
     },
     discus: {
       name: 'Discus',
@@ -2658,7 +2664,7 @@ body.has-ant-buster-page {
       tier: 'final',
       returning: true,
       returnPierce: 1,
-      upgradesTo: []
+      upgradesTo: ['vortex']
     },
     shockwave: {
       name: 'Shockwave',
@@ -2671,7 +2677,7 @@ body.has-ant-buster-page {
       tier: 'final',
       splash: { radius: 80, falloff: 0.3, splashMult: 0.6 },
       screenshake: { magnitude: 3, decay: 12 },
-      upgradesTo: []
+      upgradesTo: ['earthshaker']
     },
     repeater: {
       name: 'Repeater',
@@ -3007,6 +3013,113 @@ body.has-ant-buster-page {
       // (prevents pinball chaos). Magnitude 30 px, duration 0 (instant
       // displacement, no follow-on tick).
       statusOnFirstHit: { kind: 'knockback', magnitude: 30, duration: 0 },
+      upgradesTo: []
+    },
+
+    // === HEAVY FAMILY GOD-TIER (Plan 4 — Bucket E, Task 19) ===
+    // Six T3 rows, each upgraded from one Heavy T2 final. All gated behind
+    // wave-15 unlock (game.godTierUnlocked). flashScale: 1.7 produces the
+    // larger muzzle flash; the gold halo is rendered automatically by
+    // drawGodTierHalos when tier === 'god'.
+    particle_cannon: {
+      name: 'Particle Cannon',
+      cost: 250,
+      damage: 60,
+      fireRate: 0.6,
+      range: 140,
+      projectileSpeed: 360,
+      family: 'heavy',
+      tier: 'god',
+      linePierce: 999,
+      armorPierce: true,
+      flashScale: 1.7,
+      upgradesTo: []
+    },
+    annihilator: {
+      name: 'Annihilator',
+      cost: 280,
+      damage: 120,
+      fireRate: 0.3,
+      range: 130,
+      projectileSpeed: 260,
+      family: 'heavy',
+      tier: 'god',
+      armorPierce: true,
+      // Base 120 dmg; splashMult 0.25 yields 30 splash damage in the 60 px ring.
+      splash: { radius: 60, falloff: 0.4, splashMult: 0.25 },
+      flashScale: 1.7,
+      screenShakeMag: 5,
+      upgradesTo: []
+    },
+    saturation: {
+      name: 'Saturation',
+      cost: 260,
+      damage: 25,
+      fireRate: 0.5,
+      range: 200,
+      projectileSpeed: 220,
+      family: 'heavy',
+      tier: 'god',
+      barrels: 3,
+      // 0.05s stagger between the three shells so the volley reads as a
+      // rolling rain instead of a simultaneous triple-fire. fireProjectile
+      // delays each barrel's spawn-active time and arc start by i*stagger.
+      barrelStagger: 0.05,
+      arc: { height: 32, travelTime: 0.7 },
+      splash: { radius: 80, falloff: 0.4, splashMult: 0.8 },
+      flashScale: 1.7,
+      upgradesTo: []
+    },
+    cluster_strike: {
+      name: 'Cluster Strike',
+      cost: 280,
+      damage: 30,
+      fireRate: 0.5,
+      range: 220,
+      projectileSpeed: 240,
+      family: 'heavy',
+      tier: 'god',
+      homing: { turnRate: 5.0 },
+      // MP-M mid-flight split. Parent missile splits at 50% of distance to
+      // its initial target; three homing children spread across a 60 deg arc
+      // and re-acquire targets on spawn.
+      splitFraction: 0.5,
+      splitCount: 3,
+      splash: { radius: 30, falloff: 0.4, splashMult: 0.4 },
+      flashScale: 1.7,
+      upgradesTo: []
+    },
+    vortex: {
+      name: 'Vortex',
+      cost: 250,
+      damage: 12,
+      fireRate: 0.4,
+      range: 200,
+      projectileSpeed: 240,
+      family: 'heavy',
+      tier: 'god',
+      barrels: 2,
+      returning: true,
+      returnPierce: 2,
+      flashScale: 1.7,
+      upgradesTo: []
+    },
+    earthshaker: {
+      name: 'Earthshaker',
+      cost: 300,
+      damage: 80,
+      fireRate: 0.12,
+      range: 140,
+      projectileSpeed: 180,
+      family: 'heavy',
+      tier: 'god',
+      // 120 px splash at 62.5% mult yields 50 splash damage; stun radiates to
+      // every ant in the ring (splashStatus: true gates the broadcast).
+      splash: { radius: 120, falloff: 0.4, splashMult: 0.625 },
+      splashStatus: true,
+      statusOnHit: { kind: 'stun', magnitude: 1, duration: 0.6 },
+      flashScale: 1.7,
+      screenShakeMag: 8,
       upgradesTo: []
     }
   };
@@ -3423,13 +3536,15 @@ body.has-ant-buster-page {
           splitOriginX: 0,
           splitOriginY: 0,
           splitTotalDist: 0,
-          _splitFired: false
+          _splitFired: false,
+          dormantUntil: 0
         });
       }
       return;
     }
 
     var spread = def.spread ? def.spread : 0.06;   // per-step radian offset; ~3.4 deg default (Twin Gun)
+    var stagger = def.barrelStagger ? def.barrelStagger : 0;
     for (var i = 0; i < n; i++) {
       var off;
       if (n === 1) {
@@ -3438,6 +3553,7 @@ body.has-ant-buster-page {
         off = (i - (n - 1) / 2) * spread;
       }
       var h = heading + off;
+      var dormantUntil = stagger > 0 ? game.time + i * stagger : 0;
       // Aim jitter (Plan 3 — MP-F, Minigun). Random per-shot angular offset
       // turns a high-fire-rate single-barrel into a spray cone — no formal
       // spread param, just constant inaccuracy. Multiplied by 2 to span the
@@ -3505,10 +3621,17 @@ body.has-ant-buster-page {
         splitOriginX: cannon.x,
         splitOriginY: cannon.y,
         splitTotalDist: 0,
-        _splitFired: false
+        _splitFired: false,
+        // Plan 4 — barrelStagger (Saturation). dormantUntil > game.time
+        // freezes the projectile at its spawn position until activation;
+        // updateProjectiles and drawProjectiles both skip dormant shells.
+        dormantUntil: dormantUntil
       };
       if (def.arc) {
-        p.arcStartedAt = game.time;
+        // Shift the arc start with the dormancy so a shell that activates
+        // 0.05s late also lands 0.05s late — the rolling-rain feel needs the
+        // arc clock to track dormancy, not real time.
+        p.arcStartedAt = dormantUntil > 0 ? dormantUntil : game.time;
         p.arcDuration = def.arc.travelTime;
         p.arcHeight = def.arc.height;
       }
@@ -3712,6 +3835,14 @@ body.has-ant-buster-page {
     var kept = [];
     for (var i = 0; i < game.projectiles.length; i++) {
       var p = game.projectiles[i];
+      // Plan 4 — barrelStagger (Saturation). A staggered shell sits dormant
+      // until game.time catches up to its dormantUntil; no movement, no
+      // collision, no render. Lets a 3-shell volley feel like rolling rain
+      // instead of a triple-fire instant. drawProjectiles also skips dormant
+      // shells, so the ramp-up is purely time-gated.
+      if (p.dormantUntil) {
+        if (game.time < p.dormantUntil) { kept.push(p); continue; }
+      }
       // Homing steer (Plan 3 — Patriot). Bend the velocity vector up to
       // homingTurnRate*dt radians toward p.target each tick. If the target is
       // null or already dead, scan game.ants for the nearest live, non-intangible
@@ -3818,7 +3949,8 @@ body.has-ant-buster-page {
                 splitOriginX: 0,
                 splitOriginY: 0,
                 splitTotalDist: 0,
-                _splitFired: true
+                _splitFired: true,
+                dormantUntil: 0
               });
             }
             // Push white-flash transient at the split point. Drawn by the
