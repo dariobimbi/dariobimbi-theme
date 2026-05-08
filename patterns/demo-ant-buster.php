@@ -111,8 +111,8 @@ body.has-ant-buster-page {
     state: 'idle',            // 'idle' | 'playing'
     time: 0,                  // seconds since game start
     accumulator: 0,           // for fixed-timestep
-    cake: { x: 352, y: 76, slices: 8, lost: 0 },
-    anthill: { x: 22, y: 184 },
+    cake: { x: 352, y: 80, slices: 8, lost: 0 },
+    anthill: { x: 40, y: 300 },
     ants: [],
     cannons: [],
     projectiles: [],
@@ -813,22 +813,40 @@ body.has-ant-buster-page {
   }
 
   function makeCake(slices) {
-    var c = makeCanvas(32, 32);
+    var c = makeCanvas(48, 48);
     var x = c.getContext('2d');
     var maxSlices = 8;
     var fillRatio = slices / maxSlices;
+    // Drop shadow under the plate so the whole element pops off the
+    // red/cream blanket regardless of which checker square it lands on.
+    x.fillStyle = 'rgba(0,0,0,0.35)';
+    x.fillRect(6, 42, 36, 3);
+    // Plate: dark navy (was white) for hard contrast against both blanket
+    // colors. The white plate disappeared on the cream squares.
+    x.fillStyle = '#181425';
+    x.fillRect(6, 36, 36, 6);
+    x.fillStyle = '#262b44';
+    x.fillRect(6, 36, 36, 1);                 // plate top highlight
     if (fillRatio > 0) {
+      // Dark outline ring under the cake body so it reads as a silhouette
+      // even when sitting on a red square.
+      x.fillStyle = '#181425';
+      x.fillRect(11, 17 + (1 - fillRatio) * 18, 26, fillRatio * 19 + 2);
+      // Cake body
       x.fillStyle = '#feae34';
-      x.fillRect(8, 12 + (1 - fillRatio) * 12, 16, fillRatio * 12);
+      x.fillRect(12, 18 + (1 - fillRatio) * 18, 24, fillRatio * 18);
+      // Icing
       x.fillStyle = '#fee761';
-      x.fillRect(10, 8 + (1 - fillRatio) * 12, 12, fillRatio * 6);
+      x.fillRect(15, 12 + (1 - fillRatio) * 18, 18, fillRatio * 9);
+      // Candle outline + body
+      x.fillStyle = '#181425';
+      x.fillRect(22, 4, 4, 11);
       x.fillStyle = '#e43b44';
-      x.fillRect(15, 4, 2, 6);                  // candle
+      x.fillRect(23, 5, 2, 9);
+      // Flame
       x.fillStyle = '#fee761';
-      x.fillRect(14, 2, 4, 3);                  // flame
+      x.fillRect(21, 1, 6, 4);
     }
-    x.fillStyle = '#ffffff';
-    x.fillRect(6, 24, 20, 3);                   // plate
     return c;
   }
 
@@ -1054,7 +1072,7 @@ body.has-ant-buster-page {
   // Layer 2: cake (regenerated each frame because it depends on slice count).
   function drawCake() {
     var cakeSprite = makeCake(game.cake.slices);
-    ctx.drawImage(cakeSprite, game.cake.x - 16, game.cake.y - 16);
+    ctx.drawImage(cakeSprite, game.cake.x - 24, game.cake.y - 24);
   }
 
   // Layer 3: anthill.
@@ -1978,10 +1996,19 @@ body.has-ant-buster-page {
       // Final approach: within 2 squares (32px) of the cake, lock in for the grab.
       var dxc = ant.x - game.cake.x;
       var dyc = ant.y - game.cake.y;
-      if (dxc * dxc + dyc * dyc < 32 * 32) {
+      var distCakeSq = dxc * dxc + dyc * dyc;
+      if (distCakeSq < 32 * 32) {
         alignment = 0.9;
         jitterRate = 0.5;
         wanderScale = 0.0;
+      }
+      // Hard lock zone: very close to the cake, snap heading dead at the
+      // center and zero out jitter. Without this, jitter + wall-bounce can
+      // keep an ant orbiting just outside the pickup radius indefinitely.
+      if (distCakeSq < 26 * 26) {
+        ant.heading = angleTowards(ant.x, ant.y, game.cake.x, game.cake.y);
+        jitterRate = 0;
+        wanderScale = 0;
       }
     }
     // Status-effect speed scaling: walk every active effect and apply its multiplier (slow,
@@ -2079,7 +2106,7 @@ body.has-ant-buster-page {
   }
 
   function checkPickupsAndDeliveries() {
-    var pickupR = 14;
+    var pickupR = 18;
     var deliverR = 14;
     for (var i = 0; i < game.ants.length; i++) {
       var a = game.ants[i];
@@ -2600,7 +2627,7 @@ body.has-ant-buster-page {
     if (y > HEIGHT - 16) { return false; }
     var dxCake = x - game.cake.x;
     var dyCake = y - game.cake.y;
-    if (dxCake * dxCake + dyCake * dyCake < 24 * 24) { return false; }
+    if (dxCake * dxCake + dyCake * dyCake < 32 * 32) { return false; }
     var dxAnt = x - game.anthill.x;
     var dyAnt = y - game.anthill.y;
     if (dxAnt * dxAnt + dyAnt * dyAnt < 24 * 24) { return false; }
