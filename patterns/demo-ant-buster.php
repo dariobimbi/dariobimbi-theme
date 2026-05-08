@@ -1029,7 +1029,10 @@ body.has-ant-buster-page {
     var startY = 32;
     var cardH = 70;
     var cardW = SHOP_W - 16;
-    var keys = ['howitzer', 'repeater', 'twingun'];
+    // Plan 4: Pink Pea joins the base-cannon shop column as the 4th card.
+    // The Pink Rubber Family is a "casual / approachable" 4th family per
+    // Plan 3 §9 — available from wave 1 with no gating.
+    var keys = ['howitzer', 'repeater', 'twingun', 'pink_pea'];
     ui.shopRects = [];
     for (var i = 0; i < keys.length; i++) {
       var k = keys[i];
