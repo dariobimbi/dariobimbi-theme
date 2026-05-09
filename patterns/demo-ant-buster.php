@@ -1107,7 +1107,51 @@ body.has-ant-buster-page {
     x.fillRect(8, 0, 4, 2);
     return c;
   }
-  function makeCannonTurretBlizzard() { return makeCannonTurret(); }
+  function makeCannonTurretBlizzard() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    // Frosted base (halo-friendly slate-blue)
+    x.fillStyle = '#3a4055';
+    x.fillRect(4, 14, 12, 4);
+    // Snowflake glyph (5-pixel asterisk centered in base)
+    x.fillStyle = '#ffffff';
+    x.fillRect(9, 15, 1, 1);
+    x.fillRect(8, 16, 1, 1);
+    x.fillRect(9, 16, 1, 1);
+    x.fillRect(10, 16, 1, 1);
+    x.fillRect(9, 17, 1, 1);
+    // Rime crawling up base edges
+    x.fillStyle = '#a0d8ff';
+    x.fillRect(5, 14, 1, 1);
+    x.fillRect(15, 14, 1, 1);
+    x.fillRect(4, 16, 1, 1);
+    x.fillRect(15, 17, 1, 1);
+    // Left ice fragment (3-px triangle)
+    x.fillStyle = '#c8e8ff';
+    x.fillRect(5, 10, 2, 1);
+    x.fillRect(4, 11, 3, 1);
+    x.fillRect(5, 12, 2, 1);
+    // Right ice fragment (mirrored)
+    x.fillRect(13, 10, 2, 1);
+    x.fillRect(13, 11, 3, 1);
+    x.fillRect(13, 12, 2, 1);
+    // Central spire — hexagonal cross-section
+    x.fillStyle = '#a0d8ff';
+    // Top narrowing (2 px wide)
+    x.fillRect(9, 2, 2, 2);
+    // Middle widening (4 px)
+    x.fillRect(8, 4, 4, 8);
+    // Bottom narrowing back
+    x.fillRect(9, 12, 2, 2);
+    // Right-edge shadow on spire
+    x.fillStyle = '#5090c0';
+    x.fillRect(11, 4, 1, 8);
+    // Sparkle highlights
+    x.fillStyle = '#ffffff';
+    x.fillRect(9, 4, 1, 1);
+    x.fillRect(10, 10, 1, 1);
+    return c;
+  }
   function makeCannonTurretTempest() { return makeCannonTurret(); }
   function makeCannonTurretBiohazard() { return makeCannonTurret(); }
 
