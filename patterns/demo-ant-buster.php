@@ -917,6 +917,327 @@ body.has-ant-buster-page {
     return c;
   }
 
+  // === Plan 8a — God-tier turret factories (vertical slice, 9 of 18) ===
+  // Stubs delegate to makeCannonTurret() until each cannon's body is filled
+  // in by its own task. All 9 register in the turrets table below; the live
+  // demo will show howitzer fallback until each task lands.
+
+  function makeCannonTurretParticleCannon() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    // Breech base (slate, halo-safe)
+    x.fillStyle = '#1a1a30';
+    x.fillRect(4, 16, 12, 2);
+    // Side rails
+    x.fillStyle = '#5a5a6a';
+    x.fillRect(4, 14, 1, 4);
+    x.fillRect(15, 14, 1, 4);
+    // Barrel (silver-white accelerator)
+    x.fillStyle = '#d8e0f0';
+    x.fillRect(9, 2, 2, 14);
+    // Plasma rings (cyan core at y=5, 9, 13)
+    x.fillStyle = '#3affff';
+    x.fillRect(8, 5, 4, 1);
+    x.fillRect(8, 9, 4, 1);
+    x.fillRect(8, 13, 4, 1);
+    // Ring highlights (lighter cyan, scattered)
+    x.fillStyle = '#80ffff';
+    x.fillRect(9, 5, 1, 1);
+    x.fillRect(10, 9, 1, 1);
+    x.fillRect(9, 13, 1, 1);
+    // Purple energy core in breech
+    x.fillStyle = '#a050ff';
+    x.fillRect(9, 15, 2, 1);
+    x.fillStyle = '#e0a0ff';
+    x.fillRect(10, 15, 1, 1);
+    return c;
+  }
+  function makeCannonTurretAnnihilator() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    // Cast-iron breech (extends full width — heaviest base)
+    x.fillStyle = '#2a2530';
+    x.fillRect(3, 11, 14, 7);
+    // Bolt heads (4 corners)
+    x.fillStyle = '#806040';
+    x.fillRect(3, 11, 2, 2);
+    x.fillRect(15, 11, 2, 2);
+    x.fillRect(3, 16, 2, 2);
+    x.fillRect(15, 16, 2, 2);
+    // Stubby barrel (chunkiest)
+    x.fillStyle = '#3a3540';
+    x.fillRect(7, 3, 7, 8);
+    // Brass reinforcement bands
+    x.fillStyle = '#aa7822';
+    x.fillRect(6, 5, 9, 1);
+    x.fillRect(6, 9, 9, 1);
+    // Brass band highlights
+    x.fillStyle = '#d8a040';
+    x.fillRect(7, 5, 1, 1);
+    x.fillRect(13, 9, 1, 1);
+    // Black bore with orange flicker
+    x.fillStyle = '#000000';
+    x.fillRect(8, 0, 5, 3);
+    x.fillStyle = '#cc4020';
+    x.fillRect(10, 1, 1, 1);
+    return c;
+  }
+  function makeCannonTurretEarthshaker() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    // Cast-iron breech (widest base — anchored deep)
+    x.fillStyle = '#1a1820';
+    x.fillRect(2, 11, 16, 7);
+    // Corner bolt-heads
+    x.fillStyle = '#604035';
+    x.fillRect(2, 11, 2, 2);
+    x.fillRect(15, 11, 2, 2);
+    x.fillRect(2, 16, 2, 2);
+    x.fillRect(15, 16, 2, 2);
+    // Industrial-steel piston (lighter than family anchor for pop)
+    x.fillStyle = '#3a4055';
+    x.fillRect(6, 4, 8, 7);
+    // Hammer-face dark cap
+    x.fillStyle = '#604035';
+    x.fillRect(6, 2, 8, 2);
+    // Stud dots (+ pattern on hammer-face)
+    x.fillStyle = '#806040';
+    x.fillRect(10, 1, 1, 1);
+    x.fillRect(8, 3, 1, 1);
+    x.fillRect(10, 3, 1, 1);
+    x.fillRect(12, 3, 1, 1);
+    // Orange seep at the very bottom (warm light leaking)
+    x.fillStyle = '#cc4020';
+    x.fillRect(5, 18, 10, 1);
+    return c;
+  }
+  function makeCannonTurretPhoenix() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    // Breech (dark with ember glow)
+    x.fillStyle = '#3a2520';
+    x.fillRect(4, 14, 12, 4);
+    x.fillStyle = '#cc4020';
+    x.fillRect(6, 18, 8, 1);
+    // Gold-bronze stem (narrow neck connecting cone to breech)
+    x.fillStyle = '#aa7822';
+    x.fillRect(8, 10, 4, 4);
+    // Cone walls (slope inward — darker orange band)
+    x.fillStyle = '#cc4020';
+    x.fillRect(7, 6, 6, 2);
+    x.fillRect(6, 8, 8, 1);
+    x.fillRect(4, 5, 12, 1);
+    // Mouth — concentric color bands (back to front)
+    // Outer ring (deep orange)
+    x.fillStyle = '#ff6020';
+    x.fillRect(3, 0, 14, 4);
+    // Mid ring (bright yellow-orange)
+    x.fillStyle = '#ffcc20';
+    x.fillRect(5, 0, 10, 4);
+    // White-hot core
+    x.fillStyle = '#fff0b0';
+    x.fillRect(7, 0, 6, 4);
+    x.fillStyle = '#ffffff';
+    x.fillRect(9, 2, 2, 1);
+    // Flame-feather curls (left and right outriggers — 3-px each, mirrored)
+    x.fillStyle = '#ff9020';
+    x.fillRect(2, 5, 1, 1);
+    x.fillRect(1, 6, 1, 1);
+    x.fillRect(2, 7, 1, 1);
+    x.fillRect(17, 5, 1, 1);
+    x.fillRect(18, 6, 1, 1);
+    x.fillRect(17, 7, 1, 1);
+    return c;
+  }
+  function makeCannonTurretReaper() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    // Breech base (dark slate — halo zone)
+    x.fillStyle = '#0a0a14';
+    x.fillRect(8, 14, 6, 4);
+    // Purple aura rim at base edge
+    x.fillStyle = '#602080';
+    x.fillRect(8, 18, 6, 1);
+    // Hood cowl (dark backdrop behind the hook tip)
+    x.fillStyle = '#1a1a20';
+    x.fillRect(5, 0, 5, 3);
+    // Red eye (single pixel, inside hood)
+    x.fillStyle = '#ff2020';
+    x.fillRect(6, 1, 1, 1);
+    // Eye highlight
+    x.fillStyle = '#ff8080';
+    x.fillRect(7, 1, 1, 1);
+    // Vertical shaft (bone-white)
+    x.fillStyle = '#e8e0d0';
+    x.fillRect(10, 2, 1, 13);
+    // Hook (bone-white, overlays hood at apex)
+    x.fillRect(9, 2, 1, 1);  // hook base
+    x.fillRect(8, 1, 1, 1);  // hook apex (overlays hood)
+    x.fillRect(7, 2, 1, 1);  // hook tip
+    // Cutting edge (rusted iron, inner side of hook)
+    x.fillStyle = '#604035';
+    x.fillRect(8, 2, 1, 1);
+    x.fillRect(9, 3, 1, 1);
+    return c;
+  }
+  function makeCannonTurretHawkeye() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    // Walnut stock (breech)
+    x.fillStyle = '#604030';
+    x.fillRect(6, 14, 8, 4);
+    // Wood grain lines (broken pattern)
+    x.fillStyle = '#805040';
+    x.fillRect(7, 15, 2, 1);
+    x.fillRect(11, 15, 2, 1);
+    x.fillRect(8, 17, 2, 1);
+    x.fillRect(11, 17, 1, 1);
+    // Scope cylinder (perpendicular to barrel — cross-axis geometry)
+    x.fillStyle = '#1a1820';
+    x.fillRect(4, 11, 12, 3);
+    // Brass edge rings (left and right end caps of scope)
+    x.fillStyle = '#aa7822';
+    x.fillRect(4, 11, 1, 3);
+    x.fillRect(15, 11, 1, 3);
+    // Barrel (gunmetal, very thin — only 2 px wide)
+    x.fillStyle = '#4a5560';
+    x.fillRect(9, 2, 2, 12);
+    // Suppressor bulge at muzzle (slightly wider)
+    x.fillStyle = '#2a3540';
+    x.fillRect(8, 0, 4, 2);
+    return c;
+  }
+  function makeCannonTurretBlizzard() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    // Frosted base (halo-friendly slate-blue)
+    x.fillStyle = '#3a4055';
+    x.fillRect(4, 14, 12, 4);
+    // Snowflake glyph (5-pixel asterisk centered in base)
+    x.fillStyle = '#ffffff';
+    x.fillRect(9, 15, 1, 1);
+    x.fillRect(8, 16, 1, 1);
+    x.fillRect(9, 16, 1, 1);
+    x.fillRect(10, 16, 1, 1);
+    x.fillRect(9, 17, 1, 1);
+    // Rime crawling up base edges
+    x.fillStyle = '#a0d8ff';
+    x.fillRect(5, 14, 1, 1);
+    x.fillRect(15, 14, 1, 1);
+    x.fillRect(4, 16, 1, 1);
+    x.fillRect(15, 17, 1, 1);
+    // Left ice fragment (3-px triangle)
+    x.fillStyle = '#c8e8ff';
+    x.fillRect(5, 10, 2, 1);
+    x.fillRect(4, 11, 3, 1);
+    x.fillRect(5, 12, 2, 1);
+    // Right ice fragment (mirrored)
+    x.fillRect(13, 10, 2, 1);
+    x.fillRect(13, 11, 3, 1);
+    x.fillRect(13, 12, 2, 1);
+    // Central spire — hexagonal cross-section
+    x.fillStyle = '#a0d8ff';
+    // Top narrowing (2 px wide)
+    x.fillRect(9, 2, 2, 2);
+    // Middle widening (4 px)
+    x.fillRect(8, 4, 4, 8);
+    // Bottom narrowing back
+    x.fillRect(9, 12, 2, 2);
+    // Right-edge shadow on spire
+    x.fillStyle = '#5090c0';
+    x.fillRect(11, 4, 1, 8);
+    // Sparkle highlights
+    x.fillStyle = '#ffffff';
+    x.fillRect(9, 4, 1, 1);
+    x.fillRect(10, 10, 1, 1);
+    return c;
+  }
+  function makeCannonTurretTempest() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    // Stormy purple-grey breech
+    x.fillStyle = '#3a2a40';
+    x.fillRect(6, 15, 8, 4);
+    // Lightning glyph in breech (5-pixel zig)
+    x.fillStyle = '#fff080';
+    x.fillRect(9, 16, 1, 1);
+    x.fillRect(10, 16, 1, 1);
+    x.fillRect(8, 17, 1, 1);
+    x.fillRect(9, 17, 1, 1);
+    x.fillRect(10, 17, 1, 1);
+    // Shock-rings on the ground (concentric, symmetric — anchors rotation)
+    x.fillStyle = '#80c0ff';
+    x.fillRect(4, 15, 12, 1);
+    x.fillRect(2, 17, 16, 1);
+    // Z-bolt outer-edge halo (drawn first as a backdrop glow)
+    x.fillStyle = '#ffd040';
+    // Top segment glow
+    x.fillRect(8, 2, 3, 4);
+    // Middle kink glow
+    x.fillRect(9, 5, 5, 5);
+    // Bottom segment glow
+    x.fillRect(12, 9, 3, 6);
+    // Z-bolt core (bright yellow-white, 1-px path)
+    x.fillStyle = '#fff080';
+    // Top segment (lean left from y=2 to y=5)
+    x.fillRect(10, 2, 1, 1);
+    x.fillRect(9, 3, 1, 1);
+    x.fillRect(9, 4, 1, 1);
+    x.fillRect(8, 5, 1, 1);
+    // Middle segment (diagonal right from y=6 to y=9)
+    x.fillRect(10, 6, 1, 1);
+    x.fillRect(11, 7, 1, 1);
+    x.fillRect(12, 8, 1, 1);
+    x.fillRect(13, 9, 1, 1);
+    // Bottom segment (vertical from y=10 to y=14)
+    x.fillRect(13, 10, 1, 1);
+    x.fillRect(13, 11, 1, 1);
+    x.fillRect(14, 12, 1, 1);
+    x.fillRect(14, 13, 1, 1);
+    x.fillRect(14, 14, 1, 1);
+    return c;
+  }
+  function makeCannonTurretBiohazard() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    // Rust-patina base
+    x.fillStyle = '#3a2a20';
+    x.fillRect(4, 14, 12, 4);
+    // Patina speckles
+    x.fillStyle = '#5a3a30';
+    x.fillRect(6, 15, 1, 1);
+    x.fillRect(13, 16, 1, 1);
+    x.fillRect(8, 17, 1, 1);
+    // Left reservoir (bile-green with shadow)
+    x.fillStyle = '#7acc20';
+    x.fillRect(2, 8, 6, 10);
+    // Left reservoir shadow (left edge)
+    x.fillStyle = '#4a8c10';
+    x.fillRect(2, 8, 1, 10);
+    // Left reservoir liquid line
+    x.fillStyle = '#5a8c10';
+    x.fillRect(3, 11, 5, 1);
+    // Right reservoir (mirrored)
+    x.fillStyle = '#7acc20';
+    x.fillRect(12, 8, 6, 10);
+    x.fillStyle = '#4a8c10';
+    x.fillRect(17, 8, 1, 10);
+    x.fillStyle = '#5a8c10';
+    x.fillRect(12, 11, 5, 1);
+    // Central nozzle (dull stainless)
+    x.fillStyle = '#8a90a0';
+    x.fillRect(9, 2, 2, 8);
+    // Venom drip at the muzzle
+    x.fillStyle = '#7acc20';
+    x.fillRect(9, 0, 1, 1);
+    // Biohazard trefoil glyph (3 black 2x2 lobes clustered around x=9-10, y=5-8)
+    x.fillStyle = '#0a0a14';
+    x.fillRect(7, 5, 2, 2);
+    x.fillRect(11, 5, 2, 2);
+    x.fillRect(9, 7, 2, 2);
+    return c;
+  }
+
   function makeCake(slices) {
     var c = makeCanvas(48, 48);
     var x = c.getContext('2d');
@@ -1053,7 +1374,17 @@ body.has-ant-buster-page {
       // Plan 4 — Pink Rubber Family (Bucket B). Linear chain, no T3 god.
       pink_pea: makeCannonTurretPinkPea(),
       bouncy_bubble: makeCannonTurretBouncyBubble(),
-      rubber_wrecking_ball: makeCannonTurretRubberWreckingBall()
+      rubber_wrecking_ball: makeCannonTurretRubberWreckingBall(),
+      // Plan 8a — God-tier vertical slice (9 of 18). Plan 8b fills in the rest.
+      particle_cannon: makeCannonTurretParticleCannon(),
+      annihilator: makeCannonTurretAnnihilator(),
+      earthshaker: makeCannonTurretEarthshaker(),
+      phoenix: makeCannonTurretPhoenix(),
+      reaper: makeCannonTurretReaper(),
+      hawkeye: makeCannonTurretHawkeye(),
+      blizzard: makeCannonTurretBlizzard(),
+      tempest: makeCannonTurretTempest(),
+      biohazard: makeCannonTurretBiohazard()
     },
     anthill: makeAnthill(),
     projectile: makeProjectile()
