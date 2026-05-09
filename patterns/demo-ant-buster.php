@@ -917,6 +917,21 @@ body.has-ant-buster-page {
     return c;
   }
 
+  // === Plan 8a — God-tier turret factories (vertical slice, 9 of 18) ===
+  // Stubs delegate to makeCannonTurret() until each cannon's body is filled
+  // in by its own task. All 9 register in the turrets table below; the live
+  // demo will show howitzer fallback until each task lands.
+
+  function makeCannonTurretParticleCannon() { return makeCannonTurret(); }
+  function makeCannonTurretAnnihilator() { return makeCannonTurret(); }
+  function makeCannonTurretEarthshaker() { return makeCannonTurret(); }
+  function makeCannonTurretPhoenix() { return makeCannonTurret(); }
+  function makeCannonTurretReaper() { return makeCannonTurret(); }
+  function makeCannonTurretHawkeye() { return makeCannonTurret(); }
+  function makeCannonTurretBlizzard() { return makeCannonTurret(); }
+  function makeCannonTurretTempest() { return makeCannonTurret(); }
+  function makeCannonTurretBiohazard() { return makeCannonTurret(); }
+
   function makeCake(slices) {
     var c = makeCanvas(48, 48);
     var x = c.getContext('2d');
@@ -1053,7 +1068,17 @@ body.has-ant-buster-page {
       // Plan 4 — Pink Rubber Family (Bucket B). Linear chain, no T3 god.
       pink_pea: makeCannonTurretPinkPea(),
       bouncy_bubble: makeCannonTurretBouncyBubble(),
-      rubber_wrecking_ball: makeCannonTurretRubberWreckingBall()
+      rubber_wrecking_ball: makeCannonTurretRubberWreckingBall(),
+      // Plan 8a — God-tier vertical slice (9 of 18). Plan 8b fills in the rest.
+      particle_cannon: makeCannonTurretParticleCannon(),
+      annihilator: makeCannonTurretAnnihilator(),
+      earthshaker: makeCannonTurretEarthshaker(),
+      phoenix: makeCannonTurretPhoenix(),
+      reaper: makeCannonTurretReaper(),
+      hawkeye: makeCannonTurretHawkeye(),
+      blizzard: makeCannonTurretBlizzard(),
+      tempest: makeCannonTurretTempest(),
+      biohazard: makeCannonTurretBiohazard()
     },
     anthill: makeAnthill(),
     projectile: makeProjectile()
