@@ -1197,7 +1197,46 @@ body.has-ant-buster-page {
     x.fillRect(14, 14, 1, 1);
     return c;
   }
-  function makeCannonTurretBiohazard() { return makeCannonTurret(); }
+  function makeCannonTurretBiohazard() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    // Rust-patina base
+    x.fillStyle = '#3a2a20';
+    x.fillRect(4, 14, 12, 4);
+    // Patina speckles
+    x.fillStyle = '#5a3a30';
+    x.fillRect(6, 15, 1, 1);
+    x.fillRect(13, 16, 1, 1);
+    x.fillRect(8, 17, 1, 1);
+    // Left reservoir (bile-green with shadow)
+    x.fillStyle = '#7acc20';
+    x.fillRect(2, 8, 6, 10);
+    // Left reservoir shadow (left edge)
+    x.fillStyle = '#4a8c10';
+    x.fillRect(2, 8, 1, 10);
+    // Left reservoir liquid line
+    x.fillStyle = '#5a8c10';
+    x.fillRect(3, 11, 5, 1);
+    // Right reservoir (mirrored)
+    x.fillStyle = '#7acc20';
+    x.fillRect(12, 8, 6, 10);
+    x.fillStyle = '#4a8c10';
+    x.fillRect(17, 8, 1, 10);
+    x.fillStyle = '#5a8c10';
+    x.fillRect(12, 11, 5, 1);
+    // Central nozzle (dull stainless)
+    x.fillStyle = '#8a90a0';
+    x.fillRect(9, 2, 2, 8);
+    // Venom drip at the muzzle
+    x.fillStyle = '#7acc20';
+    x.fillRect(9, 0, 1, 1);
+    // Biohazard trefoil glyph (3 black 2x2 lobes clustered around x=9-10, y=5-8)
+    x.fillStyle = '#0a0a14';
+    x.fillRect(7, 5, 2, 2);
+    x.fillRect(11, 5, 2, 2);
+    x.fillRect(9, 7, 2, 2);
+    return c;
+  }
 
   function makeCake(slices) {
     var c = makeCanvas(48, 48);
