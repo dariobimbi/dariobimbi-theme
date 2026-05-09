@@ -63,6 +63,7 @@ body.has-ant-buster-page {
   image-rendering: crisp-edges;
   cursor: default;
   display: block;
+  touch-action: none;
 }
 
 .demo-ant-buster #ab-canvas.ab-dragging {
@@ -1425,6 +1426,15 @@ body.has-ant-buster-page {
       ctx.fillStyle = '#999';
       ctx.font = '8px monospace';
       ctx.fillText(sk.family, cardX + 32, cy + 52);
+      // Armed-card highlight (Touch Input Task 5).
+      if (ui.armedKind === k) {
+        ctx.strokeStyle = '#fee761';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(cardX + 1, cy + 1, cardW - 2, cardH - 2);
+        ctx.fillStyle = '#aaa';
+        ctx.font = '8px monospace';
+        ctx.fillText('tap a spot', cardX + 32, cy + 64);
+      }
       ui.shopRects.push({ x: cardX, y: cy, w: cardW, h: cardH, kind: k });
     }
     ctx.font = '10px monospace';   // restore default
@@ -2121,6 +2131,27 @@ body.has-ant-buster-page {
         ctx.stroke();
         ctx.restore();
       }
+      // Touch Input Task 7: invalid placement flash. Brief red pulse at
+      // the rejected tap location. Stays Armed; this is the visible
+      // "I missed" signal.
+      if (ef.kind === 'invalidPlacement') {
+        var ip = ef.t / ef.life;
+        ctx.save();
+        ctx.globalAlpha = 1 - ip;
+        ctx.strokeStyle = '#e43b44';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(ef.x, ef.y, 8 + ip * 12, 0, Math.PI * 2);
+        ctx.stroke();
+        // Small "X" through the center for unambiguous rejection.
+        ctx.beginPath();
+        ctx.moveTo(ef.x - 5, ef.y - 5);
+        ctx.lineTo(ef.x + 5, ef.y + 5);
+        ctx.moveTo(ef.x + 5, ef.y - 5);
+        ctx.lineTo(ef.x - 5, ef.y + 5);
+        ctx.stroke();
+        ctx.restore();
+      }
     }
   }
 
@@ -2190,14 +2221,28 @@ body.has-ant-buster-page {
   // the shop). Sits inside the overlays bucket because it is UI feedback drawn
   // above gameplay, but below pause/win/lose modals.
   function drawDragPreview() {
-    if (!ui.dragging) { return; }
+    if (ui.armedKind === null) { return; }
+    if (ui.activePointerId === null) { return; }   // hide ghost when no pointer is down (Task 3 keeps this)
     var ok = canPlaceCannon(ui.mouseX, ui.mouseY);
-    var dragDef = CANNON_KINDS[ui.dragging.kind];
-    var dragTurret = game.sprites.turrets[ui.dragging.kind];
+    var dragDef = CANNON_KINDS[ui.armedKind];
+    var dragTurret = game.sprites.turrets[ui.armedKind];
     if (!dragTurret) { dragTurret = game.sprites.turrets.howitzer; }
+    // Ghost sprite Y offset: lift 30 game-px on touch/pen so the player can
+    // see the placement tile under their finger. Range ring stays centered
+    // on the real (ui.mouseX, ui.mouseY) so validity readout is accurate.
+    var ghostDy = 0;
+    if (ui.pointerType === 'touch') { ghostDy = -30; }
+    if (ui.pointerType === 'pen') { ghostDy = -30; }
     ctx.globalAlpha = 0.6;
-    ctx.drawImage(game.sprites.cannonBase, Math.round(ui.mouseX - 16), Math.round(ui.mouseY - 16));
-    ctx.drawImage(dragTurret, Math.round(ui.mouseX - 10), Math.round(ui.mouseY - 16));
+    ctx.drawImage(game.sprites.cannonBase, Math.round(ui.mouseX - 16), Math.round(ui.mouseY - 16 + ghostDy));
+    ctx.drawImage(dragTurret, Math.round(ui.mouseX - 10), Math.round(ui.mouseY - 16 + ghostDy));
+    // Invalid-spot red tint over the ghost (Task 7). Drawn on top with a
+    // multiply-ish blend by stacking a translucent red rect; cheap and
+    // visible on small screens. Only renders when canPlaceCannon = false.
+    if (!ok) {
+      ctx.fillStyle = 'rgba(228, 59, 68, 0.45)';
+      ctx.fillRect(Math.round(ui.mouseX - 16), Math.round(ui.mouseY - 16 + ghostDy), 32, 24);
+    }
     ctx.globalAlpha = 1;
     ctx.strokeStyle = ok ? 'rgba(255, 255, 255, 0.5)' : 'rgba(228, 59, 68, 0.7)';
     ctx.lineWidth = 1;
@@ -5345,7 +5390,12 @@ body.has-ant-buster-page {
     game.godTierUnlockPulseStart = 0;
     ui.sendNextRect = null;
     ui.restartRunRect = null;
-    ui.dragging = null;
+    ui.activePointerId = null;
+    ui.pointerType = null;
+    ui.armedKind = null;
+    ui.pendingKind = null;
+    ui.pendingX = 0;
+    ui.pendingY = 0;
     ui.selectedCannon = null;
     ui.upgradeRects[0] = null;
     ui.upgradeRects[1] = null;
@@ -5358,7 +5408,12 @@ body.has-ant-buster-page {
 
   // === INPUT ===
   var ui = {
-    dragging: null,         // { kind } when dragging from shop
+    activePointerId: null,  // single-pointer gesture lock; subsequent pointers ignored
+    pointerType: null,      // 'mouse' | 'touch' | 'pen' for last pointerdown; drives ghost offset
+    armedKind: null,        // cannon kind promoted from Pending; non-null while dragging (Tasks 2-3)
+    pendingKind: null,      // shop-card kind currently in Pending; null when not Pending
+    pendingX: 0,            // pointerdown x in game-coords (motion-threshold reference)
+    pendingY: 0,            // pointerdown y in game-coords
     mouseX: 0,
     mouseY: 0,
     sendNextRect: null,     // bounds of the Send-Next button (set when rendered in prep)
@@ -5383,10 +5438,61 @@ body.has-ant-buster-page {
     };
   }
 
-  canvas.addEventListener('mousedown', function (evt) {
+  canvas.addEventListener('pointerdown', function (evt) {
+    if (ui.activePointerId !== null) { return; }   // single-pointer lock
+    canvas.setPointerCapture(evt.pointerId);
+    ui.activePointerId = evt.pointerId;
+    ui.pointerType = evt.pointerType;
     var p = canvasToGame(evt);
     ui.mouseX = p.x;
     ui.mouseY = p.y;
+    // === Armed-state interactions (tap-to-arm world) ===
+    // Runs before the normal hit-test cascade so an Armed gesture wins over
+    // cannon-select and HUD pass-through. HUD pause/speed/sell/upgrade are
+    // re-tested below: they do not clear armedKind.
+    if (ui.armedKind !== null) {
+      // activePointerId is guaranteed non-null here (set above after the
+      // single-pointer-lock early return). Shop hit-tests first so a same-card
+      // re-tap toggles off and a different-card tap swaps kind.
+      if (ui.shopRects) {
+        for (var sa = 0; sa < ui.shopRects.length; sa++) {
+          var ra = ui.shopRects[sa];
+          if (inRect(p, ra)) {
+            if (ra.kind === ui.armedKind) {
+              // Same card: toggle off.
+              ui.armedKind = null;
+              canvas.classList.remove('ab-dragging');
+              return;
+            }
+            // Different card: swap if affordable, else ignore.
+            var skSwap = CANNON_KINDS[ra.kind];
+            if (game.gold >= skSwap.cost) {
+              ui.armedKind = null;
+              ui.pendingKind = ra.kind;
+              ui.pendingX = p.x;
+              ui.pendingY = p.y;
+              canvas.classList.remove('ab-dragging');
+            }
+            return;
+          }
+        }
+      }
+      // Playfield: enter Placing (ghost will render via drawDragPreview).
+      // Skipped while paused so the pause-overlay's Restart Run check downstream
+      // can still receive the gesture. Armed survives the paused tap.
+      if (p.x < PLAYFIELD_W) {
+        if (p.y >= HUD_H) {
+          if (!game.paused) {
+            // Note: do not call placeCannon here. Placement commits on
+            // pointerup (Step 2 below) so the player can slide-to-adjust.
+            canvas.classList.add('ab-dragging');
+            return;
+          }
+        }
+      }
+      // Anything else (HUD, side panel, etc.): fall through to normal
+      // hit-tests below. armedKind is preserved.
+    }
     // Pause overlay's Restart Run button — only live while paused. Tested first so
     // it wins over the HUD pause toggle behind it (which is in the same x range).
     if (game.paused) {
@@ -5477,11 +5583,12 @@ body.has-ant-buster-page {
       for (var si = 0; si < ui.shopRects.length; si++) {
         var rs = ui.shopRects[si];
         if (inRect(p, rs)) {
-          // only start drag if affordable
+          // Pending state: motion in pointermove will promote to Dragging.
           var sk = CANNON_KINDS[rs.kind];
           if (game.gold >= sk.cost) {
-            ui.dragging = { kind: rs.kind };
-            canvas.classList.add('ab-dragging');
+            ui.pendingKind = rs.kind;
+            ui.pendingX = p.x;
+            ui.pendingY = p.y;
           }
           return;
         }
@@ -5489,10 +5596,25 @@ body.has-ant-buster-page {
     }
   });
 
-  canvas.addEventListener('mousemove', function (evt) {
+  canvas.addEventListener('pointermove', function (evt) {
+    // Two-level guard: allow hover events when no gesture is active
+    // (activePointerId === null), and filter spurious second pointers when one is.
+    if (ui.activePointerId !== null) {
+      if (evt.pointerId !== ui.activePointerId) { return; }
+    }
     var p = canvasToGame(evt);
     ui.mouseX = p.x;
     ui.mouseY = p.y;
+    // Pending -> Dragging promotion: 6 game-px squared distance from down point.
+    if (ui.pendingKind !== null) {
+      var ddx = p.x - ui.pendingX;
+      var ddy = p.y - ui.pendingY;
+      if (ddx * ddx + ddy * ddy > 36) {
+        ui.armedKind = ui.pendingKind;
+        ui.pendingKind = null;
+        canvas.classList.add('ab-dragging');
+      }
+    }
     // Track upgrade-button hover so drawRangeCircle can preview the target's range
     // as a dashed secondary circle. Avoids and-operator for the inline-script gotcha.
     var hovered = null;
@@ -5513,22 +5635,70 @@ body.has-ant-buster-page {
     ui.hoveredUpgrade = hovered;
   });
 
-  canvas.addEventListener('mouseup', function (evt) {
+  canvas.addEventListener('pointerup', function (evt) {
+    if (evt.pointerId !== ui.activePointerId) { return; }
     var p = canvasToGame(evt);
     ui.mouseX = p.x;
     ui.mouseY = p.y;
-    if (ui.dragging) {
-      placeCannon(ui.dragging.kind, p.x, p.y);
-      ui.dragging = null;
-      canvas.classList.remove('ab-dragging');
+    // Case A: Pending without motion -> Armed (tap-to-arm).
+    if (ui.pendingKind !== null) {
+      ui.armedKind = ui.pendingKind;
+      ui.pendingKind = null;
+      // ab-dragging class stays off: Armed without pointer down has no grab cursor.
+    } else if (ui.armedKind !== null) {
+      // Case B: Dragging or Placing -> commit if valid.
+      // Skipped while paused so a stray paused tap cannot place. Armed survives.
+      if (game.paused) {
+        canvas.classList.remove('ab-dragging');
+      } else if (canPlaceCannon(p.x, p.y)) {
+        placeCannon(ui.armedKind, p.x, p.y);
+        ui.armedKind = null;
+        canvas.classList.remove('ab-dragging');
+      } else {
+        // Case C: invalid spot. Drag-from-shop releases (Idle); tap-armed
+        // placement attempts stay Armed. We distinguish by pointerType:
+        // touch/pen came from tap-to-arm and stay armed for retry; mouse
+        // came from drag-from-shop and drops to Idle ("abandon" semantics).
+        if (ui.pointerType === 'touch') {
+          // Stay Armed; push the red-pulse flash at the rejected tap location.
+          game.effects.push({ kind: 'invalidPlacement', x: p.x, y: p.y, t: 0, life: 0.15 });
+          canvas.classList.remove('ab-dragging');
+        } else if (ui.pointerType === 'pen') {
+          // Same as touch: stay Armed. Separate branch avoids || (inline-script gotcha).
+          game.effects.push({ kind: 'invalidPlacement', x: p.x, y: p.y, t: 0, life: 0.15 });
+          canvas.classList.remove('ab-dragging');
+        } else {
+          ui.armedKind = null;
+          canvas.classList.remove('ab-dragging');
+        }
+      }
     }
+    canvas.releasePointerCapture(evt.pointerId);
+    ui.activePointerId = null;
+    ui.pointerType = null;
   });
 
-  canvas.addEventListener('mouseleave', function () {
-    if (ui.dragging) {
-      ui.dragging = null;
-      canvas.classList.remove('ab-dragging');
+  canvas.addEventListener('pointercancel', function (evt) {
+    if (evt.pointerId !== ui.activePointerId) { return; }
+    // OS-interrupt rule: drop Pending and the in-progress Dragging/Placing
+    // gesture, but leave Armed intact so the user can finish the placement
+    // after the interruption ends.
+    ui.pendingKind = null;
+    // armedKind is preserved iff this gesture started from Armed (tap-to-place).
+    // In Dragging-from-shop, Pending->Dragging set armedKind, so cancel here
+    // means dropping armedKind too. We distinguish by pointerType again:
+    // touch/pen pointers came from tap-to-place, mouse pointers came from
+    // drag-from-shop.
+    if (ui.armedKind !== null) {
+      if (ui.pointerType === 'mouse') {
+        ui.armedKind = null;
+      }
+      // touch and pen: leave armedKind set (Armed survives).
     }
+    canvas.classList.remove('ab-dragging');
+    canvas.releasePointerCapture(evt.pointerId);
+    ui.activePointerId = null;
+    ui.pointerType = null;
   });
 
   // === UPDATE ===
@@ -5668,7 +5838,15 @@ body.has-ant-buster-page {
     }
     if (e.key === '1') { game.speed = 1; return; }
     if (e.key === '2') { game.speed = 2; return; }
-    if (e.key === 'Escape') { ui.selectedCannon = null; return; }
+    if (e.key === 'Escape') {
+      // ESC unarms on desktop. Touch users have the same-card-retap to unarm.
+      if (ui.armedKind !== null) {
+        ui.armedKind = null;
+        canvas.classList.remove('ab-dragging');
+      }
+      ui.selectedCannon = null;
+      return;
+    }
     if (DEBUG) {
       if (e.key === 't') {
         var dk = DEBUG_KINDS[debugCycleIdx % DEBUG_KINDS.length];
