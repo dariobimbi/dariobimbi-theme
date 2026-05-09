@@ -87,11 +87,20 @@ Every god-tier sprite carries a **subtle gold-trim accent** somewhere on its sil
 
 ### 2.5 — Halo clearance zone
 
-`drawGodTierHalos` renders a pulsing gold radial halo CENTERED on the turret base, extending to a radius of approximately 14 game-px (28 canvas-px). The halo blends additively at moderate alpha.
+The gold halo is a **separate procedural layer**, not baked into any sprite. `drawGodTierHalos` (`patterns/demo-ant-buster.php:1447`) iterates `game.cannons`, filters by `def.tier === 'god'`, and draws `ctx.arc(c.x, c.y, 22, 0, 2π)` filled `#fee761` at a sin-pulsed alpha:
 
-- **Bottom 4 px of every god-tier sprite (y=15–18)** should be tonally **dark or neutral** (slate blue, dark steel, gunmetal). Avoid bright colors here — they will fight the gold halo and read as visual noise.
+```js
+var alpha = 0.45 + 0.15 * Math.sin(game.time * Math.PI);
+```
+
+So the halo pulses between alpha 0.30 and 0.60 once per second. It renders in render-layer 5d (under cannon bases, under turrets, under ants). The 22 px radius extends beyond the 20×20 sprite's bounding box on all sides — that's what produces the visible "ground glow" around the turret.
+
+Implications for sprite design:
+
+- **Bottom 4 px of every god-tier sprite (y=15–18)** should be tonally **dark or neutral** (slate blue, dark steel, gunmetal). Bright colors here saturate against the gold halo's pulse and read as visual noise.
 - The Earthshaker's "orange seep at y=18" and Stormcaller's "storm-cloud puff" are deliberate halo-friendly accents (low alpha or limited area). When in doubt, keep y=15–18 dark.
 - **No alpha-transparent ground-shadow** baked into the sprite. The halo is the cannon's "ground presence" — adding a sprite shadow would double up.
+- **The halo cannot be retuned per-sprite.** If the alpha or radius needs adjustment, that's a one-line change in `drawGodTierHalos`. The sprite spec only needs to honor the bottom-4 clearance.
 
 ### 2.6 — File location & naming
 
@@ -225,10 +234,10 @@ The Quick family's existing T1-T3 sprites are **light olive-greens (#5a7d4a, #4a
 #### 4.9 — Reaper
 
 - **Mechanic:** instakill Worker/Scout, +100% vs full HP, 60 dmg, range 380.
-- **Silhouette:** long thin scythe-curved barrel (NOT straight), bone-white with a rusted-iron cutting edge, dark hood at the muzzle with a single glowing red eye.
-- **Color stops:** Barrel `#e8e0d0` (bone-white). Cutting edge `#604035` (rusted iron). Hood `#1a1a20`. Red eye `#ff2020` with `#ff8080` highlight. Breech `#0a0a14` with `#602080` purple aura ring.
-- **Pixel landmarks:** Barrel curves from breech (x=10, y=14) to muzzle (x=7, y=2): pixels at x=10 y=14, x=10 y=12, x=9 y=10, x=9 y=8, x=8 y=6, x=8 y=4, x=7 y=3, x=7 y=2 (8 pixels forming the curve, 1 px wide). Cutting-edge line on the forward (left) side: parallel curve 1 px to the left of the barrel. Hood at x=5–9, y=0–3. Red eye at x=7, y=2 (single pixel) with `#ff8080` highlight at x=8, y=2. Breech base x=8–13, y=14–18 (dark) with `#602080` 1-px outer rim.
-- **Vibe:** literally the Grim Reaper's silhouette compressed into a turret — the curve is the signature.
+- **Silhouette:** vertical bone-white shaft with a **hooked scythe-blade muzzle** (NOT a true curve). The barrel is straight up; the blade hooks left at the top. Reads as a scythe held vertically — the hook is the signature, not a curved barrel.
+- **Color stops:** Shaft `#e8e0d0` (bone-white). Blade `#c8c0b0` (slightly darker bone with cool tint). Cutting edge `#604035` (rusted iron, 1 px on the inside curve of the hook). Hood `#1a1a20`. Red eye `#ff2020` with `#ff8080` highlight. Breech `#0a0a14` with `#602080` purple aura ring.
+- **Pixel landmarks:** **Vertical shaft** at x=10, y=4–14 (1 px wide, straight). **Hooked muzzle** at the top: pixels at x=10, y=2–4 (shaft continues up); x=9, y=2 (hook starts); x=8, y=1 (hook turns); x=7, y=2 (hook tip). The hook makes a 90°-ish turn at the top of the shaft, ending in a sharpened tip pointed left. Cutting-edge `#604035` on the hook's inner (lower) side at (8, 2) and (9, 3). Hood underwraps the muzzle at x=6–9, y=0–2 forming a small cowl behind the hook. Red eye single pixel at x=7, y=1 (inside the hood) with `#ff8080` highlight at x=8, y=1. Breech base x=8–13, y=14–18 (dark slate) with `#602080` 1-px outer rim at the bottom edge (y=18). Shaft remains entirely vertical from y=4 down — keeps the family's mechanical-not-organic language. The hook does the storytelling.
+- **Vibe:** the Grim Reaper's scythe held vertically — straight haft, hooked blade, dark cowl with a glowing eye. Mechanical enough to belong with the other turrets; the hook is unmistakable.
 
 #### 4.10 — Solar Lance
 
@@ -249,10 +258,10 @@ The Quick family's existing T1-T3 sprites are **light olive-greens (#5a7d4a, #4a
 #### 4.12 — Stormcaller
 
 - **Mechanic:** Tesla arc, 6 jumps, no falloff, 18 dmg.
-- **Silhouette:** tall vertical antenna spike with a forked Y-tip + two crackling violet electric coils + squat Tesla-coil base with green grounding rods.
-- **Color stops:** Antenna `#c0c8d0`. Y-tip same. Electric coils `#c080ff` with `#ffffff` sparkle pixels. Tesla base `#1a1820`. Grounding rods `#3acc3a`. Storm-cloud puff `#5a5a8a`.
-- **Pixel landmarks:** Antenna spike x=9–10, y=0–10 (vertical rod). Y-tip pixels at (8,1), (9,0), (10,0), (11,1). Lower coil at y=4: pixels at (7,4), (8,4), (11,4), (12,4); sparkle at (10,4) `#ffffff`. Upper coil at y=8: same x-pattern (7,8), (8,8), (11,8), (12,8); sparkle at (9,8) `#ffffff`. Tesla base x=4–15, y=11–18. Grounding rods 1-px green at corners (4,17), (15,17), (4,12), (15,12). Storm-cloud puff scattered `#5a5a8a` pixels at y=15–16 (3-4 pixels, e.g. (6,15), (8,16), (11,15), (13,16)).
-- **Vibe:** Tesla coil, all-vertical, all-energy — electric-purple is the family-wide tell that this cannon zaps.
+- **Silhouette:** central antenna spike flanked by **two outrigger sub-antennae** angled outward (V-formation) + crackling violet coils on the central spike + **wide Tesla-coil breech with a copper-ring base**. The outriggers are the wider footprint that distinguishes this from a thin Particle Cannon or any single-rod sniper variant.
+- **Color stops:** Central antenna `#c0c8d0`. Outrigger antennae `#8090a0` (dimmer steel — secondary). Y-tip `#c0c8d0`. Electric coils `#c080ff` with `#ffffff` sparkle pixels. Copper ring `#aa7822` (god-tier brass trim). Tesla base `#1a1820`. Grounding rods `#3acc3a`. Storm-cloud puff `#5a5a8a`.
+- **Pixel landmarks:** **Central antenna** x=9–10, y=0–10 (vertical rod, 2 px wide). Y-tip pixels at (8,1), (9,0), (10,0), (11,1). **Left outrigger antenna** angled 30° left from breech (x=5, y=11) to tip (x=2, y=4), 1 px wide: pixels at (5,11), (5,10), (4,9), (4,8), (3,7), (3,6), (2,5), (2,4). **Right outrigger antenna** mirrored from (x=14, y=11) to (x=17, y=4): pixels at (14,11), (14,10), (15,9), (15,8), (16,7), (16,6), (17,5), (17,4). Each outrigger ends in a single `#c080ff` sparkle pixel at the tip (2,4) and (17,4). Lower coil on central antenna at y=4: pixels at (7,4), (8,4), (11,4), (12,4); sparkle at (10,4) `#ffffff`. Upper coil at y=8: same x-pattern (7,8), (8,8), (11,8), (12,8); sparkle at (9,8) `#ffffff`. **Copper ring** at y=11 spanning x=2–17, 1 px high — the band that ties the three antennae together. **Tesla base** x=3–16, y=12–18 (one px wider than originally spec'd to anchor the outriggers' wider footprint). Grounding rods 1-px green at base corners (3,17), (16,17). Storm-cloud puff scattered `#5a5a8a` pixels at y=15–16 (3-4 pixels, e.g. (5,15), (8,16), (11,15), (14,16)).
+- **Vibe:** Tesla-coil shrine — three antennae rising from a copper-banded plinth, the central one crackling, the outriggers grounding the energy. The wider footprint reads as "this thing channels storms," not "this thing is a tall stick."
 
 ---
 
@@ -355,11 +364,14 @@ QA walk via Playwright against `http://localhost/dariobimbi.com/demos/ant-buster
 4. **Bottom 4 rows are halo-friendly.** For each sprite, sample 4 pixels at y=16, 17, 18, 19. None of them should be at full saturation in a non-anchor color (no bright neon at the base).
 5. **No more Howitzer fallback.** Place each god-tier cannon in turn and visually confirm the turret silhouette is unique to its kind.
 6. **Family hierarchy reads.** Place the entire Heavy family side-by-side (T1 Howitzer → T2 Siege/Mortar/Discus → T3 Patriot/Demolisher/Hellfire → T4 Particle Cannon/Annihilator/Saturation/Cluster Strike/Vortex/Earthshaker) and confirm the slate-blue + brass anchor is visible across all tiers. Repeat for Quick (olive/gold) and Double (magenta + status-color).
-7. **Rotation works without artifacts.** Aim each turret in 8 cardinal/diagonal directions; sprite rotates cleanly with no shearing or sub-pixel ghosting (this is automatic if §2.3 symmetry is honored, but worth confirming).
-8. **Gold halo plays well underneath.** Wave 15+ unlock animation and the per-frame halo render don't visually clash with any of the 18 new sprites.
-9. **PHP lint passes.** `php -l patterns/demo-ant-buster.php` returns 0.
-10. **Hygiene check passes.** `curl ... | grep -c "&#038;&#038;"` returns 0.
-11. **Theme version bumped to 0.14.0.**
+7. **Family cohesion (T3 → T4 evolution check).** For each god-tier sprite, place it next to its T3 ancestor and confirm the T4 reads as a direct evolution — same family anchor color, same general silhouette language (heavy-stubby, quick-thin, double-twin/multi), with added bulk + brass/gold trim signaling the tier-up. If a T4 looks like a member of a DIFFERENT family compared to its T3 source, the cohesion test fails. Examples: Particle Cannon (T4 Heavy) sits between Howitzer (T1) and Annihilator (T4) in cohesion, not between Reaper (T4 Quick) and Hawkeye (T4 Quick). Bulk and gold trim are the tier signals; family color is the family signal; both must coexist.
+8. **Rotation works without artifacts.** Aim each turret in 8 cardinal/diagonal directions; sprite rotates cleanly with no shearing or sub-pixel ghosting (this is automatic if §2.3 symmetry is honored, but worth confirming).
+9. **Gold halo plays well underneath.** Wave 15+ unlock animation and the per-frame halo render don't visually clash with any of the 18 new sprites.
+10. **PHP lint passes.** `php -l patterns/demo-ant-buster.php` returns 0.
+11. **Hygiene check passes.** `curl ... | grep -c "&#038;&#038;"` returns 0.
+12. **Theme version bumped to 0.14.0.**
+
+All 12 items must pass before merge.
 
 ---
 
@@ -376,15 +388,47 @@ QA walk via Playwright against `http://localhost/dariobimbi.com/demos/ant-buster
 
 ## §8 — Notes for Plan Author
 
-The implementation plan should bite-size as follows:
+Plan 8 ships in **two phases as a vertical slice**, per user direction:
 
-- **Task 1: Pick path (A procedural or B PNG).** If A, scaffold the 18 empty `makeCannonTurret*()` factories returning the cannonBase as a placeholder. If B, scaffold the loader + PNG file paths.
-- **Tasks 2-7: Heavy family — Particle Cannon, Annihilator, Saturation, Cluster Strike, Vortex, Earthshaker.** One cannon per task; verify visually before moving on.
-- **Tasks 8-13: Quick family — Hailstorm, Phoenix, Reaper, Solar Lance, Hawkeye, Stormcaller.** One cannon per task.
-- **Tasks 14-19: Double family — Scattergun, Phalanx, Blizzard, Absolute Zero, Biohazard, Tempest.** One cannon per task.
-- **Task 20: Hygiene + version bump (0.13.0 → 0.14.0) + acceptance walk.**
-- **Task 21: Status doc + merge to main.** Following Plan 5/6/7 precedent.
+### Plan 8a — Vertical slice (3 cannons per family = 9 sprites total)
 
-That's a 21-task plan, biggest yet. Could be split into Plan 8a (Heavy + Quick = 14 tasks) and Plan 8b (Double + hygiene + status = 8 tasks) if the user prefers smaller batches.
+Picks the **most visually distinctive** entry from each family so the family-anchor differentiation gets validated across all three families before the implementer commits to the conventional ones.
 
-Each per-cannon task should ship with a Playwright verify probe: place the cannon, screenshot, and confirm the sprite renders.
+- **Task 1: Path A scaffold.** Add empty `makeCannonTurret*()` factories returning a placeholder for all 9 vertical-slice cannons; register in `game.sprites.turrets[<kind>]`.
+- **Task 2: Particle Cannon (Heavy)** — long thin barrel, validates the family's "long" silhouette branch.
+- **Task 3: Annihilator (Heavy)** — stubby siege mortar, validates the "short" branch.
+- **Task 4: Earthshaker (Heavy)** — wide-base piston, validates the "wide footprint" branch.
+- **Task 5: Phoenix (Quick)** — flame-cone emitter, validates the family's no-barrel rows.
+- **Task 6: Reaper (Quick)** — hooked scythe, validates the asymmetric-tip silhouette.
+- **Task 7: Hawkeye (Quick)** — perpendicular scope, validates cross-axis geometry.
+- **Task 8: Blizzard (Double)** — ice-spire (no barrel), validates the family's aura-row silhouette.
+- **Task 9: Tempest (Double)** — Z-bolt + shockwave rings, validates the lightning/zigzag branch.
+- **Task 10: Biohazard (Double)** — twin reservoirs + biohazard glyph, validates the dual-tank branch.
+- **Task 11: Plan 8a hygiene + family-cohesion check.** Run §6 acceptance items 1-9 against the 9 new sprites. PHP lint + hygiene grep. NO version bump yet — 0.14.0 lands at end of 8b.
+- **Task 12: Plan 8a status doc + merge to main.** Following Plan 5/6/7 precedent (no-ff merge, status doc, branch cleanup).
+
+12 tasks in Plan 8a. The vertical slice tests three things in parallel: (1) family color/silhouette anchoring, (2) variety of silhouette types (long/short/wide/no-barrel/asymmetric/cross-axis), (3) god-tier "evolution" reading vs the T3 ancestors. If the slice succeeds, Plan 8b becomes mechanical fill-in.
+
+### Plan 8b — Remaining 9 cannons + hygiene
+
+After Plan 8a validates, fill in the rest. Same per-cannon task structure.
+
+- **Tasks 1-3: Heavy fill-in** — Saturation, Cluster Strike, Vortex.
+- **Tasks 4-6: Quick fill-in** — Hailstorm, Solar Lance, Stormcaller.
+- **Tasks 7-9: Double fill-in** — Scattergun, Phalanx, Absolute Zero.
+- **Task 10: Hygiene + version bump (0.13.0 → 0.14.0) + full §6 acceptance walk** (all 12 items, all 18 sprites).
+- **Task 11: Status doc + merge to main.**
+
+11 tasks in Plan 8b.
+
+### Per-cannon task structure (both phases)
+
+Each per-cannon task should ship with:
+1. The factory implementation (per §4 pixel landmarks).
+2. PHP lint + hygiene grep.
+3. Playwright verify probe: programmatically place the cannon at a known position, take a screenshot, and confirm the sprite reads as described (e.g., for Reaper, confirm the hood-hooked-blade silhouette by sampling specific pixels).
+4. Commit with message `feat(ant-buster): <kind> god-tier sprite (Plan 8a/b Task N)`.
+
+### Why the vertical slice
+
+Catching a "Heavy and Quick families look interchangeable at 20×20" issue at Task 4 instead of Task 19 saves rework. The slice produces a working subset — even if Plan 8b is delayed, the 9 god-tier sprites in Plan 8a are usable on their own; the other 9 stay on the Howitzer fallback temporarily.
