@@ -952,7 +952,36 @@ body.has-ant-buster-page {
     x.fillRect(10, 15, 1, 1);
     return c;
   }
-  function makeCannonTurretAnnihilator() { return makeCannonTurret(); }
+  function makeCannonTurretAnnihilator() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    // Cast-iron breech (extends full width — heaviest base)
+    x.fillStyle = '#2a2530';
+    x.fillRect(3, 11, 14, 7);
+    // Bolt heads (4 corners)
+    x.fillStyle = '#806040';
+    x.fillRect(3, 11, 2, 2);
+    x.fillRect(15, 11, 2, 2);
+    x.fillRect(3, 16, 2, 2);
+    x.fillRect(15, 16, 2, 2);
+    // Stubby barrel (chunkiest)
+    x.fillStyle = '#3a3540';
+    x.fillRect(7, 3, 7, 8);
+    // Brass reinforcement bands
+    x.fillStyle = '#aa7822';
+    x.fillRect(6, 5, 9, 1);
+    x.fillRect(6, 9, 9, 1);
+    // Brass band highlights
+    x.fillStyle = '#d8a040';
+    x.fillRect(7, 5, 1, 1);
+    x.fillRect(13, 9, 1, 1);
+    // Black bore with orange flicker
+    x.fillStyle = '#000000';
+    x.fillRect(8, 0, 5, 3);
+    x.fillStyle = '#cc4020';
+    x.fillRect(10, 1, 1, 1);
+    return c;
+  }
   function makeCannonTurretEarthshaker() { return makeCannonTurret(); }
   function makeCannonTurretPhoenix() { return makeCannonTurret(); }
   function makeCannonTurretReaper() { return makeCannonTurret(); }
