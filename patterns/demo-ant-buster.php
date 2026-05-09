@@ -922,7 +922,36 @@ body.has-ant-buster-page {
   // in by its own task. All 9 register in the turrets table below; the live
   // demo will show howitzer fallback until each task lands.
 
-  function makeCannonTurretParticleCannon() { return makeCannonTurret(); }
+  function makeCannonTurretParticleCannon() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    // Breech base (slate, halo-safe)
+    x.fillStyle = '#1a1a30';
+    x.fillRect(4, 16, 12, 2);
+    // Side rails
+    x.fillStyle = '#5a5a6a';
+    x.fillRect(4, 14, 1, 4);
+    x.fillRect(15, 14, 1, 4);
+    // Barrel (silver-white accelerator)
+    x.fillStyle = '#d8e0f0';
+    x.fillRect(9, 2, 2, 14);
+    // Plasma rings (cyan core at y=5, 9, 13)
+    x.fillStyle = '#3affff';
+    x.fillRect(8, 5, 4, 1);
+    x.fillRect(8, 9, 4, 1);
+    x.fillRect(8, 13, 4, 1);
+    // Ring highlights (lighter cyan, scattered)
+    x.fillStyle = '#80ffff';
+    x.fillRect(9, 5, 1, 1);
+    x.fillRect(10, 9, 1, 1);
+    x.fillRect(9, 13, 1, 1);
+    // Purple energy core in breech
+    x.fillStyle = '#a050ff';
+    x.fillRect(9, 15, 2, 1);
+    x.fillStyle = '#e0a0ff';
+    x.fillRect(10, 15, 1, 1);
+    return c;
+  }
   function makeCannonTurretAnnihilator() { return makeCannonTurret(); }
   function makeCannonTurretEarthshaker() { return makeCannonTurret(); }
   function makeCannonTurretPhoenix() { return makeCannonTurret(); }
