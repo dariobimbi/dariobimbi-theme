@@ -17,6 +17,9 @@ desktop.ini
 # the browser. Useful in-session, never useful in history.
 .playwright-mcp/
 
+# Superpowers brainstorming companion server output (mockups, state).
+.superpowers/
+
 # Loose screenshots dropped at the theme root by debug runs. Real image
 # assets live under assets/ and are not affected by these patterns.
 /screenshot.png
