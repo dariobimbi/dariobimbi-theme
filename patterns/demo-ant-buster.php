@@ -5410,45 +5410,43 @@ body.has-ant-buster-page {
     // cannon-select and HUD pass-through. HUD pause/speed/sell/upgrade are
     // re-tested below: they do not clear armedKind.
     if (ui.armedKind !== null) {
-      if (ui.activePointerId !== null) {
-        // We are already capturing this pointer; check shop and playfield.
-        // Shop hit-tests first so a same-card re-tap toggles off and a
-        // different-card tap swaps kind.
-        if (ui.shopRects) {
-          for (var sa = 0; sa < ui.shopRects.length; sa++) {
-            var ra = ui.shopRects[sa];
-            if (inRect(p, ra)) {
-              if (ra.kind === ui.armedKind) {
-                // Same card: toggle off.
-                ui.armedKind = null;
-                canvas.classList.remove('ab-dragging');
-                return;
-              }
-              // Different card: swap if affordable, else ignore.
-              var skSwap = CANNON_KINDS[ra.kind];
-              if (game.gold >= skSwap.cost) {
-                ui.armedKind = null;
-                ui.pendingKind = ra.kind;
-                ui.pendingX = p.x;
-                ui.pendingY = p.y;
-                canvas.classList.remove('ab-dragging');
-              }
+      // activePointerId is guaranteed non-null here (set above after the
+      // single-pointer-lock early return). Shop hit-tests first so a same-card
+      // re-tap toggles off and a different-card tap swaps kind.
+      if (ui.shopRects) {
+        for (var sa = 0; sa < ui.shopRects.length; sa++) {
+          var ra = ui.shopRects[sa];
+          if (inRect(p, ra)) {
+            if (ra.kind === ui.armedKind) {
+              // Same card: toggle off.
+              ui.armedKind = null;
+              canvas.classList.remove('ab-dragging');
               return;
             }
-          }
-        }
-        // Playfield: enter Placing (ghost will render via drawDragPreview).
-        if (p.x < PLAYFIELD_W) {
-          if (p.y >= HUD_H) {
-            // Note: do not call placeCannon here. Placement commits on
-            // pointerup (Step 2 below) so the player can slide-to-adjust.
-            canvas.classList.add('ab-dragging');
+            // Different card: swap if affordable, else ignore.
+            var skSwap = CANNON_KINDS[ra.kind];
+            if (game.gold >= skSwap.cost) {
+              ui.armedKind = null;
+              ui.pendingKind = ra.kind;
+              ui.pendingX = p.x;
+              ui.pendingY = p.y;
+              canvas.classList.remove('ab-dragging');
+            }
             return;
           }
         }
-        // Anything else (HUD, side panel, etc.): fall through to normal
-        // hit-tests below. armedKind is preserved.
       }
+      // Playfield: enter Placing (ghost will render via drawDragPreview).
+      if (p.x < PLAYFIELD_W) {
+        if (p.y >= HUD_H) {
+          // Note: do not call placeCannon here. Placement commits on
+          // pointerup (Step 2 below) so the player can slide-to-adjust.
+          canvas.classList.add('ab-dragging');
+          return;
+        }
+      }
+      // Anything else (HUD, side panel, etc.): fall through to normal
+      // hit-tests below. armedKind is preserved.
     }
     // Pause overlay's Restart Run button — only live while paused. Tested first so
     // it wins over the HUD pause toggle behind it (which is in the same x range).
@@ -5617,6 +5615,7 @@ body.has-ant-buster-page {
           // Stay Armed; flash effect lands in Task 7.
           canvas.classList.remove('ab-dragging');
         } else if (ui.pointerType === 'pen') {
+          // Same as touch: stay Armed. Separate branch avoids || (inline-script gotcha).
           canvas.classList.remove('ab-dragging');
         } else {
           ui.armedKind = null;
