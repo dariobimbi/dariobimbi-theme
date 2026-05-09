@@ -2191,10 +2191,11 @@ body.has-ant-buster-page {
   // the shop). Sits inside the overlays bucket because it is UI feedback drawn
   // above gameplay, but below pause/win/lose modals.
   function drawDragPreview() {
-    if (!ui.dragging) { return; }
+    if (ui.armedKind === null) { return; }
+    if (ui.activePointerId === null) { return; }   // hide ghost when no pointer is down (Task 3 keeps this)
     var ok = canPlaceCannon(ui.mouseX, ui.mouseY);
-    var dragDef = CANNON_KINDS[ui.dragging.kind];
-    var dragTurret = game.sprites.turrets[ui.dragging.kind];
+    var dragDef = CANNON_KINDS[ui.armedKind];
+    var dragTurret = game.sprites.turrets[ui.armedKind];
     if (!dragTurret) { dragTurret = game.sprites.turrets.howitzer; }
     ctx.globalAlpha = 0.6;
     ctx.drawImage(game.sprites.cannonBase, Math.round(ui.mouseX - 16), Math.round(ui.mouseY - 16));
@@ -5350,6 +5351,9 @@ body.has-ant-buster-page {
     ui.activePointerId = null;
     ui.pointerType = null;
     ui.armedKind = null;
+    ui.pendingKind = null;
+    ui.pendingX = 0;
+    ui.pendingY = 0;
     ui.selectedCannon = null;
     ui.upgradeRects[0] = null;
     ui.upgradeRects[1] = null;
@@ -5362,10 +5366,13 @@ body.has-ant-buster-page {
 
   // === INPUT ===
   var ui = {
-    dragging: null,         // { kind } when dragging from shop
+    dragging: null,         // [DEPRECATED in Task 2; kept null for one task to ease bisect]
     activePointerId: null,  // single-pointer gesture lock; subsequent pointers ignored
     pointerType: null,      // 'mouse' | 'touch' | 'pen' for last pointerdown; drives ghost offset
-    armedKind: null,        // tap-to-arm: cannon kind committed-to-place, null when idle (Tasks 2-3)
+    armedKind: null,        // cannon kind promoted from Pending; non-null while dragging (Tasks 2-3)
+    pendingKind: null,      // shop-card kind currently in Pending; null when not Pending
+    pendingX: 0,            // pointerdown x in game-coords (motion-threshold reference)
+    pendingY: 0,            // pointerdown y in game-coords
     mouseX: 0,
     mouseY: 0,
     sendNextRect: null,     // bounds of the Send-Next button (set when rendered in prep)
@@ -5488,11 +5495,12 @@ body.has-ant-buster-page {
       for (var si = 0; si < ui.shopRects.length; si++) {
         var rs = ui.shopRects[si];
         if (inRect(p, rs)) {
-          // only start drag if affordable
+          // Pending state: motion in pointermove will promote to Dragging.
           var sk = CANNON_KINDS[rs.kind];
           if (game.gold >= sk.cost) {
-            ui.dragging = { kind: rs.kind };
-            canvas.classList.add('ab-dragging');
+            ui.pendingKind = rs.kind;
+            ui.pendingX = p.x;
+            ui.pendingY = p.y;
           }
           return;
         }
@@ -5509,6 +5517,16 @@ body.has-ant-buster-page {
     var p = canvasToGame(evt);
     ui.mouseX = p.x;
     ui.mouseY = p.y;
+    // Pending -> Dragging promotion: 6 game-px squared distance from down point.
+    if (ui.pendingKind !== null) {
+      var ddx = p.x - ui.pendingX;
+      var ddy = p.y - ui.pendingY;
+      if (ddx * ddx + ddy * ddy > 36) {
+        ui.armedKind = ui.pendingKind;
+        ui.pendingKind = null;
+        canvas.classList.add('ab-dragging');
+      }
+    }
     // Track upgrade-button hover so drawRangeCircle can preview the target's range
     // as a dashed secondary circle. Avoids and-operator for the inline-script gotcha.
     var hovered = null;
@@ -5534,11 +5552,13 @@ body.has-ant-buster-page {
     var p = canvasToGame(evt);
     ui.mouseX = p.x;
     ui.mouseY = p.y;
-    if (ui.dragging) {
-      placeCannon(ui.dragging.kind, p.x, p.y);
-      ui.dragging = null;
+    if (ui.armedKind !== null) {
+      placeCannon(ui.armedKind, p.x, p.y);
+      ui.armedKind = null;
       canvas.classList.remove('ab-dragging');
     }
+    // Pending without motion: drop silently for now. Task 3 will arm here instead.
+    ui.pendingKind = null;
     canvas.releasePointerCapture(evt.pointerId);
     ui.activePointerId = null;
     ui.pointerType = null;
@@ -5546,10 +5566,11 @@ body.has-ant-buster-page {
 
   canvas.addEventListener('pointercancel', function (evt) {
     if (evt.pointerId !== ui.activePointerId) { return; }
-    if (ui.dragging) {
-      ui.dragging = null;
+    if (ui.armedKind !== null) {
+      ui.armedKind = null;
       canvas.classList.remove('ab-dragging');
     }
+    ui.pendingKind = null;
     canvas.releasePointerCapture(evt.pointerId);
     ui.activePointerId = null;
     ui.pointerType = null;
