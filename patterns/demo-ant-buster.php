@@ -5478,12 +5478,16 @@ body.has-ant-buster-page {
         }
       }
       // Playfield: enter Placing (ghost will render via drawDragPreview).
+      // Skipped while paused so the pause-overlay's Restart Run check downstream
+      // can still receive the gesture. Armed survives the paused tap.
       if (p.x < PLAYFIELD_W) {
         if (p.y >= HUD_H) {
-          // Note: do not call placeCannon here. Placement commits on
-          // pointerup (Step 2 below) so the player can slide-to-adjust.
-          canvas.classList.add('ab-dragging');
-          return;
+          if (!game.paused) {
+            // Note: do not call placeCannon here. Placement commits on
+            // pointerup (Step 2 below) so the player can slide-to-adjust.
+            canvas.classList.add('ab-dragging');
+            return;
+          }
         }
       }
       // Anything else (HUD, side panel, etc.): fall through to normal
@@ -5643,7 +5647,10 @@ body.has-ant-buster-page {
       // ab-dragging class stays off: Armed without pointer down has no grab cursor.
     } else if (ui.armedKind !== null) {
       // Case B: Dragging or Placing -> commit if valid.
-      if (canPlaceCannon(p.x, p.y)) {
+      // Skipped while paused so a stray paused tap cannot place. Armed survives.
+      if (game.paused) {
+        canvas.classList.remove('ab-dragging');
+      } else if (canPlaceCannon(p.x, p.y)) {
         placeCannon(ui.armedKind, p.x, p.y);
         ui.armedKind = null;
         canvas.classList.remove('ab-dragging');
