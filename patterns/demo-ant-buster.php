@@ -1426,6 +1426,15 @@ body.has-ant-buster-page {
       ctx.fillStyle = '#999';
       ctx.font = '8px monospace';
       ctx.fillText(sk.family, cardX + 32, cy + 52);
+      // Armed-card highlight (Touch Input Task 5).
+      if (ui.armedKind === k) {
+        ctx.strokeStyle = '#fee761';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(cardX + 1, cy + 1, cardW - 2, cardH - 2);
+        ctx.fillStyle = '#aaa';
+        ctx.font = '8px monospace';
+        ctx.fillText('tap a spot', cardX + 32, cy + 64);
+      }
       ui.shopRects.push({ x: cardX, y: cy, w: cardW, h: cardH, kind: k });
     }
     ctx.font = '10px monospace';   // restore default
