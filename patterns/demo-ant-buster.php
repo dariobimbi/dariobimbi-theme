@@ -982,7 +982,35 @@ body.has-ant-buster-page {
     x.fillRect(10, 1, 1, 1);
     return c;
   }
-  function makeCannonTurretEarthshaker() { return makeCannonTurret(); }
+  function makeCannonTurretEarthshaker() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    // Cast-iron breech (widest base — anchored deep)
+    x.fillStyle = '#1a1820';
+    x.fillRect(2, 11, 16, 7);
+    // Corner bolt-heads
+    x.fillStyle = '#604035';
+    x.fillRect(2, 11, 2, 2);
+    x.fillRect(15, 11, 2, 2);
+    x.fillRect(2, 16, 2, 2);
+    x.fillRect(15, 16, 2, 2);
+    // Industrial-steel piston (lighter than family anchor for pop)
+    x.fillStyle = '#3a4055';
+    x.fillRect(6, 4, 8, 7);
+    // Hammer-face dark cap
+    x.fillStyle = '#604035';
+    x.fillRect(6, 2, 8, 2);
+    // Stud dots (+ pattern on hammer-face)
+    x.fillStyle = '#806040';
+    x.fillRect(10, 1, 1, 1);
+    x.fillRect(8, 3, 1, 1);
+    x.fillRect(10, 3, 1, 1);
+    x.fillRect(12, 3, 1, 1);
+    // Orange seep at the very bottom (warm light leaking)
+    x.fillStyle = '#cc4020';
+    x.fillRect(5, 18, 10, 1);
+    return c;
+  }
   function makeCannonTurretPhoenix() { return makeCannonTurret(); }
   function makeCannonTurretReaper() { return makeCannonTurret(); }
   function makeCannonTurretHawkeye() { return makeCannonTurret(); }
