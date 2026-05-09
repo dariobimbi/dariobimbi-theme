@@ -1152,7 +1152,51 @@ body.has-ant-buster-page {
     x.fillRect(10, 10, 1, 1);
     return c;
   }
-  function makeCannonTurretTempest() { return makeCannonTurret(); }
+  function makeCannonTurretTempest() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    // Stormy purple-grey breech
+    x.fillStyle = '#3a2a40';
+    x.fillRect(6, 15, 8, 4);
+    // Lightning glyph in breech (5-pixel zig)
+    x.fillStyle = '#fff080';
+    x.fillRect(9, 16, 1, 1);
+    x.fillRect(10, 16, 1, 1);
+    x.fillRect(8, 17, 1, 1);
+    x.fillRect(9, 17, 1, 1);
+    x.fillRect(10, 17, 1, 1);
+    // Shock-rings on the ground (concentric, symmetric — anchors rotation)
+    x.fillStyle = '#80c0ff';
+    x.fillRect(4, 15, 12, 1);
+    x.fillRect(2, 17, 16, 1);
+    // Z-bolt outer-edge halo (drawn first as a backdrop glow)
+    x.fillStyle = '#ffd040';
+    // Top segment glow
+    x.fillRect(8, 2, 3, 4);
+    // Middle kink glow
+    x.fillRect(9, 5, 5, 5);
+    // Bottom segment glow
+    x.fillRect(12, 9, 3, 6);
+    // Z-bolt core (bright yellow-white, 1-px path)
+    x.fillStyle = '#fff080';
+    // Top segment (lean left from y=2 to y=5)
+    x.fillRect(10, 2, 1, 1);
+    x.fillRect(9, 3, 1, 1);
+    x.fillRect(9, 4, 1, 1);
+    x.fillRect(8, 5, 1, 1);
+    // Middle segment (diagonal right from y=6 to y=9)
+    x.fillRect(10, 6, 1, 1);
+    x.fillRect(11, 7, 1, 1);
+    x.fillRect(12, 8, 1, 1);
+    x.fillRect(13, 9, 1, 1);
+    // Bottom segment (vertical from y=10 to y=14)
+    x.fillRect(13, 10, 1, 1);
+    x.fillRect(13, 11, 1, 1);
+    x.fillRect(14, 12, 1, 1);
+    x.fillRect(14, 13, 1, 1);
+    x.fillRect(14, 14, 1, 1);
+    return c;
+  }
   function makeCannonTurretBiohazard() { return makeCannonTurret(); }
 
   function makeCake(slices) {
