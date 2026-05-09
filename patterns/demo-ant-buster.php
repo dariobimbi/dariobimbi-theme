@@ -2206,9 +2206,15 @@ body.has-ant-buster-page {
     var dragDef = CANNON_KINDS[ui.armedKind];
     var dragTurret = game.sprites.turrets[ui.armedKind];
     if (!dragTurret) { dragTurret = game.sprites.turrets.howitzer; }
+    // Ghost sprite Y offset: lift 30 game-px on touch/pen so the player can
+    // see the placement tile under their finger. Range ring stays centered
+    // on the real (ui.mouseX, ui.mouseY) so validity readout is accurate.
+    var ghostDy = 0;
+    if (ui.pointerType === 'touch') { ghostDy = -30; }
+    if (ui.pointerType === 'pen') { ghostDy = -30; }
     ctx.globalAlpha = 0.6;
-    ctx.drawImage(game.sprites.cannonBase, Math.round(ui.mouseX - 16), Math.round(ui.mouseY - 16));
-    ctx.drawImage(dragTurret, Math.round(ui.mouseX - 10), Math.round(ui.mouseY - 16));
+    ctx.drawImage(game.sprites.cannonBase, Math.round(ui.mouseX - 16), Math.round(ui.mouseY - 16 + ghostDy));
+    ctx.drawImage(dragTurret, Math.round(ui.mouseX - 10), Math.round(ui.mouseY - 16 + ghostDy));
     ctx.globalAlpha = 1;
     ctx.strokeStyle = ok ? 'rgba(255, 255, 255, 0.5)' : 'rgba(228, 59, 68, 0.7)';
     ctx.lineWidth = 1;
