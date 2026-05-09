@@ -1049,7 +1049,37 @@ body.has-ant-buster-page {
     x.fillRect(17, 7, 1, 1);
     return c;
   }
-  function makeCannonTurretReaper() { return makeCannonTurret(); }
+  function makeCannonTurretReaper() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    // Breech base (dark slate — halo zone)
+    x.fillStyle = '#0a0a14';
+    x.fillRect(8, 14, 6, 4);
+    // Purple aura rim at base edge
+    x.fillStyle = '#602080';
+    x.fillRect(8, 18, 6, 1);
+    // Hood cowl (dark backdrop behind the hook tip)
+    x.fillStyle = '#1a1a20';
+    x.fillRect(5, 0, 5, 3);
+    // Red eye (single pixel, inside hood)
+    x.fillStyle = '#ff2020';
+    x.fillRect(6, 1, 1, 1);
+    // Eye highlight
+    x.fillStyle = '#ff8080';
+    x.fillRect(7, 1, 1, 1);
+    // Vertical shaft (bone-white)
+    x.fillStyle = '#e8e0d0';
+    x.fillRect(10, 2, 1, 13);
+    // Hook (bone-white, overlays hood at apex)
+    x.fillRect(9, 2, 1, 1);  // hook base
+    x.fillRect(8, 1, 1, 1);  // hook apex (overlays hood)
+    x.fillRect(7, 2, 1, 1);  // hook tip
+    // Cutting edge (rusted iron, inner side of hook)
+    x.fillStyle = '#604035';
+    x.fillRect(8, 2, 1, 1);
+    x.fillRect(9, 3, 1, 1);
+    return c;
+  }
   function makeCannonTurretHawkeye() { return makeCannonTurret(); }
   function makeCannonTurretBlizzard() { return makeCannonTurret(); }
   function makeCannonTurretTempest() { return makeCannonTurret(); }
