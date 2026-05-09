@@ -5501,6 +5501,8 @@ body.has-ant-buster-page {
   });
 
   canvas.addEventListener('pointermove', function (evt) {
+    // Two-level guard: allow hover events when no gesture is active
+    // (activePointerId === null), and filter spurious second pointers when one is.
     if (ui.activePointerId !== null) {
       if (evt.pointerId !== ui.activePointerId) { return; }
     }
@@ -5537,6 +5539,7 @@ body.has-ant-buster-page {
       ui.dragging = null;
       canvas.classList.remove('ab-dragging');
     }
+    canvas.releasePointerCapture(evt.pointerId);
     ui.activePointerId = null;
     ui.pointerType = null;
   });
@@ -5547,6 +5550,7 @@ body.has-ant-buster-page {
       ui.dragging = null;
       canvas.classList.remove('ab-dragging');
     }
+    canvas.releasePointerCapture(evt.pointerId);
     ui.activePointerId = null;
     ui.pointerType = null;
   });
