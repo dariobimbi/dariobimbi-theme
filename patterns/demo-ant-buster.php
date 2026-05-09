@@ -1011,7 +1011,44 @@ body.has-ant-buster-page {
     x.fillRect(5, 18, 10, 1);
     return c;
   }
-  function makeCannonTurretPhoenix() { return makeCannonTurret(); }
+  function makeCannonTurretPhoenix() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    // Breech (dark with ember glow)
+    x.fillStyle = '#3a2520';
+    x.fillRect(4, 14, 12, 4);
+    x.fillStyle = '#cc4020';
+    x.fillRect(6, 18, 8, 1);
+    // Gold-bronze stem (narrow neck connecting cone to breech)
+    x.fillStyle = '#aa7822';
+    x.fillRect(8, 10, 4, 4);
+    // Cone walls (slope inward — darker orange band)
+    x.fillStyle = '#cc4020';
+    x.fillRect(7, 6, 6, 2);
+    x.fillRect(6, 8, 8, 1);
+    x.fillRect(4, 5, 12, 1);
+    // Mouth — concentric color bands (back to front)
+    // Outer ring (deep orange)
+    x.fillStyle = '#ff6020';
+    x.fillRect(3, 0, 14, 4);
+    // Mid ring (bright yellow-orange)
+    x.fillStyle = '#ffcc20';
+    x.fillRect(5, 0, 10, 4);
+    // White-hot core
+    x.fillStyle = '#fff0b0';
+    x.fillRect(7, 0, 6, 4);
+    x.fillStyle = '#ffffff';
+    x.fillRect(9, 2, 2, 1);
+    // Flame-feather curls (left and right outriggers — 3-px each, mirrored)
+    x.fillStyle = '#ff9020';
+    x.fillRect(2, 5, 1, 1);
+    x.fillRect(1, 6, 1, 1);
+    x.fillRect(2, 7, 1, 1);
+    x.fillRect(17, 5, 1, 1);
+    x.fillRect(18, 6, 1, 1);
+    x.fillRect(17, 7, 1, 1);
+    return c;
+  }
   function makeCannonTurretReaper() { return makeCannonTurret(); }
   function makeCannonTurretHawkeye() { return makeCannonTurret(); }
   function makeCannonTurretBlizzard() { return makeCannonTurret(); }
