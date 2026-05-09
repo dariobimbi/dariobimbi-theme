@@ -205,7 +205,7 @@ The Heavy family's existing T1-T3 sprite vocabulary is **dark slate-blue (#262b4
 
 - **Mechanic:** 80 dmg, 120 px splash + stun, screenshake 8, fireRate 0.12.
 - **Silhouette:** massive stamping piston barrel, very short and very wide, with the widest base footprint of any god-tier.
-- **Color stops:** Piston `#2a2530`. Hammer-face studs `#604035` with `#806040` highlights. Breech base `#1a1820` (cast iron). Bolt-heads `#604035`. Ground-cracks `#000000`. Orange seep `#cc4020`.
+- **Color stops:** Piston `#3a4055` (industrial steel — bumped lighter than the `#262b44` family anchor so the hammering shape pops against the darker breech below it). Hammer-face studs `#604035` with `#806040` highlights. Breech base `#1a1820` (cast iron — stays family-deep-shadow dark for halo-clearance). Bolt-heads `#604035`. Ground-cracks `#000000`. Orange seep `#cc4020`.
 - **Pixel landmarks:** Piston x=6–13, y=4–10. Hammer-face top at y=2–4 with 5 stud dots in a + pattern: center (10,3), top (10,1), bottom (10,4 — overlap), left (8,3), right (12,3). Breech base x=2–17, y=11–18. Bolt heads 2×2 at (2,11), (15,11), (2,16), (15,16). Ground-crack jags as scattered single pixels around the bottom edge (y=18). Orange seep 1-px line at y=18, x=5–14.
 - **Vibe:** this turret literally pounds the dirt; the wider base implies it's anchored deep.
 
