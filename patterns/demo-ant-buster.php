@@ -5405,6 +5405,51 @@ body.has-ant-buster-page {
     var p = canvasToGame(evt);
     ui.mouseX = p.x;
     ui.mouseY = p.y;
+    // === Armed-state interactions (tap-to-arm world) ===
+    // Runs before the normal hit-test cascade so an Armed gesture wins over
+    // cannon-select and HUD pass-through. HUD pause/speed/sell/upgrade are
+    // re-tested below: they do not clear armedKind.
+    if (ui.armedKind !== null) {
+      if (ui.activePointerId !== null) {
+        // We are already capturing this pointer; check shop and playfield.
+        // Shop hit-tests first so a same-card re-tap toggles off and a
+        // different-card tap swaps kind.
+        if (ui.shopRects) {
+          for (var sa = 0; sa < ui.shopRects.length; sa++) {
+            var ra = ui.shopRects[sa];
+            if (inRect(p, ra)) {
+              if (ra.kind === ui.armedKind) {
+                // Same card: toggle off.
+                ui.armedKind = null;
+                canvas.classList.remove('ab-dragging');
+                return;
+              }
+              // Different card: swap if affordable, else ignore.
+              var skSwap = CANNON_KINDS[ra.kind];
+              if (game.gold >= skSwap.cost) {
+                ui.armedKind = null;
+                ui.pendingKind = ra.kind;
+                ui.pendingX = p.x;
+                ui.pendingY = p.y;
+                canvas.classList.remove('ab-dragging');
+              }
+              return;
+            }
+          }
+        }
+        // Playfield: enter Placing (ghost will render via drawDragPreview).
+        if (p.x < PLAYFIELD_W) {
+          if (p.y >= HUD_H) {
+            // Note: do not call placeCannon here. Placement commits on
+            // pointerup (Step 2 below) so the player can slide-to-adjust.
+            canvas.classList.add('ab-dragging');
+            return;
+          }
+        }
+        // Anything else (HUD, side panel, etc.): fall through to normal
+        // hit-tests below. armedKind is preserved.
+      }
+    }
     // Pause overlay's Restart Run button — only live while paused. Tested first so
     // it wins over the HUD pause toggle behind it (which is in the same x range).
     if (game.paused) {
@@ -5552,13 +5597,33 @@ body.has-ant-buster-page {
     var p = canvasToGame(evt);
     ui.mouseX = p.x;
     ui.mouseY = p.y;
-    if (ui.armedKind !== null) {
-      placeCannon(ui.armedKind, p.x, p.y);
-      ui.armedKind = null;
-      canvas.classList.remove('ab-dragging');
+    // Case A: Pending without motion -> Armed (tap-to-arm).
+    if (ui.pendingKind !== null) {
+      ui.armedKind = ui.pendingKind;
+      ui.pendingKind = null;
+      // ab-dragging class stays off: Armed without pointer down has no grab cursor.
+    } else if (ui.armedKind !== null) {
+      // Case B: Dragging or Placing -> commit if valid.
+      if (canPlaceCannon(p.x, p.y)) {
+        placeCannon(ui.armedKind, p.x, p.y);
+        ui.armedKind = null;
+        canvas.classList.remove('ab-dragging');
+      } else {
+        // Case C: invalid spot. Drag-from-shop releases (Idle); tap-armed
+        // placement attempts stay Armed. We distinguish by pointerType:
+        // touch/pen came from tap-to-arm and stay armed for retry; mouse
+        // came from drag-from-shop and drops to Idle ("abandon" semantics).
+        if (ui.pointerType === 'touch') {
+          // Stay Armed; flash effect lands in Task 7.
+          canvas.classList.remove('ab-dragging');
+        } else if (ui.pointerType === 'pen') {
+          canvas.classList.remove('ab-dragging');
+        } else {
+          ui.armedKind = null;
+          canvas.classList.remove('ab-dragging');
+        }
+      }
     }
-    // Pending without motion: drop silently for now. Task 3 will arm here instead.
-    ui.pendingKind = null;
     canvas.releasePointerCapture(evt.pointerId);
     ui.activePointerId = null;
     ui.pointerType = null;
