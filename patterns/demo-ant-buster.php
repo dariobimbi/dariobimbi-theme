@@ -1080,7 +1080,33 @@ body.has-ant-buster-page {
     x.fillRect(9, 3, 1, 1);
     return c;
   }
-  function makeCannonTurretHawkeye() { return makeCannonTurret(); }
+  function makeCannonTurretHawkeye() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    // Walnut stock (breech)
+    x.fillStyle = '#604030';
+    x.fillRect(6, 14, 8, 4);
+    // Wood grain lines (broken pattern)
+    x.fillStyle = '#805040';
+    x.fillRect(7, 15, 2, 1);
+    x.fillRect(11, 15, 2, 1);
+    x.fillRect(8, 17, 2, 1);
+    x.fillRect(11, 17, 1, 1);
+    // Scope cylinder (perpendicular to barrel — cross-axis geometry)
+    x.fillStyle = '#1a1820';
+    x.fillRect(4, 11, 12, 3);
+    // Brass edge rings (left and right end caps of scope)
+    x.fillStyle = '#aa7822';
+    x.fillRect(4, 11, 1, 3);
+    x.fillRect(15, 11, 1, 3);
+    // Barrel (gunmetal, very thin — only 2 px wide)
+    x.fillStyle = '#4a5560';
+    x.fillRect(9, 2, 2, 12);
+    // Suppressor bulge at muzzle (slightly wider)
+    x.fillStyle = '#2a3540';
+    x.fillRect(8, 0, 4, 2);
+    return c;
+  }
   function makeCannonTurretBlizzard() { return makeCannonTurret(); }
   function makeCannonTurretTempest() { return makeCannonTurret(); }
   function makeCannonTurretBiohazard() { return makeCannonTurret(); }
