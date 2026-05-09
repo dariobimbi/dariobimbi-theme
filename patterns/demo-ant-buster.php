@@ -5347,6 +5347,9 @@ body.has-ant-buster-page {
     ui.sendNextRect = null;
     ui.restartRunRect = null;
     ui.dragging = null;
+    ui.activePointerId = null;
+    ui.pointerType = null;
+    ui.armedKind = null;
     ui.selectedCannon = null;
     ui.upgradeRects[0] = null;
     ui.upgradeRects[1] = null;
@@ -5360,6 +5363,9 @@ body.has-ant-buster-page {
   // === INPUT ===
   var ui = {
     dragging: null,         // { kind } when dragging from shop
+    activePointerId: null,  // single-pointer gesture lock; subsequent pointers ignored
+    pointerType: null,      // 'mouse' | 'touch' | 'pen' for last pointerdown; drives ghost offset
+    armedKind: null,        // tap-to-arm: cannon kind committed-to-place, null when idle (Tasks 2-3)
     mouseX: 0,
     mouseY: 0,
     sendNextRect: null,     // bounds of the Send-Next button (set when rendered in prep)
@@ -5384,7 +5390,11 @@ body.has-ant-buster-page {
     };
   }
 
-  canvas.addEventListener('mousedown', function (evt) {
+  canvas.addEventListener('pointerdown', function (evt) {
+    if (ui.activePointerId !== null) { return; }   // single-pointer lock
+    canvas.setPointerCapture(evt.pointerId);
+    ui.activePointerId = evt.pointerId;
+    ui.pointerType = evt.pointerType;
     var p = canvasToGame(evt);
     ui.mouseX = p.x;
     ui.mouseY = p.y;
@@ -5490,7 +5500,10 @@ body.has-ant-buster-page {
     }
   });
 
-  canvas.addEventListener('mousemove', function (evt) {
+  canvas.addEventListener('pointermove', function (evt) {
+    if (ui.activePointerId !== null) {
+      if (evt.pointerId !== ui.activePointerId) { return; }
+    }
     var p = canvasToGame(evt);
     ui.mouseX = p.x;
     ui.mouseY = p.y;
@@ -5514,7 +5527,8 @@ body.has-ant-buster-page {
     ui.hoveredUpgrade = hovered;
   });
 
-  canvas.addEventListener('mouseup', function (evt) {
+  canvas.addEventListener('pointerup', function (evt) {
+    if (evt.pointerId !== ui.activePointerId) { return; }
     var p = canvasToGame(evt);
     ui.mouseX = p.x;
     ui.mouseY = p.y;
@@ -5523,13 +5537,18 @@ body.has-ant-buster-page {
       ui.dragging = null;
       canvas.classList.remove('ab-dragging');
     }
+    ui.activePointerId = null;
+    ui.pointerType = null;
   });
 
-  canvas.addEventListener('mouseleave', function () {
+  canvas.addEventListener('pointercancel', function (evt) {
+    if (evt.pointerId !== ui.activePointerId) { return; }
     if (ui.dragging) {
       ui.dragging = null;
       canvas.classList.remove('ab-dragging');
     }
+    ui.activePointerId = null;
+    ui.pointerType = null;
   });
 
   // === UPDATE ===
