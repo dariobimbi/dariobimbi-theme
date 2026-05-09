@@ -63,6 +63,7 @@ body.has-ant-buster-page {
   image-rendering: crisp-edges;
   cursor: default;
   display: block;
+  touch-action: none;
 }
 
 .demo-ant-buster #ab-canvas.ab-dragging {
