@@ -5347,7 +5347,6 @@ body.has-ant-buster-page {
     game.godTierUnlockPulseStart = 0;
     ui.sendNextRect = null;
     ui.restartRunRect = null;
-    ui.dragging = null;
     ui.activePointerId = null;
     ui.pointerType = null;
     ui.armedKind = null;
@@ -5366,7 +5365,6 @@ body.has-ant-buster-page {
 
   // === INPUT ===
   var ui = {
-    dragging: null,         // [DEPRECATED in Task 2; kept null for one task to ease bisect]
     activePointerId: null,  // single-pointer gesture lock; subsequent pointers ignored
     pointerType: null,      // 'mouse' | 'touch' | 'pen' for last pointerdown; drives ghost offset
     armedKind: null,        // cannon kind promoted from Pending; non-null while dragging (Tasks 2-3)
@@ -5630,11 +5628,22 @@ body.has-ant-buster-page {
 
   canvas.addEventListener('pointercancel', function (evt) {
     if (evt.pointerId !== ui.activePointerId) { return; }
-    if (ui.armedKind !== null) {
-      ui.armedKind = null;
-      canvas.classList.remove('ab-dragging');
-    }
+    // OS-interrupt rule: drop Pending and the in-progress Dragging/Placing
+    // gesture, but leave Armed intact so the user can finish the placement
+    // after the interruption ends.
     ui.pendingKind = null;
+    // armedKind is preserved iff this gesture started from Armed (tap-to-place).
+    // In Dragging-from-shop, Pending->Dragging set armedKind, so cancel here
+    // means dropping armedKind too. We distinguish by pointerType again:
+    // touch/pen pointers came from tap-to-place, mouse pointers came from
+    // drag-from-shop.
+    if (ui.armedKind !== null) {
+      if (ui.pointerType === 'mouse') {
+        ui.armedKind = null;
+      }
+      // touch and pen: leave armedKind set (Armed survives).
+    }
+    canvas.classList.remove('ab-dragging');
     canvas.releasePointerCapture(evt.pointerId);
     ui.activePointerId = null;
     ui.pointerType = null;
@@ -5777,7 +5786,15 @@ body.has-ant-buster-page {
     }
     if (e.key === '1') { game.speed = 1; return; }
     if (e.key === '2') { game.speed = 2; return; }
-    if (e.key === 'Escape') { ui.selectedCannon = null; return; }
+    if (e.key === 'Escape') {
+      // ESC unarms on desktop. Touch users have the same-card-retap to unarm.
+      if (ui.armedKind !== null) {
+        ui.armedKind = null;
+        canvas.classList.remove('ab-dragging');
+      }
+      ui.selectedCannon = null;
+      return;
+    }
     if (DEBUG) {
       if (e.key === 't') {
         var dk = DEBUG_KINDS[debugCycleIdx % DEBUG_KINDS.length];
