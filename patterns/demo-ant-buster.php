@@ -2131,6 +2131,27 @@ body.has-ant-buster-page {
         ctx.stroke();
         ctx.restore();
       }
+      // Touch Input Task 7: invalid placement flash. Brief red pulse at
+      // the rejected tap location. Stays Armed; this is the visible
+      // "I missed" signal.
+      if (ef.kind === 'invalidPlacement') {
+        var ip = ef.t / ef.life;
+        ctx.save();
+        ctx.globalAlpha = 1 - ip;
+        ctx.strokeStyle = '#e43b44';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(ef.x, ef.y, 8 + ip * 12, 0, Math.PI * 2);
+        ctx.stroke();
+        // Small "X" through the center for unambiguous rejection.
+        ctx.beginPath();
+        ctx.moveTo(ef.x - 5, ef.y - 5);
+        ctx.lineTo(ef.x + 5, ef.y + 5);
+        ctx.moveTo(ef.x + 5, ef.y - 5);
+        ctx.lineTo(ef.x - 5, ef.y + 5);
+        ctx.stroke();
+        ctx.restore();
+      }
     }
   }
 
@@ -2215,6 +2236,13 @@ body.has-ant-buster-page {
     ctx.globalAlpha = 0.6;
     ctx.drawImage(game.sprites.cannonBase, Math.round(ui.mouseX - 16), Math.round(ui.mouseY - 16 + ghostDy));
     ctx.drawImage(dragTurret, Math.round(ui.mouseX - 10), Math.round(ui.mouseY - 16 + ghostDy));
+    // Invalid-spot red tint over the ghost (Task 7). Drawn on top with a
+    // multiply-ish blend by stacking a translucent red rect; cheap and
+    // visible on small screens. Only renders when canPlaceCannon = false.
+    if (!ok) {
+      ctx.fillStyle = 'rgba(228, 59, 68, 0.45)';
+      ctx.fillRect(Math.round(ui.mouseX - 16), Math.round(ui.mouseY - 16 + ghostDy), 32, 24);
+    }
     ctx.globalAlpha = 1;
     ctx.strokeStyle = ok ? 'rgba(255, 255, 255, 0.5)' : 'rgba(228, 59, 68, 0.7)';
     ctx.lineWidth = 1;
@@ -5625,10 +5653,12 @@ body.has-ant-buster-page {
         // touch/pen came from tap-to-arm and stay armed for retry; mouse
         // came from drag-from-shop and drops to Idle ("abandon" semantics).
         if (ui.pointerType === 'touch') {
-          // Stay Armed; flash effect lands in Task 7.
+          // Stay Armed; push the red-pulse flash at the rejected tap location.
+          game.effects.push({ kind: 'invalidPlacement', x: p.x, y: p.y, t: 0, life: 0.15 });
           canvas.classList.remove('ab-dragging');
         } else if (ui.pointerType === 'pen') {
           // Same as touch: stay Armed. Separate branch avoids || (inline-script gotcha).
+          game.effects.push({ kind: 'invalidPlacement', x: p.x, y: p.y, t: 0, life: 0.15 });
           canvas.classList.remove('ab-dragging');
         } else {
           ui.armedKind = null;
