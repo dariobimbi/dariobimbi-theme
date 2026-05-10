@@ -1378,27 +1378,37 @@ body.has-ant-buster-page {
   }
 
   // 12x12 gold coin used in the HUD coin tag and every cost readout.
+  // 12x12 gold coin used in the HUD coin tag and every cost readout.
   function makeCoinSprite() {
     var c = document.createElement('canvas');
     c.width = 12; c.height = 12;
     var x = c.getContext('2d');
-    // Outer dark ring
-    x.fillStyle = '#2a1810';
-    x.fillRect(2, 0, 8, 12);
-    x.fillRect(0, 2, 12, 8);
-    x.fillRect(1, 1, 10, 10);
-    // Coin body
-    x.fillStyle = '#c8a000';
-    x.fillRect(2, 2, 8, 8);
-    x.fillRect(1, 3, 10, 6);
-    x.fillRect(3, 1, 6, 10);
-    // Highlight
-    x.fillStyle = '#fee761';
-    x.fillRect(3, 3, 6, 6);
-    x.fillRect(2, 4, 8, 4);
-    // Center mark
-    x.fillStyle = '#c8a000';
-    x.fillRect(5, 5, 2, 2);
+    var ink = '#2a1810';
+    var gold = '#c8a000';
+    var hi = '#fee761';
+    // Outline ring (octagonal approximation of a circle)
+    x.fillStyle = ink;
+    x.fillRect(3, 0, 6, 1);     // top edge
+    x.fillRect(2, 1, 1, 1);
+    x.fillRect(9, 1, 1, 1);
+    x.fillRect(1, 2, 1, 2);     // upper sides
+    x.fillRect(10, 2, 1, 2);
+    x.fillRect(0, 4, 1, 4);     // mid sides
+    x.fillRect(11, 4, 1, 4);
+    x.fillRect(1, 8, 1, 2);     // lower sides
+    x.fillRect(10, 8, 1, 2);
+    x.fillRect(2, 10, 1, 1);
+    x.fillRect(9, 10, 1, 1);
+    x.fillRect(3, 11, 6, 1);    // bottom edge
+    // Gold body fill
+    x.fillStyle = gold;
+    x.fillRect(3, 1, 6, 10);    // tall band
+    x.fillRect(1, 3, 10, 6);    // wide band
+    x.fillRect(2, 2, 8, 8);     // square fill
+    // Highlight on upper-left
+    x.fillStyle = hi;
+    x.fillRect(3, 3, 4, 4);
+    x.fillRect(2, 4, 6, 2);
     return c;
   }
 
@@ -1766,27 +1776,45 @@ body.has-ant-buster-page {
       ctx.fillStyle = '#2a1810';
       ctx.fillRect(cardX + 8, statsY - 4, cardW - 16, 1);
 
-      // Three stats space-between
-      var statX0 = cardX + 12;
-      var statX2 = cardX + cardW - 12;
-      var statXMid = (statX0 + statX2) / 2;
-      drawTextWithShadow('DMG', statX0, statsY + 4, '#c8a868', 'bold 8px monospace', 'start');
-      drawTextWithShadow('' + sk.damage, statX0 + 22, statsY + 4, '#f5e6c8', 'bold 10px monospace', 'start');
-      drawTextWithShadow('RATE', statXMid - 18, statsY + 4, '#c8a868', 'bold 8px monospace', 'start');
-      drawTextWithShadow('' + sk.fireRate, statXMid + 12, statsY + 4, '#f5e6c8', 'bold 10px monospace', 'start');
-      drawTextWithShadow('RNG', statX2 - 28, statsY + 4, '#c8a868', 'bold 8px monospace', 'start');
-      drawTextWithShadow('' + sk.range, statX2 - 4, statsY + 4, '#f5e6c8', 'bold 10px monospace', 'end');
+      // Three stats in equal-width columns, label-then-value with a fixed gap.
+      var statColW = (cardW - 16) / 3;
+      var col1X = cardX + 8;
+      var col2X = cardX + 8 + statColW;
+      var col3X = cardX + 8 + 2 * statColW;
+      drawTextWithShadow('DMG', col1X, statsY + 4, '#c8a868', 'bold 8px monospace', 'start');
+      drawTextWithShadow('' + sk.damage, col1X + 22, statsY + 4, '#f5e6c8', 'bold 10px monospace', 'start');
+      drawTextWithShadow('RATE', col2X, statsY + 4, '#c8a868', 'bold 8px monospace', 'start');
+      drawTextWithShadow('' + sk.fireRate, col2X + 26, statsY + 4, '#f5e6c8', 'bold 10px monospace', 'start');
+      drawTextWithShadow('RNG', col3X, statsY + 4, '#c8a868', 'bold 8px monospace', 'start');
+      drawTextWithShadow('' + sk.range, col3X + 22, statsY + 4, '#f5e6c8', 'bold 10px monospace', 'start');
 
-      // "?" wooden hangtag at the top-right
-      var tagW = 16;
-      var tagH = 16;
+      // Cream paper "?" hangtag at the top-right — stands out against the wooden card
+      var tagW = 18;
+      var tagH = 18;
       var tagX = cardX + cardW - tagW - 4;
-      var tagY = cy + 2;
-      drawWoodenTag(tagX, tagY, tagW, tagH);
-      // Dark string anchor
+      var tagY = cy + 4;
+      // Paper body (cream)
+      ctx.fillStyle = '#fff8e8';
+      ctx.fillRect(tagX, tagY, tagW, tagH);
+      ctx.fillStyle = '#f0dfb8';
+      ctx.fillRect(tagX + 1, tagY + tagH - 3, tagW - 2, 2);
+      // Dark border
+      ctx.fillStyle = '#2a1810';
+      ctx.fillRect(tagX, tagY, tagW, 1);
+      ctx.fillRect(tagX, tagY, 1, tagH);
+      ctx.fillRect(tagX + tagW - 1, tagY, 1, tagH);
+      ctx.fillRect(tagX, tagY + tagH - 1, tagW, 1);
+      // Dark string anchor at top
       ctx.fillStyle = '#2a1810';
       ctx.fillRect(tagX + tagW / 2 - 1, tagY - 3, 2, 4);
-      drawTextWithShadow('?', tagX + tagW / 2, tagY + tagH / 2, '#fee761', 'bold 12px monospace', 'center');
+      // "?" glyph in dark on cream
+      ctx.font = 'bold 13px monospace';
+      ctx.fillStyle = '#2a1810';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('?', tagX + tagW / 2, tagY + tagH / 2 + 1);
+      ctx.textAlign = 'start';
+      ctx.textBaseline = 'alphabetic';
       ui.shopInfoRects.push({ x: tagX, y: tagY, w: tagW, h: tagH, kind: k });
 
       // Armed-card highlight + Tap a spot pill
