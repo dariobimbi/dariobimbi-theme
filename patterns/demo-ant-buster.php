@@ -1664,28 +1664,56 @@ body.has-ant-buster-page {
   // Vertical 4-px stripes alternating two wood tones plus a top-to-bottom
   // gradient overlay to read as planks.
   function drawShopBackground() {
-    var sx = PLAYFIELD_W;
-    var sy = 0;
-    var sw = SHOP_W;
-    var sh = HEIGHT;
-    // Stripes
-    for (var i = 0; i < sw; i = i + 4) {
-      if ((i / 4) % 2 === 0) {
-        ctx.fillStyle = '#4a3220';
-      } else {
-        ctx.fillStyle = '#5a3a26';
-      }
-      ctx.fillRect(sx + i, sy, 4, sh);
+    var sx; var sy; var sw; var sh;
+    if (isPortrait()) {
+      sx = 0;
+      sy = HEIGHT - STRIP_H;
+      sw = WIDTH;
+      sh = STRIP_H;
+    } else {
+      sx = PLAYFIELD_W;
+      sy = 0;
+      sw = SHOP_W;
+      sh = HEIGHT;
     }
-    // Vertical darken gradient
+    // Wood-plank stripes. Vertical planks for landscape (running top-to-bottom
+    // along the right column); horizontal planks for portrait (running
+    // left-to-right along the bottom strip) so the grain reads correctly.
+    if (isPortrait()) {
+      for (var j = 0; j < sh; j = j + 4) {
+        if ((j / 4) % 2 === 0) {
+          ctx.fillStyle = '#4a3220';
+        } else {
+          ctx.fillStyle = '#5a3a26';
+        }
+        ctx.fillRect(sx, sy + j, sw, 4);
+      }
+    } else {
+      for (var i = 0; i < sw; i = i + 4) {
+        if ((i / 4) % 2 === 0) {
+          ctx.fillStyle = '#4a3220';
+        } else {
+          ctx.fillStyle = '#5a3a26';
+        }
+        ctx.fillRect(sx + i, sy, 4, sh);
+      }
+    }
+    // Darken gradient (top-to-bottom in either orientation: the strip / column
+    // gets slightly darker toward the bottom so the chrome reads as recessed).
     var grd = ctx.createLinearGradient(sx, sy, sx, sy + sh);
     grd.addColorStop(0, 'rgba(90, 58, 38, 0.0)');
     grd.addColorStop(1, 'rgba(58, 32, 16, 0.6)');
     ctx.fillStyle = grd;
     ctx.fillRect(sx, sy, sw, sh);
-    // Left edge dark border
+    // Dark inner-edge border on the side facing the playfield.
     ctx.fillStyle = '#2a1810';
-    ctx.fillRect(sx, sy, 2, sh);
+    if (isPortrait()) {
+      // Top edge dark border
+      ctx.fillRect(sx, sy, sw, 2);
+    } else {
+      // Left edge dark border
+      ctx.fillRect(sx, sy, 2, sh);
+    }
   }
 
   function drawShopInfoPanel() {
