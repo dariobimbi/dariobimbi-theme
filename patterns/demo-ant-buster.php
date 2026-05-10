@@ -126,6 +126,17 @@ body.has-ant-buster-page {
     { x: 590, color: '#ff77a8' }
   ];
 
+  // Static layout for lose-splash ants. Six items, all medium or big sizes,
+  // positioned around (not directly behind) the sign.
+  var LOSE_ANT_LAYOUT = [
+    { x:  60, y:  60, size: 2, rot:  0.7 },
+    { x: 580, y:  80, size: 1, rot: -0.5 },
+    { x:  40, y: 280, size: 1, rot:  2.6 },
+    { x: 600, y: 290, size: 2, rot: -1.8 },
+    { x: 320, y:  20, size: 1, rot:  1.2 },
+    { x: 340, y: 330, size: 2, rot: -0.3 }
+  ];
+
   // === DEBUG MODE ===
   // Captured once at parse time from the URL. ?debug=1 enables the T hotkey
   // (cycles spawning each ant kind at the anthill). The check uses a plain
@@ -2686,17 +2697,62 @@ body.has-ant-buster-page {
     ui.restartRunRect = { x: rrX, y: rrY, w: rrW, h: rrH };
   }
 
+  // Wine-dark variant of drawWoodenSign for the lose splash.
+  function drawWoodenSignWine(x, y, w, h) {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+    ctx.fillRect(x + 2, y + h, w, 4);
+    var grd = ctx.createLinearGradient(x, y, x, y + h);
+    grd.addColorStop(0, '#5a2a20');
+    grd.addColorStop(1, '#3a1a10');
+    ctx.fillStyle = grd;
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#5a1a1a';
+    ctx.fillRect(x, y, w, 3);
+    ctx.fillRect(x, y, 3, h);
+    ctx.fillRect(x + w - 3, y, 3, h);
+    ctx.fillRect(x, y + h - 3, w, 3);
+    ctx.fillStyle = '#3a1010';
+    ctx.fillRect(x + 3, y + 3, w - 6, 1);
+    ctx.fillStyle = '#7a3a30';
+    ctx.fillRect(x + 3, y + h - 4, w - 6, 1);
+    ctx.fillStyle = '#444';
+    ctx.fillRect(x + 6, y + 5, 4, 4);
+    ctx.fillRect(x + w - 10, y + 5, 4, 4);
+    ctx.fillStyle = '#888';
+    ctx.fillRect(x + 7, y + 6, 2, 2);
+    ctx.fillRect(x + w - 9, y + 6, 2, 2);
+  }
+
   function drawLoseOverlay() {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    // Saturated red dim
+    ctx.fillStyle = 'rgba(80, 10, 10, 0.55)';
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
-    ctx.fillStyle = '#e43b44';
-    ctx.font = '16px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('THE ANTS WIN', WIDTH / 2, HEIGHT / 2 - 12);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '10px monospace';
-    ctx.fillText('Click to restart', WIDTH / 2, HEIGHT / 2 + 8);
-    ctx.textAlign = 'start';
+
+    // Scattered ants
+    for (var i = 0; i < LOSE_ANT_LAYOUT.length; i++) {
+      var a = LOSE_ANT_LAYOUT[i];
+      drawSplashAnt(a.x, a.y, a.size, a.rot);
+    }
+
+    var signW = 280;
+    var signH = 130;
+    var signX = (WIDTH - signW) / 2;
+    var signY = (HEIGHT - signH) / 2 - 6;
+    drawWoodenSignWine(signX, signY, signW, signH);
+
+    drawTextWithShadow('8 SLICES LOST', WIDTH / 2, signY + 24, '#ff8a8a', 'bold 10px monospace', 'center');
+
+    // Title with subtle horizontal jitter (1 px @ ~3 Hz).
+    var jx;
+    var p = (game.time * 6) % 2;
+    if (p < 1) { jx = 1; } else { jx = -1; }
+    ctx.save();
+    ctx.shadowBlur = 14;
+    ctx.shadowColor = 'rgba(255, 80, 80, 0.5)';
+    drawTextWithShadow('THE ANTS WIN', WIDTH / 2 + jx, signY + 70, '#ff5050', 'bold 32px monospace', 'center');
+    ctx.restore();
+
+    drawTextWithShadow('Click to try again', WIDTH / 2, signY + signH - 22, '#ffaaaa', 'bold 10px monospace', 'center');
   }
 
   function drawWinOverlay() {
