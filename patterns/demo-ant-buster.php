@@ -1684,8 +1684,7 @@ body.has-ant-buster-page {
       ctx.fillStyle = '#3a2210';
       ctx.textAlign = 'start';
       ctx.textBaseline = 'middle';
-      ctx.fillText('->', px + 10, rowY + 13);
-      ctx.fillText(udef.name, px + 22, rowY + 13);
+      ctx.fillText(udef.name, px + 12, rowY + 13);
 
       // Tier badge in the top-right corner where the cost used to be.
       var tierLabel2 = udef.tier;
@@ -2040,8 +2039,8 @@ body.has-ant-buster-page {
       drawTextWithShadow(values[i], cx, sy + 22, valColors[i], 'bold 11px monospace', 'center');
     }
 
-    // Targeting row + label
-    var afterTargetingY = drawTargetingRow(c, px + 8, py + 100);
+    // Targeting row + label (extra y-padding below the stats tag)
+    var afterTargetingY = drawTargetingRow(c, px + 8, py + 110);
 
     // Upgrade rows.
     var upgrades = sk.upgradesTo;
@@ -2049,6 +2048,7 @@ body.has-ant-buster-page {
     var hoveredLockedRect = null;
     var upgradeBaseY = afterTargetingY + 6;
     ui.upgradeRects = [null, null, null];
+    ui.detailUpgradeInfoRects = [null, null, null];
     for (var i2 = 0; i2 < upgrades.length; i2++) {
       var uk = upgrades[i2];
       var udef = CANNON_KINDS[uk];
@@ -2103,21 +2103,47 @@ body.has-ant-buster-page {
         drawWoodenButton(px + 2, by, pw - 4, rh, 'wood');
       }
 
-      // Top line
-      drawTextWithShadow('->', px + 10, by + 11, '#fee761', 'bold 10px monospace', 'start');
-      drawTextWithShadow(udef.name, px + 22, by + 11, '#fee761', 'bold 10px monospace', 'start');
-      ctx.drawImage(game.sprites.coin, px + pw - 38, by + 6);
+      // Top line — name on the left, cost in the middle (with coin), small ?
+      // hangtag on the far right that opens the upgrade's info panel.
+      drawTextWithShadow(udef.name, px + 10, by + 11, '#fee761', 'bold 10px monospace', 'start');
+      ctx.drawImage(game.sprites.coin, px + pw - 56, by + 6);
       var costColor;
       if (isLocked) { costColor = '#888'; }
       else if (canAfford) { costColor = '#fee761'; }
       else { costColor = '#ff7070'; }
-      drawTextWithShadow('' + udef.cost, px + pw - 8, by + 11, costColor, 'bold 10px monospace', 'end');
+      drawTextWithShadow('' + udef.cost, px + pw - 26, by + 11, costColor, 'bold 10px monospace', 'end');
       // Stats line
       drawTextWithShadow('DMG ' + udef.damage + '  RATE ' + udef.fireRate + '  RNG ' + udef.range, px + 10, by + 28, '#f5e6c8', 'bold 8px monospace', 'start');
+
+      // Cream paper "?" hangtag at top-right — opens info for this upgrade.
+      var ihtW = 16;
+      var ihtH = 16;
+      var ihtX = px + pw - ihtW - 6;
+      var ihtY = by + 4;
+      ctx.fillStyle = '#fff8e8';
+      ctx.fillRect(ihtX, ihtY, ihtW, ihtH);
+      ctx.fillStyle = '#f0dfb8';
+      ctx.fillRect(ihtX + 1, ihtY + ihtH - 3, ihtW - 2, 2);
+      ctx.fillStyle = '#2a1810';
+      ctx.fillRect(ihtX, ihtY, ihtW, 1);
+      ctx.fillRect(ihtX, ihtY, 1, ihtH);
+      ctx.fillRect(ihtX + ihtW - 1, ihtY, 1, ihtH);
+      ctx.fillRect(ihtX, ihtY + ihtH - 1, ihtW, 1);
+      ctx.fillStyle = '#2a1810';
+      ctx.fillRect(ihtX + ihtW / 2 - 1, ihtY - 3, 2, 4);
+      ctx.font = 'bold 11px monospace';
+      ctx.fillStyle = '#2a1810';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('?', ihtX + ihtW / 2, ihtY + ihtH / 2 + 1);
+      ctx.textAlign = 'start';
+      ctx.textBaseline = 'alphabetic';
 
       ctx.restore();
 
       ui.upgradeRects[i2] = { x: px + 2, y: by, w: pw - 4, h: rh, toKind: uk, locked: isLocked };
+      if (!ui.detailUpgradeInfoRects) { ui.detailUpgradeInfoRects = [null, null, null]; }
+      ui.detailUpgradeInfoRects[i2] = { x: ihtX, y: ihtY, w: ihtW, h: ihtH, kind: uk };
 
       if (isLocked) {
         if (ui.mouseX >= px + 2) {
@@ -3239,7 +3265,11 @@ body.has-ant-buster-page {
     drawLightningBolts();      // 9c. Tesla arc-jump polylines (~0.15s flash)
     drawEffects();             // 10. AoE flashes + future hit/splat fx
     drawHud();                 // 11. HUD strip
-    if (ui.selectedCannon) {   // 12. shop / tower-detail panel
+    if (ui.shopMode === 'info') {   // 12. info panel takes precedence (recursive drill-down)
+      drawShopBackground();
+      drawTextWithShadow('CANNONS', PLAYFIELD_W + SHOP_W / 2, 14, '#c8a868', 'bold 9px monospace', 'center');
+      drawShopInfoPanel();
+    } else if (ui.selectedCannon) {   // shop / tower-detail panel
       drawTowerPanel(ui.selectedCannon);
     } else {
       drawShop();
@@ -6282,7 +6312,9 @@ body.has-ant-buster-page {
     shopInfoKind: null,     // selected kind when shopMode === 'info' (Task 10)
     shopInfoRects: [],      // populated by drawShop; one rect per "?" hangtag
     idlePlayRect: null,
-    detailBackRect: null    // populated by drawTowerPanel; tap to clear selectedCannon
+    detailBackRect: null,   // populated by drawTowerPanel; tap to clear selectedCannon
+    shopInfoFrom: null,     // 'detail' | 'list' | null — entry point for the info panel
+    detailUpgradeInfoRects: [null, null, null] // populated by drawTowerPanel; tap to drill into upgrade info
   };
 
   function canvasToGame(evt) {
@@ -6392,6 +6424,7 @@ body.has-ant-buster-page {
         if (ui.shopMode === 'info') {
           ui.shopMode = 'list';
           ui.shopInfoKind = null;
+          ui.shopInfoFrom = null;
         }
         var hit = cannonAt(p.x, p.y);
         if (hit) {
@@ -6440,6 +6473,28 @@ body.has-ant-buster-page {
               }
             }
           }
+          // ? hangtag on a detail-panel upgrade row: open info panel for that upgrade.
+          if (ui.detailUpgradeInfoRects) {
+            for (var diuI = 0; diuI < ui.detailUpgradeInfoRects.length; diuI++) {
+              var diur = ui.detailUpgradeInfoRects[diuI];
+              if (!diur) { continue; }
+              if (p.x >= diur.x) {
+                if (p.x <= diur.x + diur.w) {
+                  if (p.y >= diur.y) {
+                    if (p.y <= diur.y + diur.h) {
+                      ui.shopMode = 'info';
+                      ui.shopInfoKind = diur.kind;
+                      ui.shopInfoFrom = 'detail';
+                      canvas.releasePointerCapture(evt.pointerId);
+                      ui.activePointerId = null;
+                      ui.pointerType = null;
+                      return;
+                    }
+                  }
+                }
+              }
+            }
+          }
           for (var ri = 0; ri < ui.upgradeRects.length; ri++) {
             var ur = ui.upgradeRects[ri];
             if (ur) {
@@ -6469,6 +6524,7 @@ body.has-ant-buster-page {
               if (p.y <= br.y + br.h) {
                 ui.shopMode = 'list';
                 ui.shopInfoKind = null;
+                ui.shopInfoFrom = null;
                 canvas.releasePointerCapture(evt.pointerId);
                 ui.activePointerId = null;
                 ui.pointerType = null;
@@ -6482,6 +6538,7 @@ body.has-ant-buster-page {
       if (p.x >= PLAYFIELD_W) {
         ui.shopMode = 'list';
         ui.shopInfoKind = null;
+        ui.shopInfoFrom = null;
         canvas.releasePointerCapture(evt.pointerId);
         ui.activePointerId = null;
         ui.pointerType = null;
@@ -6771,6 +6828,7 @@ body.has-ant-buster-page {
       if (ui.shopMode === 'info') {
         ui.shopMode = 'list';
         ui.shopInfoKind = null;
+        ui.shopInfoFrom = null;
         e.preventDefault();
         return;
       }
