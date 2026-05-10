@@ -1603,25 +1603,27 @@ body.has-ant-buster-page {
     var py = 26;
 
     // Back link
-    drawTextWithShadow('< BACK TO CANNONS', px + pw / 2, py + 6, '#c8a868', 'bold 8px monospace', 'center');
-    ui.shopInfoBackRect = { x: px, y: py, w: pw, h: 14 };
+    drawTextWithShadow('< BACK TO CANNONS', px + pw / 2, py + 8, '#c8a868', 'bold 8px monospace', 'center');
+    ui.shopInfoBackRect = { x: px, y: py, w: pw, h: 18 };
 
     // Name
-    drawTextWithShadow(sk.name, px + 4, py + 28, '#fee761', 'bold 14px monospace', 'start');
-    drawTextWithShadow(sk.family + ' family', px + 4, py + 42, '#c8a868', 'bold 8px monospace', 'start');
+    drawTextWithShadow(sk.name, px + 8, py + 32, '#fee761', 'bold 14px monospace', 'start');
+    drawTextWithShadow(sk.family + ' family', px + 8, py + 48, '#c8a868', 'bold 8px monospace', 'start');
 
     // Stats row in a single recessed tag
-    var sy = py + 50;
-    drawWoodenTag(px + 2, sy, pw - 4, 24);
-    var sx0 = px + 8;
-    var sx2 = px + pw - 8;
-    var sxMid = (sx0 + sx2) / 2;
-    drawTextWithShadow('DMG', sx0, sy + 8, '#c8a868', 'bold 7px monospace', 'start');
-    drawTextWithShadow('' + sk.damage, sx0, sy + 18, '#f5e6c8', 'bold 11px monospace', 'start');
-    drawTextWithShadow('RATE', sxMid - 12, sy + 8, '#c8a868', 'bold 7px monospace', 'start');
-    drawTextWithShadow('' + sk.fireRate, sxMid - 12, sy + 18, '#f5e6c8', 'bold 11px monospace', 'start');
-    drawTextWithShadow('RNG', sx2 - 24, sy + 8, '#c8a868', 'bold 7px monospace', 'start');
-    drawTextWithShadow('' + sk.range, sx2, sy + 18, '#f5e6c8', 'bold 11px monospace', 'end');
+    var sy = py + 58;
+    var sh = 30;
+    drawWoodenTag(px + 2, sy, pw - 4, sh);
+    var col = (pw - 4) / 3;
+    var col1 = px + 2 + col * 0 + col / 2;
+    var col2 = px + 2 + col * 1 + col / 2;
+    var col3 = px + 2 + col * 2 + col / 2;
+    drawTextWithShadow('DMG', col1, sy + 9, '#c8a868', 'bold 7px monospace', 'center');
+    drawTextWithShadow('' + sk.damage, col1, sy + 22, '#f5e6c8', 'bold 11px monospace', 'center');
+    drawTextWithShadow('RATE', col2, sy + 9, '#c8a868', 'bold 7px monospace', 'center');
+    drawTextWithShadow('' + sk.fireRate, col2, sy + 22, '#f5e6c8', 'bold 11px monospace', 'center');
+    drawTextWithShadow('RNG', col3, sy + 9, '#c8a868', 'bold 7px monospace', 'center');
+    drawTextWithShadow('' + sk.range, col3, sy + 22, '#f5e6c8', 'bold 11px monospace', 'center');
 
     // Description card. Falls back to "<family> <tier>" if description missing.
     var desc = sk.description;
@@ -1630,34 +1632,42 @@ body.has-ant-buster-page {
       if (!tierLabel) { tierLabel = 'base'; }
       desc = sk.family + ' ' + tierLabel;
     }
-    var dy = py + 80;
-    var dh = 50;
+    var dy = py + 96;
+    var dh = 56;
     ctx.fillStyle = '#2a1810';
     ctx.fillRect(px + 2, dy, pw - 4, dh);
     ctx.fillStyle = '#3a2210';
     ctx.fillRect(px + 4, dy + 2, pw - 8, dh - 4);
-    drawWrappedText(desc, px + 7, dy + 8, pw - 14, '#f5e6c8', 'bold 9px monospace', 14);
+    drawWrappedText(desc, px + 12, dy + 10, pw - 24, '#f5e6c8', 'bold 9px monospace', 14);
 
     // Upgrades to header
-    drawTextWithShadow('UPGRADES TO', px + 4, py + 142, '#c8a868', 'bold 8px monospace', 'start');
+    drawTextWithShadow('UPGRADES TO', px + 8, py + 162, '#c8a868', 'bold 8px monospace', 'start');
 
     // Upgrade rows
     var upgrades = sk.upgradesTo;
     if (!upgrades) { upgrades = []; }
-    var rowY = py + 152;
+    var rowY = py + 174;
     for (var i = 0; i < upgrades.length; i++) {
       var uk = upgrades[i];
       var udef = CANNON_KINDS[uk];
       if (!udef) { continue; }
-      var rh = 42;
+      var rh = 46;
+      var canAfford = (game.gold >= udef.cost);
+
+      // Affordable: normal brown wood. Unaffordable: dim with globalAlpha
+      // and red cost color so the row reads as locked-by-funds.
+      ctx.save();
+      if (!canAfford) { ctx.globalAlpha = 0.55; }
       drawWoodenButton(px + 2, rowY, pw - 4, rh, 'wood');
       // Top line: arrow + name + cost-with-coin (right aligned)
-      drawTextWithShadow('->', px + 6, rowY + 9, '#fee761', 'bold 10px monospace', 'start');
-      drawTextWithShadow(udef.name, px + 18, rowY + 9, '#fee761', 'bold 10px monospace', 'start');
-      ctx.drawImage(game.sprites.coin, px + pw - 36, rowY + 4);
-      drawTextWithShadow('' + udef.cost, px + pw - 6, rowY + 9, '#fee761', 'bold 10px monospace', 'end');
+      drawTextWithShadow('->', px + 10, rowY + 11, '#fee761', 'bold 10px monospace', 'start');
+      drawTextWithShadow(udef.name, px + 22, rowY + 11, '#fee761', 'bold 10px monospace', 'start');
+      ctx.drawImage(game.sprites.coin, px + pw - 38, rowY + 6);
+      var costColor;
+      if (canAfford) { costColor = '#fee761'; } else { costColor = '#ff7070'; }
+      drawTextWithShadow('' + udef.cost, px + pw - 8, rowY + 11, costColor, 'bold 10px monospace', 'end');
       // Stats line
-      drawTextWithShadow('DMG ' + udef.damage + '  RATE ' + udef.fireRate + '  RNG ' + udef.range, px + 6, rowY + 24, '#f5e6c8', 'bold 8px monospace', 'start');
+      drawTextWithShadow('DMG ' + udef.damage + '  RATE ' + udef.fireRate + '  RNG ' + udef.range, px + 10, rowY + 26, '#f5e6c8', 'bold 8px monospace', 'start');
       // Description line (falls back to family + tier)
       var udesc = udef.description;
       if (!udesc) {
@@ -1665,8 +1675,9 @@ body.has-ant-buster-page {
         if (!ut) { ut = 'mid'; }
         udesc = udef.family + ' ' + ut;
       }
-      drawTextWithShadow(truncate(udesc, 30), px + 6, rowY + 36, '#d8c8a0', 'bold 7px monospace', 'start');
-      rowY = rowY + rh + 4;
+      drawTextWithShadow(truncate(udesc, 28), px + 10, rowY + 39, '#d8c8a0', 'bold 7px monospace', 'start');
+      ctx.restore();
+      rowY = rowY + rh + 5;
     }
   }
 
@@ -1932,16 +1943,18 @@ body.has-ant-buster-page {
 
     drawShopBackground();
 
-    // Back link
-    drawTextWithShadow('< BACK TO CANNONS', px + pw / 2, py + 6, '#c8a868', 'bold 8px monospace', 'center');
+    // Back link — captured rect now wired into the pointerdown handler.
+    drawTextWithShadow('< BACK TO CANNONS', px + pw / 2, py + 8, '#c8a868', 'bold 8px monospace', 'center');
+    ui.detailBackRect = { x: px, y: py, w: pw, h: 18 };
 
     // Name
-    drawTextWithShadow(sk.name, px + 4, py + 28, '#fee761', 'bold 14px monospace', 'start');
-    drawTextWithShadow(sk.family + ' family', px + 4, py + 42, '#c8a868', 'bold 8px monospace', 'start');
+    drawTextWithShadow(sk.name, px + 8, py + 32, '#fee761', 'bold 14px monospace', 'start');
+    drawTextWithShadow(sk.family + ' family', px + 8, py + 48, '#c8a868', 'bold 8px monospace', 'start');
 
-    // Stats row — 4 columns including KILLS.
-    var sy = py + 50;
-    drawWoodenTag(px + 2, sy, pw - 4, 26);
+    // Stats row — 4 centered columns (DMG / RATE / RNG / KILLS).
+    var sy = py + 58;
+    var sh = 30;
+    drawWoodenTag(px + 2, sy, pw - 4, sh);
     var col = (pw - 4) / 4;
     var killCount;
     if (c.kills) { killCount = c.kills; } else { killCount = 0; }
@@ -1950,25 +1963,25 @@ body.has-ant-buster-page {
     var valColors = ['#f5e6c8', '#f5e6c8', '#f5e6c8', '#fee761'];
     for (var i = 0; i < 4; i++) {
       var cx = px + 2 + col * i + col / 2;
-      drawTextWithShadow(labels[i], cx, sy + 8, '#c8a868', 'bold 7px monospace', 'center');
-      drawTextWithShadow(values[i], cx, sy + 19, valColors[i], 'bold 10px monospace', 'center');
+      drawTextWithShadow(labels[i], cx, sy + 9, '#c8a868', 'bold 7px monospace', 'center');
+      drawTextWithShadow(values[i], cx, sy + 22, valColors[i], 'bold 11px monospace', 'center');
     }
 
     // Targeting row + label
-    var afterTargetingY = drawTargetingRow(c, px + 4, py + 86);
+    var afterTargetingY = drawTargetingRow(c, px + 8, py + 100);
 
-    // Upgrade rows (same format as info panel) — but tappable.
+    // Upgrade rows.
     var upgrades = sk.upgradesTo;
     if (!upgrades) { upgrades = []; }
     var hoveredLockedRect = null;
-    var upgradeBaseY = afterTargetingY + 4;
+    var upgradeBaseY = afterTargetingY + 6;
     ui.upgradeRects = [null, null, null];
     for (var i2 = 0; i2 < upgrades.length; i2++) {
       var uk = upgrades[i2];
       var udef = CANNON_KINDS[uk];
       if (!udef) { continue; }
       var rh = 42;
-      var by = upgradeBaseY + i2 * (rh + 3);
+      var by = upgradeBaseY + i2 * (rh + 5);
       var canAfford = (game.gold >= udef.cost);
       var isGod = (udef.tier === 'god');
       var isLocked = false;
@@ -1992,7 +2005,12 @@ body.has-ant-buster-page {
       }
 
       ctx.save();
-      if (isLocked) { ctx.globalAlpha = 0.5; }
+      // Affordability + locked dim
+      if (isLocked) {
+        ctx.globalAlpha = 0.5;
+      } else if (!canAfford) {
+        ctx.globalAlpha = 0.55;
+      }
 
       // Wooden frame, gold tint for god-tier
       if (isGod) {
@@ -2013,14 +2031,16 @@ body.has-ant-buster-page {
       }
 
       // Top line
-      drawTextWithShadow('->', px + 6, by + 9, '#fee761', 'bold 10px monospace', 'start');
-      drawTextWithShadow(udef.name, px + 18, by + 9, '#fee761', 'bold 10px monospace', 'start');
-      ctx.drawImage(game.sprites.coin, px + pw - 36, by + 4);
+      drawTextWithShadow('->', px + 10, by + 11, '#fee761', 'bold 10px monospace', 'start');
+      drawTextWithShadow(udef.name, px + 22, by + 11, '#fee761', 'bold 10px monospace', 'start');
+      ctx.drawImage(game.sprites.coin, px + pw - 38, by + 6);
       var costColor;
-      if (canAfford) { costColor = '#fee761'; } else { costColor = '#888'; }
-      drawTextWithShadow('' + udef.cost, px + pw - 6, by + 9, costColor, 'bold 10px monospace', 'end');
+      if (isLocked) { costColor = '#888'; }
+      else if (canAfford) { costColor = '#fee761'; }
+      else { costColor = '#ff7070'; }
+      drawTextWithShadow('' + udef.cost, px + pw - 8, by + 11, costColor, 'bold 10px monospace', 'end');
       // Stats line
-      drawTextWithShadow('DMG ' + udef.damage + '  RATE ' + udef.fireRate + '  RNG ' + udef.range, px + 6, by + 24, '#f5e6c8', 'bold 8px monospace', 'start');
+      drawTextWithShadow('DMG ' + udef.damage + '  RATE ' + udef.fireRate + '  RNG ' + udef.range, px + 10, by + 28, '#f5e6c8', 'bold 8px monospace', 'start');
 
       ctx.restore();
 
@@ -2050,7 +2070,7 @@ body.has-ant-buster-page {
     // Sell button — pinned near the bottom
     var refund = sellRefund(c);
     var sbW = pw - 4;
-    var sbH = 22;
+    var sbH = 24;
     var sbX = px + 2;
     var sbY = HEIGHT - sbH - 6;
     drawWoodenButton(sbX, sbY, sbW, sbH, 'red');
@@ -6172,7 +6192,8 @@ body.has-ant-buster-page {
     shopMode: 'list',       // 'list' | 'info' — Task 9 visual coherence shop sidebar
     shopInfoKind: null,     // selected kind when shopMode === 'info' (Task 10)
     shopInfoRects: [],      // populated by drawShop; one rect per "?" hangtag
-    idlePlayRect: null
+    idlePlayRect: null,
+    detailBackRect: null    // populated by drawTowerPanel; tap to clear selectedCannon
   };
 
   function canvasToGame(evt) {
@@ -6299,6 +6320,23 @@ body.has-ant-buster-page {
       // then the sell button.
       if (ui.selectedCannon) {
         if (p.x >= PLAYFIELD_W) {
+          // Detail-panel back link: clear selection.
+          if (ui.detailBackRect) {
+            var dbr = ui.detailBackRect;
+            if (p.x >= dbr.x) {
+              if (p.x <= dbr.x + dbr.w) {
+                if (p.y >= dbr.y) {
+                  if (p.y <= dbr.y + dbr.h) {
+                    ui.selectedCannon = null;
+                    canvas.releasePointerCapture(evt.pointerId);
+                    ui.activePointerId = null;
+                    ui.pointerType = null;
+                    return;
+                  }
+                }
+              }
+            }
+          }
           // Plan 7 — Targeting row hit-test. Mode strings are positional and
           // must match the order in drawTargetingRow's `modes` array.
           if (ui.targetingRects) {
