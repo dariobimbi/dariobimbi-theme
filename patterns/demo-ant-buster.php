@@ -93,6 +93,27 @@ body.has-ant-buster-page {
   var TARGET_FPS = 60;
   var FIXED_DT = 1 / TARGET_FPS;
 
+  // Static layout for the 15 idle-splash ants. Frozen so they don't reshuffle
+  // every frame. Each: { x, y, size, rot } in canvas coords. size: 0=small,
+  // 1=medium, 2=big. rot in radians.
+  var IDLE_ANT_LAYOUT = [
+    { x:  40, y:  18, size: 2, rot:  0.6 },
+    { x: 540, y:  30, size: 1, rot: -0.35 },
+    { x: 110, y:  60, size: 0, rot:  1.92 },
+    { x: 590, y:  70, size: 1, rot:  1.31 },
+    { x:  20, y: 110, size: 1, rot: -0.87 },
+    { x: 560, y: 140, size: 2, rot: -1.92 },
+    { x:  50, y: 215, size: 0, rot:  0.35 },
+    { x: 530, y: 250, size: 1, rot:  2.79 },
+    { x:  90, y: 275, size: 1, rot: -1.22 },
+    { x: 380, y: 310, size: 2, rot:  0.7 },
+    { x:  40, y: 330, size: 0, rot: -0.44 },
+    { x: 320, y:  14, size: 1, rot:  1.05 },
+    { x: 410, y:  56, size: 0, rot: -1.48 },
+    { x: 240, y: 100, size: 1, rot: -0.52 },
+    { x: 320, y: 320, size: 1, rot:  2.09 }
+  ];
+
   // === DEBUG MODE ===
   // Captured once at parse time from the URL. ?debug=1 enables the T hotkey
   // (cycles spawning each ant kind at the anthill). The check uses a plain
@@ -2534,18 +2555,86 @@ body.has-ant-buster-page {
     ctx.restore();
   }
 
+  // drawSplashAnt: renders the existing worker-ant sprite at one of three
+  // scaled sizes with rotation. Used by idle and lose splashes.
+  function drawSplashAnt(x, y, size, rot) {
+    var s = game.sprites.worker;
+    var scale;
+    if (size === 0) { scale = 0.5; }
+    else if (size === 1) { scale = 0.75; }
+    else { scale = 1.0; }
+    var w = s.width * scale;
+    var h = s.height * scale;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rot);
+    ctx.drawImage(s, -w / 2, -h / 2, w, h);
+    ctx.restore();
+  }
+
   function drawIdleOverlay() {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    // Dim layer
+    ctx.fillStyle = 'rgba(20, 10, 4, 0.55)';
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
-    ctx.fillStyle = '#fee761';
-    ctx.font = '16px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('ANT BUSTER', WIDTH / 2, HEIGHT / 2 - 16);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '10px monospace';
-    ctx.fillText('Defend the cake from the ants', WIDTH / 2, HEIGHT / 2 + 4);
-    ctx.fillText('Click to start', WIDTH / 2, HEIGHT / 2 + 22);
-    ctx.textAlign = 'start';
+
+    // 15 scattered ants, behind the cake and sign.
+    for (var i = 0; i < IDLE_ANT_LAYOUT.length; i++) {
+      var a = IDLE_ANT_LAYOUT[i];
+      drawSplashAnt(a.x, a.y, a.size, a.rot);
+    }
+
+    // Hero cake — 96x72 sprite scaled 2.92x to render at ~280x210, top-edge y=14.
+    var cakeW = 280;
+    var cakeH = 210;
+    var cakeX = (WIDTH - cakeW) / 2;
+    var cakeY = 14;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(game.sprites.titleCake, cakeX, cakeY, cakeW, cakeH);
+
+    // Title sign — 380x140, bottom edge y=320, overlaps cake's lower portion.
+    var signW = 380;
+    var signH = 140;
+    var signX = (WIDTH - signW) / 2;
+    var signY = HEIGHT - 40 - signH;
+    drawWoodenSign(signX, signY, signW, signH);
+
+    // Eyebrow
+    drawTextWithShadow('DEFEND THE PICNIC', WIDTH / 2, signY + 22, '#c8a868', 'bold 10px monospace', 'center');
+
+    // Title — per-letter rotation for hand-painted feel, no animation.
+    var letters = ['A', 'N', 'T', ' ', 'B', 'U', 'S', 'T', 'E', 'R'];
+    var rots = [-0.05, 0.035, -0.018, 0, 0.052, -0.035, 0, 0.035, -0.035, -0.018];
+    ctx.font = 'bold 32px monospace';
+    var totalW = 0;
+    for (var l = 0; l < letters.length; l++) {
+      totalW = totalW + ctx.measureText(letters[l]).width;
+    }
+    var lx = WIDTH / 2 - totalW / 2;
+    var ly = signY + 70;
+    for (var k = 0; k < letters.length; k++) {
+      var ch = letters[k];
+      var lw = ctx.measureText(ch).width;
+      ctx.save();
+      ctx.translate(lx + lw / 2, ly);
+      ctx.rotate(rots[k]);
+      ctx.fillStyle = '#2a1810';
+      ctx.fillText(ch, -lw / 2 + 2, 2);
+      ctx.fillStyle = '#fee761';
+      ctx.fillText(ch, -lw / 2, 0);
+      ctx.restore();
+      lx = lx + lw;
+    }
+
+    // PLAY button — green wooden.
+    var btnW = 110;
+    var btnH = 30;
+    var btnX = WIDTH / 2 - btnW / 2;
+    var btnY = signY + signH - 50;
+    drawWoodenButton(btnX, btnY, btnW, btnH, 'green');
+    drawTextWithShadow('PLAY', btnX + btnW / 2, btnY + btnH / 2, '#1a1a0a', 'bold 16px monospace', 'center');
+
+    // Track the click target for tap-to-start.
+    ui.idlePlayRect = { x: btnX, y: btnY, w: btnW, h: btnH };
   }
 
   function drawTutorialHint() {
