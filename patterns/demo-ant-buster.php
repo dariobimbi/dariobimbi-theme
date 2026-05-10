@@ -1962,8 +1962,11 @@ body.has-ant-buster-page {
       ctx.textAlign = 'start';
       ctx.fillText('DMG ' + udef.damage + '  RATE ' + udef.fireRate + '  RNG ' + udef.range, px + 10, rowY + 27);
 
-      // Description line (only if row is tall enough — at ~30 it's too tight to add a 3rd line)
-      if (rh >= 36) {
+      // Description line — only render if the row is tall enough to fit a
+      // 7px text baseline at y+38 plus descenders without clipping the card's
+      // bottom border. Landscape cards (rh=46) qualify; portrait cards
+      // (rh~39) do not, so descriptions are dropped there.
+      if (rh >= 46) {
         var udesc = udef.description;
         if (!udesc) {
           var ut = udef.tier;
