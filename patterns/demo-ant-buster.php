@@ -75,6 +75,13 @@ body.has-ant-buster-page {
     width: 100%;
   }
 }
+
+@media (max-aspect-ratio: 1/1) {
+  .demo-ant-buster #ab-canvas {
+    aspect-ratio: 480 / 600;
+    width: 480px;
+  }
+}
 </style>
 
 <script>
@@ -85,13 +92,66 @@ body.has-ant-buster-page {
   document.body.classList.add('has-ant-buster-page');
 
   // === CONSTANTS ===
+  // Layout constants. Mutated at boot and on rotation by relayout(). The
+  // landscape values (640x360, right sidebar) are the desktop default; the
+  // portrait values (480x600, bottom strip) kick in when isPortrait() is
+  // true. PLAYFIELD_H is new and equals HEIGHT - HUD_H in landscape and
+  // HEIGHT - HUD_H - STRIP_H in portrait. STRIP_H is the height of the
+  // bottom strip in portrait, 0 in landscape.
   var WIDTH = 640;
   var HEIGHT = 360;
   var PLAYFIELD_W = 480;
+  var PLAYFIELD_H = 336;
   var HUD_H = 24;
   var SHOP_W = 160;
+  var STRIP_H = 0;
   var TARGET_FPS = 60;
   var FIXED_DT = 1 / TARGET_FPS;
+
+  // Returns true when the canvas's host element is taller than wide. Reads
+  // the bounding rect of the .ab-stage element; falls back to window
+  // innerWidth/innerHeight if the stage isn't measurable yet (boot race).
+  function isPortrait() {
+    var stage = canvas.parentElement;
+    if (stage) {
+      var r = stage.getBoundingClientRect();
+      if (r.width > 0) {
+        if (r.height >= r.width) { return true; }
+        return false;
+      }
+    }
+    if (window.innerHeight >= window.innerWidth) { return true; }
+    return false;
+  }
+
+  // Mutates the layout constants and resizes the backing canvas. Called once
+  // at boot and again on resize/orientationchange when isPortrait() flips.
+  // Game state (cannons, gold, wave, paused, selectedCannon, armedKind, etc.)
+  // is preserved -- only render-layer constants change.
+  function relayout() {
+    if (isPortrait()) {
+      WIDTH = 480;
+      HEIGHT = 600;
+      PLAYFIELD_W = 480;
+      PLAYFIELD_H = 336;
+      SHOP_W = 0;
+      STRIP_H = 240;
+    } else {
+      WIDTH = 640;
+      HEIGHT = 360;
+      PLAYFIELD_W = 480;
+      PLAYFIELD_H = 336;
+      SHOP_W = 160;
+      STRIP_H = 0;
+    }
+    // 2x retina backing buffer.
+    canvas.width = WIDTH * 2;
+    canvas.height = HEIGHT * 2;
+    ctx.setTransform(2, 0, 0, 2, 0, 0);
+    // Resizing the canvas resets all 2D context state, so re-disable image
+    // smoothing here so crisp pixel-art rendering survives rotation.
+    ctx.imageSmoothingEnabled = false;
+  }
 
   // Static layout for the 15 idle-splash ants. Frozen so they don't reshuffle
   // every frame. Each: { x, y, size, rot } in canvas coords. size: 0=small,
@@ -227,8 +287,26 @@ body.has-ant-buster-page {
   var canvas = document.getElementById('ab-canvas');
   if (!canvas) { return; }
   var ctx = canvas.getContext('2d');
-  ctx.scale(2, 2);
-  ctx.imageSmoothingEnabled = false;
+  relayout();
+
+  // On rotate / window resize, re-pick the layout if portrait/landscape flips.
+  // Cache the last result so we only run relayout() on actual changes -- not
+  // every pixel-by-pixel resize event during a slow drag.
+  var lastIsPortrait = isPortrait();
+  window.addEventListener('resize', function () {
+    var nowPortrait = isPortrait();
+    if (nowPortrait !== lastIsPortrait) {
+      lastIsPortrait = nowPortrait;
+      relayout();
+    }
+  });
+  window.addEventListener('orientationchange', function () {
+    var nowPortrait = isPortrait();
+    if (nowPortrait !== lastIsPortrait) {
+      lastIsPortrait = nowPortrait;
+      relayout();
+    }
+  });
 
   // === SPRITES ===
   // All sprites are generated procedurally as offscreen canvases.
