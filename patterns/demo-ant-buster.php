@@ -1851,23 +1851,17 @@ body.has-ant-buster-page {
   //   [closest, first, last, strongest, weakest].
   function drawTargetingRow(c, px, py) {
     var def = CANNON_KINDS[c.kind];
-    // Aura cannons (MP-N etc.) don't call findTarget, so the row is omitted.
-    // Cone-DoT (Plasma Torch) and beam (Glacier, Solar Lance) DO call findTarget
-    // and use targeting modes meaningfully, so they receive the row.
     if (def.aura) {
       ui.targetingRects = [];
       return py;
     }
-
     var modes = ['closest', 'first', 'last', 'strongest', 'weakest'];
     var glyphs = ['C', 'F', 'L', 'S', 'W'];
     var modeNames = ['Closest', 'First', 'Last', 'Strongest', 'Weakest'];
-    var activeColors = ['#3a4a8c', '#9a7820', '#3a3a3a', '#7a2020', '#7a2040'];
-    var inactiveBg = '#1a1a28';
+    var modeColors = ['#4a6acc', '#c8a040', '#888', '#c84444', '#c84090'];
     var btnW = 22;
     var btnH = 22;
     var gap = 4;
-    var rowY = py;
 
     var active = c.targetingMode;
     if (!active) { active = 'closest'; }
@@ -1875,89 +1869,74 @@ body.has-ant-buster-page {
     ui.targetingRects = [];
     for (var i = 0; i < 5; i++) {
       var bx = px + i * (btnW + gap);
-      var by = rowY;
+      var by = py;
       var isActive = (modes[i] === active);
-
+      drawWoodenButton(bx, by, btnW, btnH, 'wood');
       if (isActive) {
-        ctx.fillStyle = activeColors[i];
-      } else {
-        ctx.fillStyle = inactiveBg;
+        // Mode-color bar along the bottom edge
+        ctx.fillStyle = modeColors[i];
+        ctx.fillRect(bx + 2, by + btnH - 6, btnW - 4, 4);
       }
-      ctx.fillRect(bx, by, btnW, btnH);
-
-      if (isActive) {
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(bx + 1, by + 1, btnW - 2, btnH - 2);
-        ctx.lineWidth = 1;
-      }
-
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 12px monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText(glyphs[i], bx + btnW / 2, by + btnH / 2 + 4);
-      ctx.textAlign = 'left';
-
+      var glyphColor;
+      if (isActive) { glyphColor = '#fee761'; } else { glyphColor = '#f5e6c8'; }
+      drawTextWithShadow(glyphs[i], bx + btnW / 2, by + btnH / 2, glyphColor, 'bold 11px monospace', 'center');
       ui.targetingRects.push({ x: bx, y: by, w: btnW, h: btnH });
     }
 
-    var labelY = rowY + btnH + 12;
+    var labelY = py + btnH + 14;
     var activeIdx = 0;
     for (var li = 0; li < modes.length; li++) {
       if (modes[li] === active) { activeIdx = li; break; }
     }
-    ctx.fillStyle = '#cccccc';
-    ctx.font = '10px monospace';
-    ctx.fillText('Targeting: ' + modeNames[activeIdx], px, labelY);
-
-    return labelY + 6;
+    drawTextWithShadow('TARGETING ' + modeNames[activeIdx].toUpperCase(), px, labelY, '#c8a868', 'bold 8px monospace', 'start');
+    return labelY + 8;
   }
 
   function drawTowerPanel(c) {
     var sk = CANNON_KINDS[c.kind];
-    var px = PLAYFIELD_W + 8;
-    var py = 32;
-    var pw = SHOP_W - 16;
-    ctx.fillStyle = '#262b44';
-    ctx.fillRect(px, py, pw, 232);  // Plan 7 — +32 to fit targeting row
-    ctx.fillStyle = '#fee761';
-    ctx.font = '10px monospace';
-    ctx.textAlign = 'left';
-    ctx.fillText(sk.name, px + 6, py + 14);
-    ctx.fillStyle = '#cccccc';
-    ctx.fillText('DMG ' + sk.damage, px + 6, py + 30);
-    ctx.fillText('RATE ' + sk.fireRate + '/s', px + 6, py + 42);
-    ctx.fillText('RANGE ' + sk.range, px + 6, py + 54);
+    var px = PLAYFIELD_W + 6;
+    var pw = SHOP_W - 12;
+    var py = 26;
+
+    drawShopBackground();
+
+    // Back link
+    drawTextWithShadow('< BACK TO CANNONS', px + pw / 2, py + 6, '#c8a868', 'bold 8px monospace', 'center');
+
+    // Name
+    drawTextWithShadow(sk.name, px + 4, py + 28, '#fee761', 'bold 14px monospace', 'start');
+    drawTextWithShadow(sk.family + ' family', px + 4, py + 42, '#c8a868', 'bold 8px monospace', 'start');
+
+    // Stats row — 4 columns including KILLS.
+    var sy = py + 50;
+    drawWoodenTag(px + 2, sy, pw - 4, 26);
+    var col = (pw - 4) / 4;
     var killCount;
     if (c.kills) { killCount = c.kills; } else { killCount = 0; }
-    ctx.fillText('KILLS ' + killCount, px + 6, py + 66);
+    var labels = ['DMG', 'RATE', 'RNG', 'KILLS'];
+    var values = ['' + sk.damage, '' + sk.fireRate, '' + sk.range, '' + killCount];
+    var valColors = ['#f5e6c8', '#f5e6c8', '#f5e6c8', '#fee761'];
+    for (var i = 0; i < 4; i++) {
+      var cx = px + 2 + col * i + col / 2;
+      drawTextWithShadow(labels[i], cx, sy + 8, '#c8a868', 'bold 7px monospace', 'center');
+      drawTextWithShadow(values[i], cx, sy + 19, valColors[i], 'bold 10px monospace', 'center');
+    }
 
-    // Plan 7 — Targeting row sits between stats and upgrades. Returns the
-    // y-coordinate where the next element can start. For aura cannons the row
-    // is omitted and the function returns the y it received, so the upgrade
-    // base-Y clamp below preserves the original layout.
-    var afterTargetingY = drawTargetingRow(c, px + 6, py + 78);
+    // Targeting row + label
+    var afterTargetingY = drawTargetingRow(c, px + 4, py + 86);
 
-    // Upgrade buttons (up to 3) — only present when sk.upgradesTo is non-empty.
-    // Base cannons offer 3 mid options, mid cannons offer 2 finals, finals
-    // offer 1 god-tier (Plan 4). God-tier buttons render at 50% alpha with a
-    // tooltip when locked, full alpha when unlocked, and an additive gold
-    // halo for the first 0.5s after unlock fires (game.godTierUnlockPulseStart).
+    // Upgrade rows (same format as info panel) — but tappable.
     var upgrades = sk.upgradesTo;
     if (!upgrades) { upgrades = []; }
     var hoveredLockedRect = null;
-    // Plan 7 — upgradeBaseY shifts to accommodate the targeting row. For aura
-    // cannons (no row), afterTargetingY equals py + 78, which is below py + 90,
-    // so the clamp keeps the original layout.
-    var upgradeBaseY = afterTargetingY;
-    if (upgradeBaseY < py + 90) { upgradeBaseY = py + 90; }
-    for (var i = 0; i < upgrades.length; i++) {
-      var uk = upgrades[i];
+    var upgradeBaseY = afterTargetingY + 4;
+    ui.upgradeRects = [null, null, null];
+    for (var i2 = 0; i2 < upgrades.length; i2++) {
+      var uk = upgrades[i2];
       var udef = CANNON_KINDS[uk];
-      var by = upgradeBaseY + i * 22;
-      var bx = px + 6;
-      var bw = pw - 12;
-      var bh = 18;
+      if (!udef) { continue; }
+      var rh = 32;
+      var by = upgradeBaseY + i2 * (rh + 3);
       var canAfford = (game.gold >= udef.cost);
       var isGod = (udef.tier === 'god');
       var isLocked = false;
@@ -1965,8 +1944,7 @@ body.has-ant-buster-page {
         if (!game.godTierUnlocked) { isLocked = true; }
       }
 
-      // Plan 4 — unlock pulse halo. Renders behind the button for the first
-      // 0.5s after godTierUnlockPulseStart, fading from full to zero alpha.
+      // Plan 4 unlock pulse
       if (isGod) {
         var pulseAge = game.time - game.godTierUnlockPulseStart;
         if (pulseAge >= 0) {
@@ -1975,7 +1953,7 @@ body.has-ant-buster-page {
             ctx.save();
             ctx.globalAlpha = pulseAlpha;
             ctx.fillStyle = '#fee761';
-            ctx.fillRect(bx - 4, by - 4, bw + 8, bh + 8);
+            ctx.fillRect(px - 2, by - 4, pw + 4, rh + 8);
             ctx.restore();
           }
         }
@@ -1983,68 +1961,69 @@ body.has-ant-buster-page {
 
       ctx.save();
       if (isLocked) { ctx.globalAlpha = 0.5; }
-      ctx.fillStyle = canAfford ? '#3a8c3a' : '#444';
+
+      // Wooden frame, gold tint for god-tier
       if (isGod) {
-        if (!isLocked) {
-          // Unlocked god-tier gets a distinct gold-on-dark scheme so the
-          // upgrade reads as apex tier even at full alpha. Affordability
-          // still gates the inner fill — locked god uses the muted gray.
-          ctx.fillStyle = canAfford ? '#a07020' : '#444';
-        }
+        var grd = ctx.createLinearGradient(px + 2, by, px + 2, by + rh);
+        grd.addColorStop(0, '#5a4a10');
+        grd.addColorStop(1, '#3a2c00');
+        ctx.fillStyle = grd;
+        ctx.fillRect(px + 2, by, pw - 4, rh);
+        ctx.fillStyle = '#2a1810';
+        ctx.fillRect(px + 2, by, pw - 4, 2);
+        ctx.fillRect(px + 2, by, 2, rh);
+        ctx.fillRect(px + pw - 4, by, 2, rh);
+        ctx.fillRect(px + 2, by + rh - 2, pw - 4, 2);
+        ctx.fillStyle = '#c0a040';
+        ctx.fillRect(px + 4, by + rh - 4, pw - 8, 2);
+      } else {
+        drawWoodenButton(px + 2, by, pw - 4, rh, 'wood');
       }
-      ctx.fillRect(bx, by, bw, bh);
-      ctx.fillStyle = canAfford ? '#fee761' : '#888';
-      if (isGod) {
-        if (!isLocked) {
-          ctx.fillStyle = canAfford ? '#fee761' : '#888';
-        }
-      }
-      ctx.fillText('-> ' + udef.name + ' (' + udef.cost + 'g)', bx + 4, by + 12);
+
+      // Top line
+      drawTextWithShadow('->', px + 6, by + 8, '#fee761', 'bold 10px monospace', 'start');
+      drawTextWithShadow(udef.name, px + 18, by + 8, '#fee761', 'bold 10px monospace', 'start');
+      ctx.drawImage(game.sprites.coin, px + pw - 26, by + 3);
+      var costColor;
+      if (canAfford) { costColor = '#fee761'; } else { costColor = '#888'; }
+      drawTextWithShadow('' + udef.cost, px + pw - 6, by + 8, costColor, 'bold 10px monospace', 'end');
+      // Stats line
+      drawTextWithShadow('DMG ' + udef.damage + '  RATE ' + udef.fireRate + '  RNG ' + udef.range, px + 6, by + 22, '#f5e6c8', 'bold 8px monospace', 'start');
+
       ctx.restore();
 
-      ui.upgradeRects[i] = { x: bx, y: by, w: bw, h: bh, toKind: uk, locked: isLocked };
+      ui.upgradeRects[i2] = { x: px + 2, y: by, w: pw - 4, h: rh, toKind: uk, locked: isLocked };
 
-      // Capture the rect for tooltip rendering after the loop, so the
-      // tooltip composites over neighbour buttons cleanly.
       if (isLocked) {
-        if (ui.mouseX >= bx) {
-          if (ui.mouseX <= bx + bw) {
+        if (ui.mouseX >= px + 2) {
+          if (ui.mouseX <= px + pw - 2) {
             if (ui.mouseY >= by) {
-              if (ui.mouseY <= by + bh) {
-                hoveredLockedRect = { x: bx, y: by, w: bw, h: bh };
+              if (ui.mouseY <= by + rh) {
+                hoveredLockedRect = { x: px + 2, y: by, w: pw - 4, h: rh };
               }
             }
           }
         }
       }
     }
-    for (var k = upgrades.length; k < 3; k++) { ui.upgradeRects[k] = null; }
 
-    // Plan 4 — locked god-tier tooltip. Drawn after the loop so a tooltip
-    // for an upper button never sits under the button below it. 140 px wide
-    // matches the panel column width minus padding.
+    // Locked god-tier tooltip
     if (hoveredLockedRect) {
       var tipX = hoveredLockedRect.x;
-      var tipY = hoveredLockedRect.y - 22;
-      ctx.save();
-      ctx.fillStyle = 'rgba(20, 22, 36, 0.92)';
-      ctx.fillRect(tipX, tipY, 140, 18);
-      ctx.fillStyle = '#fee761';
-      ctx.font = '10px monospace';
-      ctx.fillText('Unlocks at wave 15', tipX + 6, tipY + 12);
-      ctx.restore();
+      var tipY = hoveredLockedRect.y - 18;
+      drawWoodenTag(tipX, tipY, hoveredLockedRect.w, 16);
+      drawTextWithShadow('Unlocks at wave 15', tipX + hoveredLockedRect.w / 2, tipY + 8, '#fee761', 'bold 8px monospace', 'center');
     }
 
-    // Sell button — pinned near the bottom of the panel rect.
+    // Sell button — pinned near the bottom
     var refund = sellRefund(c);
-    var sy = py + 232 - 26;  // Plan 7 — panel height bumped to 232
-    ctx.fillStyle = '#a44';
-    ctx.fillRect(px + 6, sy, pw - 12, 18);
-    ctx.fillStyle = '#fee761';
-    ctx.fillText('Sell (+' + refund + 'g)', px + 10, sy + 12);
-    ui.sellRect = { x: px + 6, y: sy, w: pw - 12, h: 18 };
-
-    ctx.textAlign = 'start';
+    var sbW = pw - 4;
+    var sbH = 22;
+    var sbX = px + 2;
+    var sbY = HEIGHT - sbH - 6;
+    drawWoodenButton(sbX, sbY, sbW, sbH, 'red');
+    drawTextWithShadow('Sell · +' + refund, sbX + sbW / 2, sbY + sbH / 2, '#fee761', 'bold 10px monospace', 'center');
+    ui.sellRect = { x: sbX, y: sbY, w: sbW, h: sbH };
   }
 
   // === Render helpers (z-order spec §3.5, layers 1–13) ===
