@@ -1602,16 +1602,18 @@ body.has-ant-buster-page {
     var pw = SHOP_W - 12;
     var py = 26;
 
-    // Back link
-    drawTextWithShadow('< BACK TO CANNONS', px + pw / 2, py + 8, '#c8a868', 'bold 8px monospace', 'center');
-    ui.shopInfoBackRect = { x: px, y: py, w: pw, h: 18 };
+    // "FIELD GUIDE" eyebrow + back link — visual marker that this is the
+    // catalog/info view, not the buy/detail view.
+    drawTextWithShadow('FIELD GUIDE', px + pw / 2, py, '#c8a868', 'bold 8px monospace', 'center');
+    drawTextWithShadow('< BACK TO CANNONS', px + pw / 2, py + 14, '#c8a868', 'bold 8px monospace', 'center');
+    ui.shopInfoBackRect = { x: px, y: py - 4, w: pw, h: 24 };
 
     // Name
-    drawTextWithShadow(sk.name, px + 8, py + 32, '#fee761', 'bold 14px monospace', 'start');
-    drawTextWithShadow(sk.family + ' family', px + 8, py + 48, '#c8a868', 'bold 8px monospace', 'start');
+    drawTextWithShadow(sk.name, px + 8, py + 38, '#fee761', 'bold 14px monospace', 'start');
+    drawTextWithShadow(sk.family + ' family', px + 8, py + 54, '#c8a868', 'bold 8px monospace', 'start');
 
     // Stats row in a single recessed tag
-    var sy = py + 58;
+    var sy = py + 64;
     var sh = 30;
     drawWoodenTag(px + 2, sy, pw - 4, sh);
     var col = (pw - 4) / 3;
@@ -1625,58 +1627,96 @@ body.has-ant-buster-page {
     drawTextWithShadow('RNG', col3, sy + 9, '#c8a868', 'bold 7px monospace', 'center');
     drawTextWithShadow('' + sk.range, col3, sy + 22, '#f5e6c8', 'bold 11px monospace', 'center');
 
-    // Description card. Falls back to "<family> <tier>" if description missing.
+    // Description card — cream paper to match the field-guide aesthetic.
     var desc = sk.description;
     if (!desc) {
       var tierLabel = sk.tier;
       if (!tierLabel) { tierLabel = 'base'; }
       desc = sk.family + ' ' + tierLabel;
     }
-    var dy = py + 96;
+    var dy = py + 102;
     var dh = 56;
-    ctx.fillStyle = '#2a1810';
+    // Cream paper body
+    var dgrd = ctx.createLinearGradient(px + 2, dy, px + 2, dy + dh);
+    dgrd.addColorStop(0, '#fff8e8');
+    dgrd.addColorStop(1, '#f0dfb8');
+    ctx.fillStyle = dgrd;
     ctx.fillRect(px + 2, dy, pw - 4, dh);
-    ctx.fillStyle = '#3a2210';
-    ctx.fillRect(px + 4, dy + 2, pw - 8, dh - 4);
-    drawWrappedText(desc, px + 12, dy + 10, pw - 24, '#f5e6c8', 'bold 9px monospace', 14);
+    // Dark border
+    ctx.fillStyle = '#2a1810';
+    ctx.fillRect(px + 2, dy, pw - 4, 2);
+    ctx.fillRect(px + 2, dy, 2, dh);
+    ctx.fillRect(px + pw - 4, dy, 2, dh);
+    ctx.fillRect(px + 2, dy + dh - 2, pw - 4, 2);
+    // Text in dark on cream — drawn directly (not via drawTextWithShadow,
+    // which would put a dark stamp on dark text).
+    drawWrappedTextDark(desc, px + 12, dy + 10, pw - 24, '#3a2210', 'bold 9px monospace', 14);
 
-    // Upgrades to header
-    drawTextWithShadow('UPGRADES TO', px + 8, py + 162, '#c8a868', 'bold 8px monospace', 'start');
+    // "EVOLVES TO" header (different word than detail panel's "UPGRADES TO"
+    // so the screen reads as a different surface).
+    drawTextWithShadow('EVOLVES TO', px + 8, py + 168, '#c8a868', 'bold 8px monospace', 'start');
 
-    // Upgrade rows
+    // Upgrade rows — cream paper cards, no cost, no affordability dim.
     var upgrades = sk.upgradesTo;
     if (!upgrades) { upgrades = []; }
-    var rowY = py + 174;
+    var rowY = py + 180;
     for (var i = 0; i < upgrades.length; i++) {
       var uk = upgrades[i];
       var udef = CANNON_KINDS[uk];
       if (!udef) { continue; }
       var rh = 46;
-      var canAfford = (game.gold >= udef.cost);
 
-      // Affordable: normal brown wood. Unaffordable: dim with globalAlpha
-      // and red cost color so the row reads as locked-by-funds.
-      ctx.save();
-      if (!canAfford) { ctx.globalAlpha = 0.55; }
-      drawWoodenButton(px + 2, rowY, pw - 4, rh, 'wood');
-      // Top line: arrow + name + cost-with-coin (right aligned)
-      drawTextWithShadow('->', px + 10, rowY + 11, '#fee761', 'bold 10px monospace', 'start');
-      drawTextWithShadow(udef.name, px + 22, rowY + 11, '#fee761', 'bold 10px monospace', 'start');
-      ctx.drawImage(game.sprites.coin, px + pw - 38, rowY + 6);
-      var costColor;
-      if (canAfford) { costColor = '#fee761'; } else { costColor = '#ff7070'; }
-      drawTextWithShadow('' + udef.cost, px + pw - 8, rowY + 11, costColor, 'bold 10px monospace', 'end');
-      // Stats line
-      drawTextWithShadow('DMG ' + udef.damage + '  RATE ' + udef.fireRate + '  RNG ' + udef.range, px + 10, rowY + 26, '#f5e6c8', 'bold 8px monospace', 'start');
-      // Description line (falls back to family + tier)
+      // Cream paper card body
+      var rgrd = ctx.createLinearGradient(px + 2, rowY, px + 2, rowY + rh);
+      rgrd.addColorStop(0, '#fff8e8');
+      rgrd.addColorStop(1, '#f0dfb8');
+      ctx.fillStyle = rgrd;
+      ctx.fillRect(px + 2, rowY, pw - 4, rh);
+      // Dark border
+      ctx.fillStyle = '#2a1810';
+      ctx.fillRect(px + 2, rowY, pw - 4, 2);
+      ctx.fillRect(px + 2, rowY, 2, rh);
+      ctx.fillRect(px + pw - 4, rowY, 2, rh);
+      ctx.fillRect(px + 2, rowY + rh - 2, pw - 4, 2);
+
+      // Top line: arrow + name. No cost.
+      ctx.font = 'bold 10px monospace';
+      ctx.fillStyle = '#3a2210';
+      ctx.textAlign = 'start';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('->', px + 10, rowY + 13);
+      ctx.fillText(udef.name, px + 22, rowY + 13);
+
+      // Tier badge in the top-right corner where the cost used to be.
+      var tierLabel2 = udef.tier;
+      if (!tierLabel2) { tierLabel2 = 'mid'; }
+      ctx.font = 'bold 7px monospace';
+      ctx.fillStyle = '#8a5a30';
+      ctx.textAlign = 'end';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(tierLabel2.toUpperCase(), px + pw - 8, rowY + 13);
+
+      // Stats line, dark on cream.
+      ctx.font = 'bold 8px monospace';
+      ctx.fillStyle = '#5a3a20';
+      ctx.textAlign = 'start';
+      ctx.fillText('DMG ' + udef.damage + '  RATE ' + udef.fireRate + '  RNG ' + udef.range, px + 10, rowY + 27);
+
+      // Description line, mid-tone gray on cream.
       var udesc = udef.description;
       if (!udesc) {
         var ut = udef.tier;
         if (!ut) { ut = 'mid'; }
         udesc = udef.family + ' ' + ut;
       }
-      drawTextWithShadow(truncate(udesc, 28), px + 10, rowY + 39, '#d8c8a0', 'bold 7px monospace', 'start');
-      ctx.restore();
+      ctx.font = 'bold 7px monospace';
+      ctx.fillStyle = '#7a5a40';
+      ctx.fillText(truncate(udesc, 32), px + 10, rowY + 38);
+
+      // Reset text alignment
+      ctx.textAlign = 'start';
+      ctx.textBaseline = 'alphabetic';
+
       rowY = rowY + rh + 5;
     }
   }
@@ -1709,6 +1749,39 @@ body.has-ant-buster-page {
     if (line.length > 0) {
       drawTextWithShadow(line, x, ly, color, font, 'start');
     }
+  }
+
+  // Word-wrap helper for cream/paper backgrounds (no drop shadow).
+  function drawWrappedTextDark(text, x, y, maxW, color, font, lineH) {
+    ctx.font = font;
+    ctx.fillStyle = color;
+    ctx.textAlign = 'start';
+    ctx.textBaseline = 'middle';
+    var words = text.split(' ');
+    var line = '';
+    var ly = y + lineH / 2;
+    for (var i = 0; i < words.length; i++) {
+      var test = line;
+      if (test.length > 0) { test = test + ' '; }
+      test = test + words[i];
+      if (ctx.measureText(test).width > maxW) {
+        if (line.length > 0) {
+          ctx.fillText(line, x, ly);
+          ly = ly + lineH;
+          line = words[i];
+        } else {
+          ctx.fillText(test, x, ly);
+          ly = ly + lineH;
+          line = '';
+        }
+      } else {
+        line = test;
+      }
+    }
+    if (line.length > 0) {
+      ctx.fillText(line, x, ly);
+    }
+    ctx.textBaseline = 'alphabetic';
   }
 
   function truncate(s, n) {
