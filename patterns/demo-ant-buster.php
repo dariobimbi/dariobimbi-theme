@@ -1325,6 +1325,112 @@ body.has-ant-buster-page {
     return c;
   }
 
+  // 12x12 gold coin used in the HUD coin tag and every cost readout.
+  function makeCoinSprite() {
+    var c = document.createElement('canvas');
+    c.width = 12; c.height = 12;
+    var x = c.getContext('2d');
+    // Outer dark ring
+    x.fillStyle = '#2a1810';
+    x.fillRect(2, 0, 8, 12);
+    x.fillRect(0, 2, 12, 8);
+    x.fillRect(1, 1, 10, 10);
+    // Coin body
+    x.fillStyle = '#c8a000';
+    x.fillRect(2, 2, 8, 8);
+    x.fillRect(1, 3, 10, 6);
+    x.fillRect(3, 1, 6, 10);
+    // Highlight
+    x.fillStyle = '#fee761';
+    x.fillRect(3, 3, 6, 6);
+    x.fillRect(2, 4, 8, 4);
+    // Center mark
+    x.fillStyle = '#c8a000';
+    x.fillRect(5, 5, 2, 2);
+    return c;
+  }
+
+  // 12x12 cake-slice with candle. Used in the HUD cake tag.
+  function makeCakeSliceSprite() {
+    var c = document.createElement('canvas');
+    c.width = 12; c.height = 12;
+    var x = c.getContext('2d');
+    // Frosting top (cream-yellow)
+    x.fillStyle = '#fee761';
+    x.fillRect(1, 4, 10, 2);
+    // Cake body
+    x.fillStyle = '#f5d000';
+    x.fillRect(1, 6, 10, 2);
+    // Bottom red layer
+    x.fillStyle = '#c84244';
+    x.fillRect(1, 8, 10, 3);
+    // Outline
+    x.fillStyle = '#2a1810';
+    x.fillRect(0, 4, 1, 7);
+    x.fillRect(11, 4, 1, 7);
+    x.fillRect(1, 11, 10, 1);
+    x.fillRect(1, 3, 10, 1);
+    // Candle
+    x.fillStyle = '#f5e6c8';
+    x.fillRect(5, 1, 2, 3);
+    // Flame
+    x.fillStyle = '#ff9c44';
+    x.fillRect(5, 0, 2, 1);
+    return c;
+  }
+
+  // 96x72 hero cake for the idle/title splash. Three tiers, three lit candles.
+  // Drawn at 2x output scale (96x72) so that, when canvas is rendered at the
+  // typical 2x CSS scale on desktop, it stays crisp.
+  function makeTitleCakeSprite() {
+    var c = document.createElement('canvas');
+    c.width = 96; c.height = 72;
+    var x = c.getContext('2d');
+    var ink = '#2a1810';
+    // Tier sizes (centered)
+    // base: full-width bottom tier
+    var b = { x: 4,  y: 50, w: 88, h: 18 };
+    var m = { x: 14, y: 32, w: 68, h: 18 };
+    var t = { x: 24, y: 18, w: 48, h: 14 };
+    function tier(rect, frostingColor) {
+      // Outline
+      x.fillStyle = ink;
+      x.fillRect(rect.x, rect.y, rect.w, rect.h);
+      // Frosting strip on top
+      x.fillStyle = '#fee761';
+      x.fillRect(rect.x + 2, rect.y + 2, rect.w - 4, 4);
+      // Body band
+      x.fillStyle = '#f5d000';
+      x.fillRect(rect.x + 2, rect.y + 6, rect.w - 4, 4);
+      // Bottom frosting/colour band
+      x.fillStyle = frostingColor;
+      x.fillRect(rect.x + 2, rect.y + 10, rect.w - 4, rect.h - 12);
+      // Bottom darken
+      x.fillStyle = 'rgba(0, 0, 0, 0.25)';
+      x.fillRect(rect.x + 2, rect.y + rect.h - 4, rect.w - 4, 2);
+    }
+    tier(b, '#c84244');     // bottom: red frosting band
+    tier(m, '#ff77a8');     // middle: pink
+    tier(t, '#c8f5a8');     // top: green
+    // Three candles on top tier
+    var cy = 6;
+    for (var i = 0; i < 3; i++) {
+      var cx = 36 + i * 12;
+      x.fillStyle = ink;
+      x.fillRect(cx, cy, 4, 12);
+      x.fillStyle = '#f5e6c8';
+      x.fillRect(cx + 1, cy + 1, 2, 10);
+      // Flame
+      x.fillStyle = ink;
+      x.fillRect(cx + 1, cy - 5, 2, 5);
+      x.fillStyle = '#ff9c44';
+      x.fillRect(cx + 1, cy - 4, 2, 4);
+      x.fillStyle = '#fee761';
+      x.fillRect(cx + 1, cy - 3, 2, 2);
+    }
+    return c;
+  }
+
   game.sprites = {
     worker: makeWorkerSprite(),
     royal_guard: makeRoyalGuardSprite(),
@@ -1388,7 +1494,10 @@ body.has-ant-buster-page {
       biohazard: makeCannonTurretBiohazard()
     },
     anthill: makeAnthill(),
-    projectile: makeProjectile()
+    projectile: makeProjectile(),
+    coin: makeCoinSprite(),
+    cakeSlice: makeCakeSliceSprite(),
+    titleCake: makeTitleCakeSprite()
   };
   // Note: cake sprite is regenerated in render() per frame because it depends on slice count.
 
