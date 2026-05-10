@@ -1722,6 +1722,14 @@ body.has-ant-buster-page {
     var sk = CANNON_KINDS[k];
     if (!sk) { ui.shopMode = 'list'; return; }
 
+    if (isPortrait()) {
+      drawShopInfoPanelPortrait(sk);
+    } else {
+      drawShopInfoPanelLandscape(sk);
+    }
+  }
+
+  function drawShopInfoPanelLandscape(sk) {
     var px = PLAYFIELD_W + 6;
     var pw = SHOP_W - 12;
     var py = 26;
@@ -1811,14 +1819,115 @@ body.has-ant-buster-page {
     drawTextWithShadow('EVOLVES TO', px + 8, py + 168, '#c8a868', 'bold 8px monospace', 'start');
 
     // Upgrade rows — cream paper cards, no cost, no affordability dim.
+    drawShopInfoEvolveCards(sk, px, pw, py + 180, 46);
+  }
+
+  function drawShopInfoPanelPortrait(sk) {
+    var stripY = HEIGHT - STRIP_H;
+
+    // Back button (full strip-width wooden chrome) + FIELD GUIDE eyebrow.
+    var bbX = 16;
+    var bbY = stripY + 4;
+    var bbW = WIDTH - 32;
+    var bbH = 16;
+    drawWoodenButton(bbX, bbY, bbW, bbH, 'wood');
+    ctx.font = 'bold 9px monospace';
+    var backLabel;
+    if (ui.shopInfoFrom === 'detail') {
+      if (ui.selectedCannon) {
+        var srcName = CANNON_KINDS[ui.selectedCannon.kind].name.toUpperCase();
+        var prefixW = ctx.measureText('< BACK TO ').width;
+        var nameMaxW = (bbW - 8) - prefixW;
+        backLabel = '< BACK TO ' + truncateToWidth(srcName, nameMaxW);
+      } else {
+        backLabel = '< BACK TO CANNONS';
+      }
+    } else {
+      backLabel = '< BACK TO CANNONS';
+    }
+    drawTextWithShadow(backLabel, bbX + bbW / 2, bbY + bbH / 2, '#fee761', 'bold 9px monospace', 'center');
+    ui.shopInfoBackRect = { x: bbX, y: bbY, w: bbW, h: bbH };
+
+    // FIELD GUIDE eyebrow below the back button.
+    drawTextWithShadow('FIELD GUIDE', WIDTH / 2, stripY + 28, '#c8a868', 'bold 8px monospace', 'center');
+
+    // Two columns
+    var colTop = stripY + 36;
+    var colH = STRIP_H - 40;     // 140 with STRIP_H=180
+    var leftX = 4;
+    var leftW = 276;
+    var rightX = 284;
+    var rightW = WIDTH - rightX - 4;
+
+    // === LEFT: cream paper with name + family + stats + description ===
+    var lgrd = ctx.createLinearGradient(leftX, colTop, leftX, colTop + colH);
+    lgrd.addColorStop(0, '#fff8e8');
+    lgrd.addColorStop(1, '#f0dfb8');
+    ctx.fillStyle = lgrd;
+    ctx.fillRect(leftX, colTop, leftW, colH);
+    ctx.fillStyle = '#2a1810';
+    ctx.fillRect(leftX, colTop, leftW, 2);
+    ctx.fillRect(leftX, colTop, 2, colH);
+    ctx.fillRect(leftX + leftW - 2, colTop, 2, colH);
+    ctx.fillRect(leftX, colTop + colH - 2, leftW, 2);
+
+    // Name (dark on cream)
+    ctx.font = 'bold 14px monospace';
+    var fittedInfoName = truncateToWidth(sk.name, leftW - 16);
+    ctx.fillStyle = '#3a2210';
+    ctx.textAlign = 'start';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(fittedInfoName, leftX + 8, colTop + 12);
+    ctx.font = 'bold 8px monospace';
+    ctx.fillStyle = '#8a5a30';
+    ctx.fillText(sk.family + ' family', leftX + 8, colTop + 26);
+
+    // 3-stat row inside the cream area
+    var statsY = colTop + 38;
+    var colW = (leftW - 16) / 3;
+    var labels3 = ['DMG', 'RATE', 'RNG'];
+    var values3 = ['' + sk.damage, '' + sk.fireRate, '' + sk.range];
+    for (var sI = 0; sI < 3; sI++) {
+      var sCx = leftX + 8 + colW * sI + colW / 2;
+      ctx.font = 'bold 7px monospace';
+      ctx.fillStyle = '#8a5a30';
+      ctx.textAlign = 'center';
+      ctx.fillText(labels3[sI], sCx, statsY);
+      ctx.font = 'bold 11px monospace';
+      ctx.fillStyle = '#3a2210';
+      ctx.fillText(values3[sI], sCx, statsY + 14);
+    }
+    ctx.textAlign = 'start';
+    ctx.textBaseline = 'alphabetic';
+
+    // Description (wrapped, dark on cream)
+    var descP = sk.description;
+    if (!descP) {
+      var tierLabelP = sk.tier;
+      if (!tierLabelP) { tierLabelP = 'base'; }
+      descP = sk.family + ' ' + tierLabelP;
+    }
+    drawWrappedTextDark(descP, leftX + 8, colTop + 64, leftW - 16, '#3a2210', 'bold 9px monospace', 12);
+
+    // === RIGHT: EVOLVES TO header + cream evolution cards ===
+    drawTextWithShadow('EVOLVES TO', rightX + rightW / 2, colTop + 6, '#fee761', 'bold 8px monospace', 'center');
+    var evolveTop = colTop + 14;
+    var evolveH = colH - 14;
+    // Up to 3 cards, with 4px gaps. rh = (evolveH - 8) / 3 = ~39 with colH 140
+    var evolveRowH = Math.floor((evolveH - 8) / 3);
+    drawShopInfoEvolveCards(sk, rightX, rightW, evolveTop, evolveRowH);
+  }
+
+  // Shared evolution-cards renderer. Renders up to 3 cream-paper cards
+  // starting at baseY, each rh tall with a 5 px gap.
+  function drawShopInfoEvolveCards(sk, px, pw, baseY, rh) {
     var upgrades = sk.upgradesTo;
     if (!upgrades) { upgrades = []; }
-    var rowY = py + 180;
+    var rowY = baseY;
     for (var i = 0; i < upgrades.length; i++) {
       var uk = upgrades[i];
       var udef = CANNON_KINDS[uk];
       if (!udef) { continue; }
-      var rh = 46;
 
       // Cream paper card body
       var rgrd = ctx.createLinearGradient(px + 2, rowY, px + 2, rowY + rh);
@@ -1826,16 +1935,13 @@ body.has-ant-buster-page {
       rgrd.addColorStop(1, '#f0dfb8');
       ctx.fillStyle = rgrd;
       ctx.fillRect(px + 2, rowY, pw - 4, rh);
-      // Dark border
       ctx.fillStyle = '#2a1810';
       ctx.fillRect(px + 2, rowY, pw - 4, 2);
       ctx.fillRect(px + 2, rowY, 2, rh);
       ctx.fillRect(px + pw - 4, rowY, 2, rh);
       ctx.fillRect(px + 2, rowY + rh - 2, pw - 4, 2);
 
-      // Top line: name on the left, tier badge on the right. Truncate the
-      // name so it can't run under the tier badge — at 7px the badge plus
-      // its right-edge inset reserves ~30px on the right.
+      // Top line: name + tier badge
       ctx.font = 'bold 10px monospace';
       var fittedInfoUpgName = truncateToWidth(udef.name, pw - 42);
       ctx.fillStyle = '#3a2210';
@@ -1843,33 +1949,32 @@ body.has-ant-buster-page {
       ctx.textBaseline = 'middle';
       ctx.fillText(fittedInfoUpgName, px + 12, rowY + 13);
 
-      // Tier badge in the top-right corner where the cost used to be.
       var tierLabel2 = udef.tier;
       if (!tierLabel2) { tierLabel2 = 'mid'; }
       ctx.font = 'bold 7px monospace';
       ctx.fillStyle = '#8a5a30';
       ctx.textAlign = 'end';
-      ctx.textBaseline = 'middle';
       ctx.fillText(tierLabel2.toUpperCase(), px + pw - 8, rowY + 13);
 
-      // Stats line, dark on cream.
+      // Stats line
       ctx.font = 'bold 8px monospace';
       ctx.fillStyle = '#5a3a20';
       ctx.textAlign = 'start';
       ctx.fillText('DMG ' + udef.damage + '  RATE ' + udef.fireRate + '  RNG ' + udef.range, px + 10, rowY + 27);
 
-      // Description line, mid-tone gray on cream.
-      var udesc = udef.description;
-      if (!udesc) {
-        var ut = udef.tier;
-        if (!ut) { ut = 'mid'; }
-        udesc = udef.family + ' ' + ut;
+      // Description line (only if row is tall enough — at ~30 it's too tight to add a 3rd line)
+      if (rh >= 36) {
+        var udesc = udef.description;
+        if (!udesc) {
+          var ut = udef.tier;
+          if (!ut) { ut = 'mid'; }
+          udesc = udef.family + ' ' + ut;
+        }
+        ctx.font = 'bold 7px monospace';
+        ctx.fillStyle = '#7a5a40';
+        ctx.fillText(truncate(udesc, 32), px + 10, rowY + 38);
       }
-      ctx.font = 'bold 7px monospace';
-      ctx.fillStyle = '#7a5a40';
-      ctx.fillText(truncate(udesc, 32), px + 10, rowY + 38);
 
-      // Reset text alignment
       ctx.textAlign = 'start';
       ctx.textBaseline = 'alphabetic';
 
