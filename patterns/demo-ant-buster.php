@@ -3516,8 +3516,8 @@ body.has-ant-buster-page {
     ctx.globalAlpha = alpha;
     var w = 140;
     var h = 26;
-    var x = WIDTH / 2 - w / 2;
-    var y = 32;
+    var x = PLAYFIELD_W / 2 - w / 2;
+    var y = HUD_H + 8;
     if (game.banner.isBoss) {
       drawWoodenSignWine(x, y, w, h);
       drawTextWithShadow(game.banner.text, x + w / 2, y + h / 2, '#ffaaaa', 'bold 12px monospace', 'center');
@@ -3670,21 +3670,21 @@ body.has-ant-buster-page {
 
   function drawPauseOverlay() {
     ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
-    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    ctx.fillRect(0, HUD_H, PLAYFIELD_W, PLAYFIELD_H);
 
     var signW = 220;
     var signH = 120;
-    var signX = (WIDTH - signW) / 2;
-    var signY = (HEIGHT - signH) / 2 - 10;
+    var signX = (PLAYFIELD_W - signW) / 2;
+    var signY = HUD_H + (PLAYFIELD_H - signH) / 2 - 10;
     drawWoodenSign(signX, signY, signW, signH);
 
-    drawTextWithShadow('HOLD UP', WIDTH / 2, signY + 22, '#c8a868', 'bold 10px monospace', 'center');
-    drawTextWithShadow('PAUSED', WIDTH / 2, signY + 52, '#fee761', 'bold 24px monospace', 'center');
-    drawTextWithShadow('Space to resume', WIDTH / 2, signY + 78, '#f5e6c8', 'bold 10px monospace', 'center');
+    drawTextWithShadow('HOLD UP', PLAYFIELD_W / 2, signY + 22, '#c8a868', 'bold 10px monospace', 'center');
+    drawTextWithShadow('PAUSED', PLAYFIELD_W / 2, signY + 52, '#fee761', 'bold 24px monospace', 'center');
+    drawTextWithShadow('Space to resume', PLAYFIELD_W / 2, signY + 78, '#f5e6c8', 'bold 10px monospace', 'center');
 
     var rrW = 100;
     var rrH = 22;
-    var rrX = WIDTH / 2 - rrW / 2;
+    var rrX = PLAYFIELD_W / 2 - rrW / 2;
     var rrY = signY + signH - 36;
     drawWoodenButton(rrX, rrY, rrW, rrH, 'red');
     drawTextWithShadow('Restart Run', rrX + rrW / 2, rrY + rrH / 2, '#fee761', 'bold 10px monospace', 'center');
@@ -3720,7 +3720,7 @@ body.has-ant-buster-page {
   function drawLoseOverlay() {
     // Saturated red dim
     ctx.fillStyle = 'rgba(80, 10, 10, 0.55)';
-    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    ctx.fillRect(0, HUD_H, PLAYFIELD_W, PLAYFIELD_H);
 
     // Scattered ants
     for (var i = 0; i < LOSE_ANT_LAYOUT.length; i++) {
@@ -3730,11 +3730,11 @@ body.has-ant-buster-page {
 
     var signW = 280;
     var signH = 130;
-    var signX = (WIDTH - signW) / 2;
-    var signY = (HEIGHT - signH) / 2 - 6;
+    var signX = (PLAYFIELD_W - signW) / 2;
+    var signY = HUD_H + (PLAYFIELD_H - signH) / 2 - 6;
     drawWoodenSignWine(signX, signY, signW, signH);
 
-    drawTextWithShadow('8 SLICES LOST', WIDTH / 2, signY + 24, '#ff8a8a', 'bold 10px monospace', 'center');
+    drawTextWithShadow('8 SLICES LOST', PLAYFIELD_W / 2, signY + 24, '#ff8a8a', 'bold 10px monospace', 'center');
 
     // Title with subtle horizontal jitter (1 px @ ~3 Hz).
     var jx;
@@ -3743,19 +3743,21 @@ body.has-ant-buster-page {
     ctx.save();
     ctx.shadowBlur = 14;
     ctx.shadowColor = 'rgba(255, 80, 80, 0.5)';
-    drawTextWithShadow('THE ANTS WIN', WIDTH / 2 + jx, signY + 70, '#ff5050', 'bold 32px monospace', 'center');
+    drawTextWithShadow('THE ANTS WIN', PLAYFIELD_W / 2 + jx, signY + 70, '#ff5050', 'bold 32px monospace', 'center');
     ctx.restore();
 
-    drawTextWithShadow('Click to try again', WIDTH / 2, signY + signH - 22, '#ffaaaa', 'bold 10px monospace', 'center');
+    drawTextWithShadow('Click to try again', PLAYFIELD_W / 2, signY + signH - 22, '#ffaaaa', 'bold 10px monospace', 'center');
   }
 
   function drawWinOverlay() {
     // Warm radial dim — golden glow at the center, deeper dim at the edges.
-    var grd = ctx.createRadialGradient(WIDTH / 2, HEIGHT / 2, 40, WIDTH / 2, HEIGHT / 2, 320);
+    var cxR = PLAYFIELD_W / 2;
+    var cyR = HUD_H + PLAYFIELD_H / 2;
+    var grd = ctx.createRadialGradient(cxR, cyR, 40, cxR, cyR, 320);
     grd.addColorStop(0, 'rgba(254, 231, 97, 0.35)');
     grd.addColorStop(1, 'rgba(20, 10, 4, 0.55)');
     ctx.fillStyle = grd;
-    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    ctx.fillRect(0, HUD_H, PLAYFIELD_W, PLAYFIELD_H);
 
     // Confetti — eight pieces drifting down, looping every 4 s.
     var t = (game.time % 4) / 4;
@@ -3774,8 +3776,8 @@ body.has-ant-buster-page {
     // Sign
     var signW = 280;
     var signH = 130;
-    var signX = (WIDTH - signW) / 2;
-    var signY = (HEIGHT - signH) / 2 - 6;
+    var signX = (PLAYFIELD_W - signW) / 2;
+    var signY = HUD_H + (PLAYFIELD_H - signH) / 2 - 6;
     drawWoodenSign(signX, signY, signW, signH);
 
     // Three candles on top of the sign.
@@ -3797,13 +3799,13 @@ body.has-ant-buster-page {
     }
 
     // Title — VICTORY at 40 px with a gold glow.
-    drawTextWithShadow('ALL 25 WAVES CLEARED', WIDTH / 2, signY + 24, '#fee761', 'bold 10px monospace', 'center');
+    drawTextWithShadow('ALL 25 WAVES CLEARED', PLAYFIELD_W / 2, signY + 24, '#fee761', 'bold 10px monospace', 'center');
     ctx.save();
     ctx.shadowBlur = 18;
     ctx.shadowColor = 'rgba(254, 231, 97, 0.6)';
-    drawTextWithShadow('VICTORY', WIDTH / 2, signY + 70, '#fff8a0', 'bold 40px monospace', 'center');
+    drawTextWithShadow('VICTORY', PLAYFIELD_W / 2, signY + 70, '#fff8a0', 'bold 40px monospace', 'center');
     ctx.restore();
-    drawTextWithShadow('Click to restart', WIDTH / 2, signY + signH - 22, '#f5e6c8', 'bold 10px monospace', 'center');
+    drawTextWithShadow('Click to restart', PLAYFIELD_W / 2, signY + signH - 22, '#f5e6c8', 'bold 10px monospace', 'center');
   }
 
   // Layer 13: overlays — drag preview, wave banner, then full-screen modals.
