@@ -1621,33 +1621,33 @@ body.has-ant-buster-page {
       desc = sk.family + ' ' + tierLabel;
     }
     var dy = py + 80;
-    var dh = 36;
+    var dh = 50;
     ctx.fillStyle = '#2a1810';
     ctx.fillRect(px + 2, dy, pw - 4, dh);
     ctx.fillStyle = '#3a2210';
     ctx.fillRect(px + 4, dy + 2, pw - 8, dh - 4);
-    drawWrappedText(desc, px + 7, dy + 6, pw - 14, '#f5e6c8', 'bold 9px monospace', 11);
+    drawWrappedText(desc, px + 7, dy + 8, pw - 14, '#f5e6c8', 'bold 9px monospace', 14);
 
     // Upgrades to header
-    drawTextWithShadow('UPGRADES TO', px + 4, py + 124, '#c8a868', 'bold 8px monospace', 'start');
+    drawTextWithShadow('UPGRADES TO', px + 4, py + 142, '#c8a868', 'bold 8px monospace', 'start');
 
     // Upgrade rows
     var upgrades = sk.upgradesTo;
     if (!upgrades) { upgrades = []; }
-    var rowY = py + 134;
+    var rowY = py + 152;
     for (var i = 0; i < upgrades.length; i++) {
       var uk = upgrades[i];
       var udef = CANNON_KINDS[uk];
       if (!udef) { continue; }
-      var rh = 36;
+      var rh = 42;
       drawWoodenButton(px + 2, rowY, pw - 4, rh, 'wood');
       // Top line: arrow + name + cost-with-coin (right aligned)
-      drawTextWithShadow('->', px + 6, rowY + 8, '#fee761', 'bold 10px monospace', 'start');
-      drawTextWithShadow(udef.name, px + 18, rowY + 8, '#fee761', 'bold 10px monospace', 'start');
-      ctx.drawImage(game.sprites.coin, px + pw - 26, rowY + 3);
-      drawTextWithShadow('' + udef.cost, px + pw - 6, rowY + 8, '#fee761', 'bold 10px monospace', 'end');
+      drawTextWithShadow('->', px + 6, rowY + 9, '#fee761', 'bold 10px monospace', 'start');
+      drawTextWithShadow(udef.name, px + 18, rowY + 9, '#fee761', 'bold 10px monospace', 'start');
+      ctx.drawImage(game.sprites.coin, px + pw - 36, rowY + 4);
+      drawTextWithShadow('' + udef.cost, px + pw - 6, rowY + 9, '#fee761', 'bold 10px monospace', 'end');
       // Stats line
-      drawTextWithShadow('DMG ' + udef.damage + '  RATE ' + udef.fireRate + '  RNG ' + udef.range, px + 6, rowY + 20, '#f5e6c8', 'bold 8px monospace', 'start');
+      drawTextWithShadow('DMG ' + udef.damage + '  RATE ' + udef.fireRate + '  RNG ' + udef.range, px + 6, rowY + 24, '#f5e6c8', 'bold 8px monospace', 'start');
       // Description line (falls back to family + tier)
       var udesc = udef.description;
       if (!udesc) {
@@ -1655,7 +1655,7 @@ body.has-ant-buster-page {
         if (!ut) { ut = 'mid'; }
         udesc = udef.family + ' ' + ut;
       }
-      drawTextWithShadow(truncate(udesc, 30), px + 6, rowY + 30, '#d8c8a0', 'bold 7px monospace', 'start');
+      drawTextWithShadow(truncate(udesc, 30), px + 6, rowY + 36, '#d8c8a0', 'bold 7px monospace', 'start');
       rowY = rowY + rh + 4;
     }
   }
@@ -1939,7 +1939,7 @@ body.has-ant-buster-page {
       var uk = upgrades[i2];
       var udef = CANNON_KINDS[uk];
       if (!udef) { continue; }
-      var rh = 32;
+      var rh = 42;
       var by = upgradeBaseY + i2 * (rh + 3);
       var canAfford = (game.gold >= udef.cost);
       var isGod = (udef.tier === 'god');
@@ -1985,14 +1985,14 @@ body.has-ant-buster-page {
       }
 
       // Top line
-      drawTextWithShadow('->', px + 6, by + 8, '#fee761', 'bold 10px monospace', 'start');
-      drawTextWithShadow(udef.name, px + 18, by + 8, '#fee761', 'bold 10px monospace', 'start');
-      ctx.drawImage(game.sprites.coin, px + pw - 26, by + 3);
+      drawTextWithShadow('->', px + 6, by + 9, '#fee761', 'bold 10px monospace', 'start');
+      drawTextWithShadow(udef.name, px + 18, by + 9, '#fee761', 'bold 10px monospace', 'start');
+      ctx.drawImage(game.sprites.coin, px + pw - 36, by + 4);
       var costColor;
       if (canAfford) { costColor = '#fee761'; } else { costColor = '#888'; }
-      drawTextWithShadow('' + udef.cost, px + pw - 6, by + 8, costColor, 'bold 10px monospace', 'end');
+      drawTextWithShadow('' + udef.cost, px + pw - 6, by + 9, costColor, 'bold 10px monospace', 'end');
       // Stats line
-      drawTextWithShadow('DMG ' + udef.damage + '  RATE ' + udef.fireRate + '  RNG ' + udef.range, px + 6, by + 22, '#f5e6c8', 'bold 8px monospace', 'start');
+      drawTextWithShadow('DMG ' + udef.damage + '  RATE ' + udef.fireRate + '  RNG ' + udef.range, px + 6, by + 24, '#f5e6c8', 'bold 8px monospace', 'start');
 
       ctx.restore();
 
