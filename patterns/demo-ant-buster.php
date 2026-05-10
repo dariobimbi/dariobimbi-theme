@@ -2652,22 +2652,26 @@ body.has-ant-buster-page {
   }
 
   function drawPauseOverlay() {
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
-    ctx.fillStyle = '#fee761';
-    ctx.font = '20px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('PAUSED', WIDTH / 2, HEIGHT / 2 - 12);
-    ctx.font = '10px monospace';
-    ctx.fillText('Space to resume', WIDTH / 2, HEIGHT / 2 + 8);
-    var rrx = WIDTH / 2 - 36;
-    var rry = HEIGHT / 2 + 22;
-    ctx.fillStyle = '#a44';
-    ctx.fillRect(rrx, rry, 72, 14);
-    ctx.fillStyle = '#fee761';
-    ctx.fillText('Restart Run', WIDTH / 2, rry + 11);
-    ctx.textAlign = 'start';
-    ui.restartRunRect = { x: rrx, y: rry, w: 72, h: 14 };
+
+    var signW = 220;
+    var signH = 120;
+    var signX = (WIDTH - signW) / 2;
+    var signY = (HEIGHT - signH) / 2 - 10;
+    drawWoodenSign(signX, signY, signW, signH);
+
+    drawTextWithShadow('HOLD UP', WIDTH / 2, signY + 22, '#c8a868', 'bold 10px monospace', 'center');
+    drawTextWithShadow('PAUSED', WIDTH / 2, signY + 52, '#fee761', 'bold 24px monospace', 'center');
+    drawTextWithShadow('Space to resume', WIDTH / 2, signY + 78, '#f5e6c8', 'bold 10px monospace', 'center');
+
+    var rrW = 100;
+    var rrH = 22;
+    var rrX = WIDTH / 2 - rrW / 2;
+    var rrY = signY + signH - 36;
+    drawWoodenButton(rrX, rrY, rrW, rrH, 'red');
+    drawTextWithShadow('Restart Run', rrX + rrW / 2, rrY + rrH / 2, '#fee761', 'bold 10px monospace', 'center');
+    ui.restartRunRect = { x: rrX, y: rrY, w: rrW, h: rrH };
   }
 
   function drawLoseOverlay() {
