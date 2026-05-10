@@ -2564,17 +2564,20 @@ body.has-ant-buster-page {
     if (bt > game.banner.duration - 0.5) { alpha = (game.banner.duration - bt) / 0.5; }
     ctx.save();
     ctx.globalAlpha = alpha;
-    if (game.banner.isFinal) {
-      ctx.fillStyle = '#7a1a1a';
+    var w = 140;
+    var h = 26;
+    var x = WIDTH / 2 - w / 2;
+    var y = 32;
+    if (game.banner.isBoss) {
+      drawWoodenSignWine(x, y, w, h);
+      drawTextWithShadow(game.banner.text, x + w / 2, y + h / 2, '#ffaaaa', 'bold 12px monospace', 'center');
+    } else if (game.banner.isFinal) {
+      drawWoodenSignWine(x, y, w, h);
+      drawTextWithShadow(game.banner.text, x + w / 2, y + h / 2, '#fee761', 'bold 12px monospace', 'center');
     } else {
-      ctx.fillStyle = game.banner.isBoss ? '#a44' : '#3a4466';
+      drawWoodenSign(x, y, w, h);
+      drawTextWithShadow(game.banner.text, x + w / 2, y + h / 2, '#fee761', 'bold 12px monospace', 'center');
     }
-    ctx.fillRect(WIDTH / 2 - 48, 36, 96, 16);
-    ctx.fillStyle = '#fee761';
-    ctx.font = '10px monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(game.banner.text, WIDTH / 2, 44);
     ctx.restore();
   }
 
@@ -2664,13 +2667,35 @@ body.has-ant-buster-page {
     if (game.state !== 'playing') { return; }
     if (game.time >= 4) { return; }
     if (game.cannons.length !== 0) { return; }
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-    ctx.fillRect(60, 100, 200, 70);
-    ctx.fillStyle = '#fee761';
-    ctx.font = '10px monospace';
+    var w = 220;
+    var h = 64;
+    var x = 60;
+    var y = 110;
+    ctx.save();
+    ctx.translate(x + w / 2, y + h / 2);
+    ctx.rotate(-0.026); // -1.5 deg
+    // Paper card body
+    var grd = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
+    grd.addColorStop(0, '#fff8e8');
+    grd.addColorStop(1, '#f0dfb8');
+    ctx.fillStyle = grd;
+    ctx.fillRect(-w / 2, -h / 2, w, h);
+    // Drop shadow under the rotated card
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+    ctx.fillRect(-w / 2 + 3, h / 2, w, 3);
+    // Border
+    ctx.fillStyle = '#2a1810';
+    ctx.fillRect(-w / 2, -h / 2, w, 2);
+    ctx.fillRect(-w / 2, -h / 2, 2, h);
+    ctx.fillRect(w / 2 - 2, -h / 2, 2, h);
+    ctx.fillRect(-w / 2, h / 2 - 2, w, 2);
+    // Text
+    ctx.font = 'bold 10px monospace';
+    ctx.fillStyle = '#4a3220';
     ctx.textAlign = 'center';
-    ctx.fillText('Drag a cannon from the shop', 160, 130);
-    ctx.fillText('onto the picnic blanket to start!', 160, 145);
+    ctx.fillText('Drag a cannon from the shop', 0, -6);
+    ctx.fillText('onto the picnic blanket to start', 0, 10);
+    ctx.restore();
     ctx.textAlign = 'start';
   }
 
