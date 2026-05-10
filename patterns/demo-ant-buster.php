@@ -1582,9 +1582,117 @@ body.has-ant-buster-page {
     ctx.fillRect(sx, sy, 2, sh);
   }
 
-  // Stub. Task 10 replaces this with the full info panel.
   function drawShopInfoPanel() {
-    drawTextWithShadow('Info panel coming in Task 10', PLAYFIELD_W + SHOP_W / 2, HEIGHT / 2, '#c8a868', 'bold 10px monospace', 'center');
+    var k = ui.shopInfoKind;
+    if (!k) { ui.shopMode = 'list'; return; }
+    var sk = CANNON_KINDS[k];
+    if (!sk) { ui.shopMode = 'list'; return; }
+
+    var px = PLAYFIELD_W + 6;
+    var pw = SHOP_W - 12;
+    var py = 26;
+
+    // Back link
+    drawTextWithShadow('< BACK TO CANNONS', px + pw / 2, py + 6, '#c8a868', 'bold 8px monospace', 'center');
+    ui.shopInfoBackRect = { x: px, y: py, w: pw, h: 14 };
+
+    // Name
+    drawTextWithShadow(sk.name, px + 4, py + 28, '#fee761', 'bold 14px monospace', 'start');
+    drawTextWithShadow(sk.family + ' family', px + 4, py + 42, '#c8a868', 'bold 8px monospace', 'start');
+
+    // Stats row in a single recessed tag
+    var sy = py + 50;
+    drawWoodenTag(px + 2, sy, pw - 4, 24);
+    var sx0 = px + 8;
+    var sx2 = px + pw - 8;
+    var sxMid = (sx0 + sx2) / 2;
+    drawTextWithShadow('DMG', sx0, sy + 8, '#c8a868', 'bold 7px monospace', 'start');
+    drawTextWithShadow('' + sk.damage, sx0, sy + 18, '#f5e6c8', 'bold 11px monospace', 'start');
+    drawTextWithShadow('RATE', sxMid - 12, sy + 8, '#c8a868', 'bold 7px monospace', 'start');
+    drawTextWithShadow('' + sk.fireRate, sxMid - 12, sy + 18, '#f5e6c8', 'bold 11px monospace', 'start');
+    drawTextWithShadow('RNG', sx2 - 24, sy + 8, '#c8a868', 'bold 7px monospace', 'start');
+    drawTextWithShadow('' + sk.range, sx2, sy + 18, '#f5e6c8', 'bold 11px monospace', 'end');
+
+    // Description card. Falls back to "<family> <tier>" if description missing.
+    var desc = sk.description;
+    if (!desc) {
+      var tierLabel = sk.tier;
+      if (!tierLabel) { tierLabel = 'base'; }
+      desc = sk.family + ' ' + tierLabel;
+    }
+    var dy = py + 80;
+    var dh = 36;
+    ctx.fillStyle = '#2a1810';
+    ctx.fillRect(px + 2, dy, pw - 4, dh);
+    ctx.fillStyle = '#3a2210';
+    ctx.fillRect(px + 4, dy + 2, pw - 8, dh - 4);
+    drawWrappedText(desc, px + 7, dy + 6, pw - 14, '#f5e6c8', 'bold 9px monospace', 11);
+
+    // Upgrades to header
+    drawTextWithShadow('UPGRADES TO', px + 4, py + 124, '#c8a868', 'bold 8px monospace', 'start');
+
+    // Upgrade rows
+    var upgrades = sk.upgradesTo;
+    if (!upgrades) { upgrades = []; }
+    var rowY = py + 134;
+    for (var i = 0; i < upgrades.length; i++) {
+      var uk = upgrades[i];
+      var udef = CANNON_KINDS[uk];
+      if (!udef) { continue; }
+      var rh = 36;
+      drawWoodenButton(px + 2, rowY, pw - 4, rh, 'wood');
+      // Top line: arrow + name + cost-with-coin (right aligned)
+      drawTextWithShadow('->', px + 6, rowY + 8, '#fee761', 'bold 10px monospace', 'start');
+      drawTextWithShadow(udef.name, px + 18, rowY + 8, '#fee761', 'bold 10px monospace', 'start');
+      ctx.drawImage(game.sprites.coin, px + pw - 26, rowY + 3);
+      drawTextWithShadow('' + udef.cost, px + pw - 6, rowY + 8, '#fee761', 'bold 10px monospace', 'end');
+      // Stats line
+      drawTextWithShadow('DMG ' + udef.damage + '  RATE ' + udef.fireRate + '  RNG ' + udef.range, px + 6, rowY + 20, '#f5e6c8', 'bold 8px monospace', 'start');
+      // Description line (falls back to family + tier)
+      var udesc = udef.description;
+      if (!udesc) {
+        var ut = udef.tier;
+        if (!ut) { ut = 'mid'; }
+        udesc = udef.family + ' ' + ut;
+      }
+      drawTextWithShadow(truncate(udesc, 30), px + 6, rowY + 30, '#d8c8a0', 'bold 7px monospace', 'start');
+      rowY = rowY + rh + 4;
+    }
+  }
+
+  // Word-wrap helper for the description card. Naive but enough for short
+  // sentences at small widths.
+  function drawWrappedText(text, x, y, maxW, color, font, lineH) {
+    ctx.font = font;
+    var words = text.split(' ');
+    var line = '';
+    var ly = y + lineH / 2;
+    for (var i = 0; i < words.length; i++) {
+      var test = line;
+      if (test.length > 0) { test = test + ' '; }
+      test = test + words[i];
+      if (ctx.measureText(test).width > maxW) {
+        if (line.length > 0) {
+          drawTextWithShadow(line, x, ly, color, font, 'start');
+          ly = ly + lineH;
+          line = words[i];
+        } else {
+          drawTextWithShadow(test, x, ly, color, font, 'start');
+          ly = ly + lineH;
+          line = '';
+        }
+      } else {
+        line = test;
+      }
+    }
+    if (line.length > 0) {
+      drawTextWithShadow(line, x, ly, color, font, 'start');
+    }
+  }
+
+  function truncate(s, n) {
+    if (s.length <= n) { return s; }
+    return s.substring(0, n - 1) + '...';
   }
 
   function drawShop() {
@@ -6127,6 +6235,11 @@ body.has-ant-buster-page {
     }
     if (game.state === 'playing') {
       if (p.x < PLAYFIELD_W) {
+        // If info panel is open, close it on any playfield tap.
+        if (ui.shopMode === 'info') {
+          ui.shopMode = 'list';
+          ui.shopInfoKind = null;
+        }
         var hit = cannonAt(p.x, p.y);
         if (hit) {
           ui.selectedCannon = hit;
@@ -6170,6 +6283,56 @@ body.has-ant-buster-page {
             if (inRect(p, ui.sellRect)) {
               sellCannon(ui.selectedCannon);
               return;
+            }
+          }
+        }
+      }
+    }
+    // Visual coherence: hangtag click flips to info panel.
+    if (ui.shopMode === 'info') {
+      // Back link?
+      if (ui.shopInfoBackRect) {
+        var br = ui.shopInfoBackRect;
+        if (p.x >= br.x) {
+          if (p.x <= br.x + br.w) {
+            if (p.y >= br.y) {
+              if (p.y <= br.y + br.h) {
+                ui.shopMode = 'list';
+                ui.shopInfoKind = null;
+                canvas.releasePointerCapture(evt.pointerId);
+                ui.activePointerId = null;
+                ui.pointerType = null;
+                return;
+              }
+            }
+          }
+        }
+      }
+      // Any other tap inside the info panel: close.
+      if (p.x >= PLAYFIELD_W) {
+        ui.shopMode = 'list';
+        ui.shopInfoKind = null;
+        canvas.releasePointerCapture(evt.pointerId);
+        ui.activePointerId = null;
+        ui.pointerType = null;
+        return;
+      }
+    }
+    // Hangtag rects always checked first when in list mode.
+    if (ui.shopMode === 'list') {
+      for (var hi = 0; hi < ui.shopInfoRects.length; hi++) {
+        var hr = ui.shopInfoRects[hi];
+        if (p.x >= hr.x) {
+          if (p.x <= hr.x + hr.w) {
+            if (p.y >= hr.y) {
+              if (p.y <= hr.y + hr.h) {
+                ui.shopMode = 'info';
+                ui.shopInfoKind = hr.kind;
+                canvas.releasePointerCapture(evt.pointerId);
+                ui.activePointerId = null;
+                ui.pointerType = null;
+                return;
+              }
             }
           }
         }
@@ -6435,6 +6598,12 @@ body.has-ant-buster-page {
     if (e.key === '1') { game.speed = 1; return; }
     if (e.key === '2') { game.speed = 2; return; }
     if (e.key === 'Escape') {
+      if (ui.shopMode === 'info') {
+        ui.shopMode = 'list';
+        ui.shopInfoKind = null;
+        e.preventDefault();
+        return;
+      }
       // ESC unarms on desktop. Touch users have the same-card-retap to unarm.
       if (ui.armedKind !== null) {
         ui.armedKind = null;
