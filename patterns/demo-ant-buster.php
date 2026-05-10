@@ -108,18 +108,16 @@ body.has-ant-buster-page {
   var TARGET_FPS = 60;
   var FIXED_DT = 1 / TARGET_FPS;
 
-  // Returns true when the canvas's host element is taller than wide. Reads
-  // the bounding rect of the .ab-stage element; falls back to window
-  // innerWidth/innerHeight if the stage isn't measurable yet (boot race).
+  // Mirrors the CSS @media (max-aspect-ratio: 1/1) query so JS and CSS agree
+  // on orientation. Reading the .ab-stage rect doesn't work because the
+  // stage flex-centers the canvas inside a wider column -- its rect stays
+  // landscape-shaped even when the canvas inside is portrait.
   function isPortrait() {
-    var stage = canvas.parentElement;
-    if (stage) {
-      var r = stage.getBoundingClientRect();
-      if (r.width > 0) {
-        if (r.height >= r.width) { return true; }
-        return false;
-      }
+    if (window.matchMedia) {
+      return window.matchMedia('(max-aspect-ratio: 1/1)').matches;
     }
+    // Fallback for environments without matchMedia (none of the targets,
+    // but keeps the function safe to call during boot).
     if (window.innerHeight >= window.innerWidth) { return true; }
     return false;
   }
@@ -307,6 +305,26 @@ body.has-ant-buster-page {
       relayout();
     }
   });
+
+  // Belt-and-suspenders: matchMedia change fires on the exact breakpoint
+  // crossing, even in edge cases where resize/orientationchange don't (e.g.
+  // some DevTools device-emulation transitions).
+  if (window.matchMedia) {
+    var mql = window.matchMedia('(max-aspect-ratio: 1/1)');
+    var onMqlChange = function () {
+      var nowPortrait = isPortrait();
+      if (nowPortrait !== lastIsPortrait) {
+        lastIsPortrait = nowPortrait;
+        relayout();
+      }
+    };
+    if (mql.addEventListener) {
+      mql.addEventListener('change', onMqlChange);
+    } else if (mql.addListener) {
+      // Older Safari / iOS pre-14 fallback.
+      mql.addListener(onMqlChange);
+    }
+  }
 
   // === SPRITES ===
   // All sprites are generated procedurally as offscreen canvases.
