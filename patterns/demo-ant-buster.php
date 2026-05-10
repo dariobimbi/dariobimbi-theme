@@ -114,6 +114,18 @@ body.has-ant-buster-page {
     { x: 320, y: 320, size: 1, rot:  2.09 }
   ];
 
+  // Static layout for win-splash confetti. Each: { x, color }. y is animated.
+  var WIN_CONFETTI_LAYOUT = [
+    { x:  60, color: '#fee761' },
+    { x: 130, color: '#ff77a8' },
+    { x: 220, color: '#c8f5a8' },
+    { x: 300, color: '#fee761' },
+    { x: 380, color: '#ff77a8' },
+    { x: 450, color: '#c8f5a8' },
+    { x: 530, color: '#fee761' },
+    { x: 590, color: '#ff77a8' }
+  ];
+
   // === DEBUG MODE ===
   // Captured once at parse time from the URL. ?debug=1 enables the T hotkey
   // (cycles spawning each ant kind at the anthill). The check uses a plain
@@ -2688,16 +2700,60 @@ body.has-ant-buster-page {
   }
 
   function drawWinOverlay() {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    // Warm radial dim — golden glow at the center, deeper dim at the edges.
+    var grd = ctx.createRadialGradient(WIDTH / 2, HEIGHT / 2, 40, WIDTH / 2, HEIGHT / 2, 320);
+    grd.addColorStop(0, 'rgba(254, 231, 97, 0.35)');
+    grd.addColorStop(1, 'rgba(20, 10, 4, 0.55)');
+    ctx.fillStyle = grd;
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
-    ctx.fillStyle = '#fee761';
-    ctx.font = '16px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('CAKE SAVED', WIDTH / 2, HEIGHT / 2 - 12);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '10px monospace';
-    ctx.fillText('Click to restart', WIDTH / 2, HEIGHT / 2 + 8);
-    ctx.textAlign = 'start';
+
+    // Confetti — eight pieces drifting down, looping every 4 s.
+    var t = (game.time % 4) / 4;
+    for (var i = 0; i < WIN_CONFETTI_LAYOUT.length; i++) {
+      var p = WIN_CONFETTI_LAYOUT[i];
+      var phase = (t + i / 8) % 1;
+      var py = phase * (HEIGHT + 20) - 10;
+      ctx.save();
+      ctx.translate(p.x, py);
+      ctx.rotate(phase * Math.PI * 4);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-3, -4, 6, 8);
+      ctx.restore();
+    }
+
+    // Sign
+    var signW = 280;
+    var signH = 130;
+    var signX = (WIDTH - signW) / 2;
+    var signY = (HEIGHT - signH) / 2 - 6;
+    drawWoodenSign(signX, signY, signW, signH);
+
+    // Three candles on top of the sign.
+    var candleY = signY - 14;
+    for (var c = 0; c < 3; c++) {
+      var cx = signX + signW / 2 - 18 + c * 18;
+      ctx.fillStyle = '#2a1810';
+      ctx.fillRect(cx, candleY, 4, 14);
+      ctx.fillStyle = '#f5e6c8';
+      ctx.fillRect(cx + 1, candleY + 1, 2, 12);
+      // Flame flicker — uses time so all three flicker together. Cheap.
+      var flick = (game.time * 4 + c) % 1;
+      var flameH;
+      if (flick < 0.5) { flameH = 5; } else { flameH = 6; }
+      ctx.fillStyle = '#ff9c44';
+      ctx.fillRect(cx + 1, candleY - flameH, 2, flameH);
+      ctx.fillStyle = '#fee761';
+      ctx.fillRect(cx + 1, candleY - flameH + 2, 2, flameH - 2);
+    }
+
+    // Title — VICTORY at 40 px with a gold glow.
+    drawTextWithShadow('ALL 25 WAVES CLEARED', WIDTH / 2, signY + 24, '#fee761', 'bold 10px monospace', 'center');
+    ctx.save();
+    ctx.shadowBlur = 18;
+    ctx.shadowColor = 'rgba(254, 231, 97, 0.6)';
+    drawTextWithShadow('VICTORY', WIDTH / 2, signY + 70, '#fff8a0', 'bold 40px monospace', 'center');
+    ctx.restore();
+    drawTextWithShadow('Click to restart', WIDTH / 2, signY + signH - 22, '#f5e6c8', 'bold 10px monospace', 'center');
   }
 
   // Layer 13: overlays — drag preview, wave banner, then full-screen modals.
