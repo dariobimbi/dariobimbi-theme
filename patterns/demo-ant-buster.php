@@ -1602,14 +1602,44 @@ body.has-ant-buster-page {
     var pw = SHOP_W - 12;
     var py = 26;
 
-    // "FIELD GUIDE" eyebrow + back link — visual marker that this is the
-    // catalog/info view, not the buy/detail view.
+    // "FIELD GUIDE" eyebrow + back button. The back affordance is a wooden
+    // button so it matches the sell / targeting / send-next chrome elsewhere
+    // in the game. Label is contextual: when the panel was opened by tapping
+    // "?" on an upgrade row of a placed cannon's detail panel, we return to
+    // that cannon (selectedCannon is preserved across the info-panel push),
+    // so the label says "BACK TO HOWITZER" rather than "BACK TO CANNONS".
     drawTextWithShadow('FIELD GUIDE', px + pw / 2, py, '#c8a868', 'bold 8px monospace', 'center');
-    drawTextWithShadow('< BACK TO CANNONS', px + pw / 2, py + 14, '#c8a868', 'bold 8px monospace', 'center');
-    ui.shopInfoBackRect = { x: px, y: py - 4, w: pw, h: 24 };
 
-    // Name
-    drawTextWithShadow(sk.name, px + 8, py + 38, '#fee761', 'bold 14px monospace', 'start');
+    var bbX = px + 16;
+    var bbY = py + 6;
+    var bbW = pw - 32;
+    var bbH = 16;
+    drawWoodenButton(bbX, bbY, bbW, bbH, 'wood');
+
+    // Compute the label after sizing the button so we can truncate the
+    // cannon name against the actual interior width (button w minus 8 px
+    // total horizontal padding) at the rendered font.
+    ctx.font = 'bold 9px monospace';
+    var backLabel;
+    if (ui.shopInfoFrom === 'detail') {
+      if (ui.selectedCannon) {
+        var srcName = CANNON_KINDS[ui.selectedCannon.kind].name.toUpperCase();
+        var prefixW = ctx.measureText('< BACK TO ').width;
+        var nameMaxW = (bbW - 8) - prefixW;
+        backLabel = '< BACK TO ' + truncateToWidth(srcName, nameMaxW);
+      } else {
+        backLabel = '< BACK TO CANNONS';
+      }
+    } else {
+      backLabel = '< BACK TO CANNONS';
+    }
+    drawTextWithShadow(backLabel, bbX + bbW / 2, bbY + bbH / 2, '#fee761', 'bold 9px monospace', 'center');
+    ui.shopInfoBackRect = { x: bbX, y: bbY, w: bbW, h: bbH };
+
+    // Name — same shrink-then-truncate fallback as the detail panel so
+    // a long kind name doesn't overflow the field-guide panel.
+    var infoNameFit = fitFont(sk.name, pw - 16, 'bold __PX__px monospace', 14, 9);
+    drawTextWithShadow(infoNameFit.text, px + 8, py + 38, '#fee761', infoNameFit.font, 'start');
     drawTextWithShadow(sk.family + ' family', px + 8, py + 54, '#c8a868', 'bold 8px monospace', 'start');
 
     // Stats row in a single recessed tag
@@ -1679,12 +1709,15 @@ body.has-ant-buster-page {
       ctx.fillRect(px + pw - 4, rowY, 2, rh);
       ctx.fillRect(px + 2, rowY + rh - 2, pw - 4, 2);
 
-      // Top line: arrow + name. No cost.
+      // Top line: name on the left, tier badge on the right. Truncate the
+      // name so it can't run under the tier badge — at 7px the badge plus
+      // its right-edge inset reserves ~30px on the right.
       ctx.font = 'bold 10px monospace';
+      var fittedInfoUpgName = truncateToWidth(udef.name, pw - 42);
       ctx.fillStyle = '#3a2210';
       ctx.textAlign = 'start';
       ctx.textBaseline = 'middle';
-      ctx.fillText(udef.name, px + 12, rowY + 13);
+      ctx.fillText(fittedInfoUpgName, px + 12, rowY + 13);
 
       // Tier badge in the top-right corner where the cost used to be.
       var tierLabel2 = udef.tier;
@@ -1788,6 +1821,47 @@ body.has-ant-buster-page {
     return s.substring(0, n - 1) + '...';
   }
 
+  // Pixel-aware truncation. Caller MUST set ctx.font before calling so the
+  // measurement reflects the font that will actually render the text.
+  // Returns the input verbatim when it already fits maxW, else a binary-search
+  // truncated prefix with a single-character ellipsis suffix that fits.
+  function truncateToWidth(text, maxW) {
+    if (ctx.measureText(text).width <= maxW) { return text; }
+    var ell = '…';
+    if (ctx.measureText(ell).width > maxW) { return ''; }
+    var lo = 0;
+    var hi = text.length;
+    while (lo < hi) {
+      var mid = (lo + hi + 1) >> 1;
+      var probe = text.substring(0, mid) + ell;
+      if (ctx.measureText(probe).width <= maxW) { lo = mid; }
+      else { hi = mid - 1; }
+    }
+    if (lo === 0) { return ell; }
+    return text.substring(0, lo) + ell;
+  }
+
+  // Shrinks the font size from startPx down to minPx (1px steps) until the
+  // text fits maxW; if it never fits at minPx, returns a width-truncated copy.
+  // Side effect: leaves ctx.font set to the chosen size so the caller can render
+  // immediately. fontTpl uses '__PX__' as the size placeholder, e.g.
+  // 'bold __PX__px monospace'. Returns { text, font } so the caller can pass
+  // `font` straight to drawTextWithShadow.
+  function fitFont(text, maxW, fontTpl, startPx, minPx) {
+    var px = startPx;
+    while (px >= minPx) {
+      var f = fontTpl.replace('__PX__', '' + px);
+      ctx.font = f;
+      if (ctx.measureText(text).width <= maxW) {
+        return { text: text, font: f };
+      }
+      px = px - 1;
+    }
+    var fmin = fontTpl.replace('__PX__', '' + minPx);
+    ctx.font = fmin;
+    return { text: truncateToWidth(text, maxW), font: fmin };
+  }
+
   function drawShop() {
     drawShopBackground();
 
@@ -1842,8 +1916,12 @@ body.has-ant-buster-page {
       var turret = game.sprites.turrets[k];
       if (turret) { ctx.drawImage(turret, spX + 6, spY); }
 
-      // Name
-      drawTextWithShadow(sk.name, spX + 36, cy + 14, '#fee761', 'bold 11px monospace', 'start');
+      // Name — truncate so a long name can't reach the "?" hangtag.
+      // Sprite tile ends at spX+32 (we render the name at spX+36); hangtag
+      // starts at cardX + cardW - 22 with a 4px gap.
+      ctx.font = 'bold 11px monospace';
+      var fittedShopName = truncateToWidth(sk.name, cardW - 72);
+      drawTextWithShadow(fittedShopName, spX + 36, cy + 14, '#fee761', 'bold 11px monospace', 'start');
 
       // Cost row: coin sprite + value, vertically centered with the coin.
       var costY = cy + 30;
@@ -1852,18 +1930,20 @@ body.has-ant-buster-page {
       if (canAfford) { costColor = '#fee761'; } else { costColor = '#888'; }
       drawTextWithShadow('' + sk.cost, spX + 52, costY + 1, costColor, 'bold 11px monospace', 'start');
 
-      // Stats row — full card width, below the sprite/name/cost zone.
+      // Stats row — inset from the family-color strip on the left so the
+      // box doesn't visually butt against it. cardX+12 leaves a 5px gap
+      // past the strip border at cardX+7; right edge stays at cardX+cardW-8.
       var statsY = cy + 56;
       ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
-      ctx.fillRect(cardX + 8, statsY - 4, cardW - 16, 18);
+      ctx.fillRect(cardX + 12, statsY - 4, cardW - 20, 18);
       ctx.fillStyle = '#2a1810';
-      ctx.fillRect(cardX + 8, statsY - 4, cardW - 16, 1);
+      ctx.fillRect(cardX + 12, statsY - 4, cardW - 20, 1);
 
       // Three stats in equal-width columns, label-then-value with a fixed gap.
-      var statColW = (cardW - 16) / 3;
-      var col1X = cardX + 8;
-      var col2X = cardX + 8 + statColW;
-      var col3X = cardX + 8 + 2 * statColW;
+      var statColW = (cardW - 20) / 3;
+      var col1X = cardX + 12;
+      var col2X = cardX + 12 + statColW;
+      var col3X = cardX + 12 + 2 * statColW;
       drawTextWithShadow('DMG', col1X, statsY + 4, '#c8a868', 'bold 8px monospace', 'start');
       drawTextWithShadow('' + sk.damage, col1X + 22, statsY + 4, '#f5e6c8', 'bold 10px monospace', 'start');
       drawTextWithShadow('RATE', col2X, statsY + 4, '#c8a868', 'bold 8px monospace', 'start');
@@ -2015,12 +2095,21 @@ body.has-ant-buster-page {
 
     drawShopBackground();
 
-    // Back link — captured rect now wired into the pointerdown handler.
-    drawTextWithShadow('< BACK TO CANNONS', px + pw / 2, py + 8, '#c8a868', 'bold 8px monospace', 'center');
-    ui.detailBackRect = { x: px, y: py, w: pw, h: 18 };
+    // Back button — wooden chrome to match the info panel's back button and
+    // the rest of the game's button language (sell / targeting / send-next).
+    var dbX = px + 16;
+    var dbY = py + 2;
+    var dbW = pw - 32;
+    var dbH = 16;
+    drawWoodenButton(dbX, dbY, dbW, dbH, 'wood');
+    drawTextWithShadow('< BACK TO CANNONS', dbX + dbW / 2, dbY + dbH / 2, '#fee761', 'bold 9px monospace', 'center');
+    ui.detailBackRect = { x: dbX, y: dbY, w: dbW, h: dbH };
 
-    // Name
-    drawTextWithShadow(sk.name, px + 8, py + 32, '#fee761', 'bold 14px monospace', 'start');
+    // Name — shrink to fit the panel width, then truncate at the smallest size
+    // we'll allow. Long upgrade names (e.g. "Rubber Wrecking Ball") would
+    // otherwise spill past the panel's right edge.
+    var detailNameFit = fitFont(sk.name, pw - 16, 'bold __PX__px monospace', 14, 9);
+    drawTextWithShadow(detailNameFit.text, px + 8, py + 32, '#fee761', detailNameFit.font, 'start');
     drawTextWithShadow(sk.family + ' family', px + 8, py + 48, '#c8a868', 'bold 8px monospace', 'start');
 
     // Stats row — 4 centered columns (DMG / RATE / RNG / KILLS).
@@ -2105,7 +2194,11 @@ body.has-ant-buster-page {
 
       // Top line — name on the left, cost in the middle (with coin), small ?
       // hangtag on the far right that opens the upgrade's info panel.
-      drawTextWithShadow(udef.name, px + 10, by + 11, '#fee761', 'bold 10px monospace', 'start');
+      // Truncate the name so it can't extend under the coin / cost / ? hangtag.
+      // Coin x = px + pw - 56, so the name must end before it with a small gap.
+      ctx.font = 'bold 10px monospace';
+      var fittedUpgName = truncateToWidth(udef.name, pw - 70);
+      drawTextWithShadow(fittedUpgName, px + 10, by + 11, '#fee761', 'bold 10px monospace', 'start');
       ctx.drawImage(game.sprites.coin, px + pw - 56, by + 6);
       var costColor;
       if (isLocked) { costColor = '#888'; }
@@ -2795,7 +2888,10 @@ body.has-ant-buster-page {
     var tagH = HUD_H - 2;
     var tagX = 4;
 
-    // 1. Coin tag — 12x12 sprite + gold value.
+    // 1. Coin tag — 12x12 sprite + gold value. Set font BEFORE measuring so
+    // the tag width tracks the actual rendered glyphs (otherwise we'd be
+    // measuring with whatever font the previous draw left on ctx).
+    ctx.font = 'bold 11px monospace';
     var goldStr = '' + game.gold;
     var coinTagW = 14 + ctx.measureText(goldStr).width + 14;
     drawWoodenTag(tagX, tagY, coinTagW, tagH);
@@ -2804,6 +2900,7 @@ body.has-ant-buster-page {
     tagX = tagX + coinTagW + 4;
 
     // 2. Cake tag — 12x12 cake-slice + warm gold value.
+    ctx.font = 'bold 11px monospace';
     var cakeStr = game.cake.slices + '/8';
     var cakeTagW = 14 + ctx.measureText(cakeStr).width + 14;
     drawWoodenTag(tagX, tagY, cakeTagW, tagH);
@@ -2812,6 +2909,7 @@ body.has-ant-buster-page {
     tagX = tagX + cakeTagW + 4;
 
     // 3. Wave tag — small caps "WAVE" + white value.
+    ctx.font = 'bold 11px monospace';
     var waveStr = (game.waveIndex + 1) + '/' + WAVES.length;
     var waveTagW = 28 + ctx.measureText(waveStr).width + 8;
     drawWoodenTag(tagX, tagY, waveTagW, tagH);
@@ -2821,6 +2919,7 @@ body.has-ant-buster-page {
 
     // 4. Prep tag — small caps "PREP" + light-green value, only during prep.
     if (game.waveState === 'prep') {
+      ctx.font = 'bold 11px monospace';
       var prepStr = Math.ceil(game.prepRemaining) + 's';
       var prepTagW = 26 + ctx.measureText(prepStr).width + 8;
       drawWoodenTag(tagX, tagY, prepTagW, tagH);
@@ -6439,8 +6538,16 @@ body.has-ant-buster-page {
       }
       // Click inside the right-column panel while a cannon is selected — test
       // the targeting buttons first (Plan 7), then upgrade buttons (up to 3),
-      // then the sell button.
+      // then the sell button. Only run this hit-test cascade when the detail
+      // panel is the panel actually being rendered (shopMode === 'list'). When
+      // the info panel is showing on top of a selected cannon (shopMode ===
+      // 'info'), the detail-panel rects (detailBackRect, upgradeRects, etc.)
+      // are stale from the previous frame and overlap the info panel's own
+      // rects — including its back link — which would cause an info-panel
+      // back tap to be eaten by the stale detail-panel back rect, clearing
+      // selectedCannon silently.
       if (ui.selectedCannon) {
+       if (ui.shopMode === 'list') {
         if (p.x >= PLAYFIELD_W) {
           // Detail-panel back link: clear selection.
           if (ui.detailBackRect) {
@@ -6511,6 +6618,7 @@ body.has-ant-buster-page {
             }
           }
         }
+       }
       }
     }
     // Visual coherence: hangtag click flips to info panel.
