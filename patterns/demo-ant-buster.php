@@ -2002,13 +2002,16 @@ body.has-ant-buster-page {
     var portrait = isPortrait();
     var cardX; var cardW; var cardH; var startY; var startX; var dx; var dy;
     if (portrait) {
-      // 4 cards in a row, 5 px outer + 4 px inner gaps. Card 115w x 230h.
+      // 4 cards in a row at the BOTTOM of the strip, with 4px horizontal
+      // gaps. Card height is compact (160) and the cards sit at the strip's
+      // bottom edge so the empty space lives above the cards (where the
+      // wood plaque is visible) instead of as dead space inside each card.
       var stripY = HEIGHT - STRIP_H;
       var GAP = 4;
       cardW = (WIDTH - 5 * GAP) / 4;
-      cardH = STRIP_H - 2 * GAP - 2;
+      cardH = 160;
       startX = GAP;
-      startY = stripY + GAP;
+      startY = stripY + STRIP_H - cardH - GAP;
       dx = cardW + GAP;
       dy = 0;
       cardX = startX;
@@ -2050,7 +2053,7 @@ body.has-ant-buster-page {
         // === PORTRAIT CARD ===
         // Sprite tile 40x40, centered horizontally near the top.
         var spX = cx + cardW / 2 - 20;
-        var spY = cy + 16;
+        var spY = cy + 10;
         ctx.fillStyle = '#2a1810';
         ctx.fillRect(spX, spY, 40, 40);
         ctx.fillStyle = '#1a0a00';
@@ -2067,7 +2070,7 @@ body.has-ant-buster-page {
         // Name centered under sprite. Truncate to fit card width minus 8 px.
         ctx.font = 'bold 11px monospace';
         var fittedName = truncateToWidth(sk.name, cardW - 8);
-        drawTextWithShadow(fittedName, cx + cardW / 2, cy + 70, '#fee761', 'bold 11px monospace', 'center');
+        drawTextWithShadow(fittedName, cx + cardW / 2, cy + 64, '#fee761', 'bold 11px monospace', 'center');
 
         // Cost row: coin + value, centered.
         ctx.font = 'bold 11px monospace';
@@ -2075,22 +2078,29 @@ body.has-ant-buster-page {
         var costTextW = ctx.measureText(costStr).width;
         var rowW = 12 + 4 + costTextW;
         var rowStartX = cx + (cardW - rowW) / 2;
-        ctx.drawImage(game.sprites.coin, rowStartX, cy + 90 - 6);
+        ctx.drawImage(game.sprites.coin, rowStartX, cy + 84 - 6);
         var costColor;
         if (canAfford) { costColor = '#fee761'; } else { costColor = '#888'; }
-        drawTextWithShadow(costStr, rowStartX + 16, cy + 90, costColor, 'bold 11px monospace', 'start');
+        drawTextWithShadow(costStr, rowStartX + 16, cy + 84, costColor, 'bold 11px monospace', 'start');
 
-        // DMG / RATE inline (RNG omitted — too tight for 3 columns at 115 wide).
-        drawTextWithShadow('DMG ' + sk.damage + '   RATE ' + sk.fireRate, cx + cardW / 2, cy + 110, '#c8a868', 'bold 8px monospace', 'center');
-
-        // Stats card-internal row at the bottom — recessed to match desktop visual.
+        // Consolidated stats card — all three stats (DMG/RATE/RNG) in a
+        // single recessed 3-column tag near the bottom of the card. At
+        // 7px label / 9px value the columns fit even at 115 wide.
         var statsY = cy + cardH - 32;
         ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
-        ctx.fillRect(cx + 12, statsY, cardW - 24, 18);
+        ctx.fillRect(cx + 8, statsY, cardW - 16, 24);
         ctx.fillStyle = '#2a1810';
-        ctx.fillRect(cx + 12, statsY, cardW - 24, 1);
-        drawTextWithShadow('RNG', cx + cardW / 2 - 18, statsY + 9, '#c8a868', 'bold 8px monospace', 'start');
-        drawTextWithShadow('' + sk.range, cx + cardW / 2 + 8, statsY + 9, '#f5e6c8', 'bold 10px monospace', 'start');
+        ctx.fillRect(cx + 8, statsY, cardW - 16, 1);
+        var statColW = (cardW - 16) / 3;
+        var sc1 = cx + 8 + statColW * 0.5;
+        var sc2 = cx + 8 + statColW * 1.5;
+        var sc3 = cx + 8 + statColW * 2.5;
+        drawTextWithShadow('DMG', sc1, statsY + 7, '#c8a868', 'bold 7px monospace', 'center');
+        drawTextWithShadow('' + sk.damage, sc1, statsY + 18, '#f5e6c8', 'bold 9px monospace', 'center');
+        drawTextWithShadow('RATE', sc2, statsY + 7, '#c8a868', 'bold 7px monospace', 'center');
+        drawTextWithShadow('' + sk.fireRate, sc2, statsY + 18, '#f5e6c8', 'bold 9px monospace', 'center');
+        drawTextWithShadow('RNG', sc3, statsY + 7, '#c8a868', 'bold 7px monospace', 'center');
+        drawTextWithShadow('' + sk.range, sc3, statsY + 18, '#f5e6c8', 'bold 9px monospace', 'center');
 
         // ? hangtag at top-right. Larger than landscape (16 vs 18) for tappability.
         var tagW = 18;
