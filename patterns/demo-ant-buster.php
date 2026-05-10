@@ -3917,6 +3917,7 @@ body.has-ant-buster-page {
   var CANNON_KINDS = {
     howitzer: {
       name: 'Howitzer',
+      description: 'Slow, hard-hitting single shot. The foundation of the heavy line.',
       cost: 50,
       damage: 5,
       fireRate: 0.6,         // shots per second
@@ -3928,6 +3929,7 @@ body.has-ant-buster-page {
     },
     siege: {
       name: 'Siege',
+      description: 'Harder hit, longer reach. Same slow rhythm as the Howitzer.',
       cost: 50,
       damage: 12,
       fireRate: 0.6,
@@ -3952,6 +3954,7 @@ body.has-ant-buster-page {
     },
     mortar: {
       name: 'Mortar',
+      description: 'Lobs a shell that splashes on impact. Hits clusters.',
       cost: 60,
       damage: 8,
       fireRate: 0.5,
@@ -4003,6 +4006,7 @@ body.has-ant-buster-page {
     },
     discus: {
       name: 'Discus',
+      description: 'Bouncing disc. Hits the same ant up to three times.',
       cost: 60,
       damage: 4,
       fireRate: 0.4,
@@ -4041,6 +4045,7 @@ body.has-ant-buster-page {
     },
     repeater: {
       name: 'Repeater',
+      description: 'Light, fast pellets. Trades damage per shot for fire rate.',
       cost: 50,
       damage: 1,
       fireRate: 4,
@@ -4052,6 +4057,7 @@ body.has-ant-buster-page {
     },
     autocannon: {
       name: 'Auto-Cannon',
+      description: 'Higher fire rate than the Repeater. Sustained pressure.',
       cost: 50,
       damage: 2,
       fireRate: 6,
@@ -4090,6 +4096,7 @@ body.has-ant-buster-page {
     },
     vulcan: {
       name: 'Vulcan',
+      description: 'Spins up to a punishing fire rate. Pays off on long lanes.',
       cost: 80,
       damage: 3,
       fireRate: 9,
@@ -4102,6 +4109,7 @@ body.has-ant-buster-page {
     },
     plasma_torch: {
       name: 'Plasma Torch',
+      description: 'Cone of plasma that burns over time. Soft on armor.',
       cost: 90,
       damage: 0,                 // cone-DoT cannons don't fire projectiles
       fireRate: 0,
@@ -4119,6 +4127,7 @@ body.has-ant-buster-page {
     },
     sharpshooter: {
       name: 'Sharpshooter',
+      description: 'Long-range precision shot. Picks off targets at the back.',
       cost: 100,
       damage: 25,
       fireRate: 0.5,
@@ -4184,6 +4193,7 @@ body.has-ant-buster-page {
     },
     twingun: {
       name: 'Twin Gun',
+      description: 'Two barrels firing alternately. Each hit can apply a status effect.',
       cost: 75,
       damage: 2,
       fireRate: 1,
@@ -4196,6 +4206,7 @@ body.has-ant-buster-page {
     },
     triple_threat: {
       name: 'Triple Threat',
+      description: 'Three barrels, three status hits per volley.',
       cost: 70,
       damage: 2,
       fireRate: 1,
@@ -4234,6 +4245,7 @@ body.has-ant-buster-page {
     },
     toxin: {
       name: 'Toxin',
+      description: 'Inflicts poison. Damage continues after the shot lands.',
       cost: 75,
       damage: 1,
       fireRate: 1,
@@ -4295,6 +4307,7 @@ body.has-ant-buster-page {
     },
     frost: {
       name: 'Frost',
+      description: 'Slows ants on hit. Pairs with heavy cannons for shatter combos.',
       cost: 75,
       damage: 1,
       fireRate: 1.5,
@@ -4328,6 +4341,7 @@ body.has-ant-buster-page {
     // family stays "casual / approachable" by design.
     pink_pea: {
       name: 'Pink Pea',
+      description: 'Bouncy rubber pellet. Casual cousin of the heavy line, no gating.',
       cost: 50,
       damage: 5,
       fireRate: 0.8,
@@ -4343,6 +4357,7 @@ body.has-ant-buster-page {
     },
     bouncy_bubble: {
       name: 'Bouncy Bubble',
+      description: 'Round bouncing pellet. Wider knockback than Pink Pea.',
       cost: 80,
       damage: 12,
       fireRate: 0.6,
@@ -4358,6 +4373,7 @@ body.has-ant-buster-page {
     },
     rubber_wrecking_ball: {
       name: 'Rubber Wrecking Ball',
+      description: 'Heavy bouncing payload. Big knockback, slow recovery.',
       cost: 120,
       damage: 30,
       fireRate: 0.4,
