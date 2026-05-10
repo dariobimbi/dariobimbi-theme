@@ -2958,7 +2958,11 @@ body.has-ant-buster-page {
   // Layer 11: HUD strip across the top of the playfield. Gold, cake, lost,
   // wave index, prep timer, send-next button, pause + speed widgets.
   function drawHud() {
-    drawWoodenPlaque(0, 0, PLAYFIELD_W, HUD_H);
+    if (isPortrait()) {
+      drawWoodenPlaque(0, 0, WIDTH, HUD_H);
+    } else {
+      drawWoodenPlaque(0, 0, PLAYFIELD_W, HUD_H);
+    }
 
     // Four readout tags, left-aligned.
     // Tag layout: 22 px tall, 1 px from top of HUD, content vertically centered.
@@ -3007,7 +3011,7 @@ body.has-ant-buster-page {
       // Send Next button — green wooden, right-edge.
       var btnW = 64;
       var btnH = HUD_H - 4;
-      var btnX = PLAYFIELD_W - btnW - 4;
+      var btnX = WIDTH - btnW - 4;
       var btnY = 2;
       ui.sendNextRect = { x: btnX, y: btnY, w: btnW, h: btnH };
       drawWoodenButton(btnX, btnY, btnW, btnH, 'green');
@@ -3026,11 +3030,11 @@ body.has-ant-buster-page {
     // Wooden tag underneath each so they read as part of the HUD chrome on
     // the right edge. Pause and speed sit at fixed positions; Send Next
     // appears to their right during prep.
-    ui.pauseRect.x = PLAYFIELD_W - 122;
+    ui.pauseRect.x = WIDTH - 122;
     ui.pauseRect.y = 2;
     ui.pauseRect.w = 22;
     ui.pauseRect.h = HUD_H - 4;
-    ui.speedRect.x = PLAYFIELD_W - 96;
+    ui.speedRect.x = WIDTH - 96;
     ui.speedRect.y = 2;
     ui.speedRect.w = 22;
     ui.speedRect.h = HUD_H - 4;
