@@ -2398,39 +2398,60 @@ body.has-ant-buster-page {
   // Layer 11: HUD strip across the top of the playfield. Gold, cake, lost,
   // wave index, prep timer, send-next button, pause + speed widgets.
   function drawHud() {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
-    ctx.fillRect(0, 0, PLAYFIELD_W, HUD_H);
-    ctx.font = '10px monospace';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#fee761';
-    ctx.fillText('Gold: ' + game.gold, 54, 12);
-    ctx.fillStyle = '#e43b44';
-    ctx.fillText('Cake: ' + game.cake.slices + '/8', 124, 12);
-    ctx.fillStyle = '#ff8888';
-    ctx.fillText('Lost: ' + game.cake.lost + '/8', 200, 12);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText('W: ' + (game.waveIndex + 1) + '/' + WAVES.length, 276, 12);
+    drawWoodenPlaque(0, 0, PLAYFIELD_W, HUD_H);
+
+    // Four readout tags, left-aligned.
+    // Tag layout: 22 px tall, 1 px from top of HUD, content vertically centered.
+    var tagY = 1;
+    var tagH = HUD_H - 2;
+    var tagX = 4;
+
+    // 1. Coin tag — 12x12 sprite + gold value.
+    var goldStr = '' + game.gold;
+    var coinTagW = 14 + ctx.measureText(goldStr).width + 14;
+    drawWoodenTag(tagX, tagY, coinTagW, tagH);
+    ctx.drawImage(game.sprites.coin, tagX + 4, tagY + 5);
+    drawTextWithShadow(goldStr, tagX + 20, tagY + tagH / 2, '#fee761', 'bold 11px monospace', 'start');
+    tagX = tagX + coinTagW + 4;
+
+    // 2. Cake tag — 12x12 cake-slice + warm gold value.
+    var cakeStr = game.cake.slices + '/8';
+    var cakeTagW = 14 + ctx.measureText(cakeStr).width + 14;
+    drawWoodenTag(tagX, tagY, cakeTagW, tagH);
+    ctx.drawImage(game.sprites.cakeSlice, tagX + 4, tagY + 5);
+    drawTextWithShadow(cakeStr, tagX + 20, tagY + tagH / 2, '#ffd86b', 'bold 11px monospace', 'start');
+    tagX = tagX + cakeTagW + 4;
+
+    // 3. Wave tag — small caps "WAVE" + white value.
+    var waveStr = (game.waveIndex + 1) + '/' + WAVES.length;
+    var waveTagW = 28 + ctx.measureText(waveStr).width + 8;
+    drawWoodenTag(tagX, tagY, waveTagW, tagH);
+    drawTextWithShadow('WAVE', tagX + 5, tagY + tagH / 2, '#f5e6c8', 'bold 8px monospace', 'start');
+    drawTextWithShadow(waveStr, tagX + 28, tagY + tagH / 2, '#ffffff', 'bold 11px monospace', 'start');
+    tagX = tagX + waveTagW + 4;
+
+    // 4. Prep tag — small caps "PREP" + light-green value, only during prep.
     if (game.waveState === 'prep') {
-      ctx.fillStyle = '#aef0a0';
-      ctx.fillText('Prep: ' + Math.ceil(game.prepRemaining) + 's', 320, 12);
-      var btnX = PLAYFIELD_W - 80;
-      var btnY = 4;
-      var btnW = 76;
-      var btnH = 16;
+      var prepStr = Math.ceil(game.prepRemaining) + 's';
+      var prepTagW = 26 + ctx.measureText(prepStr).width + 8;
+      drawWoodenTag(tagX, tagY, prepTagW, tagH);
+      drawTextWithShadow('PREP', tagX + 5, tagY + tagH / 2, '#f5e6c8', 'bold 8px monospace', 'start');
+      drawTextWithShadow(prepStr, tagX + 28, tagY + tagH / 2, '#c8f5a8', 'bold 11px monospace', 'start');
+
+      // Send Next button — green wooden, right-edge.
+      var btnW = 64;
+      var btnH = HUD_H - 4;
+      var btnX = PLAYFIELD_W - btnW - 4;
+      var btnY = 2;
       ui.sendNextRect = { x: btnX, y: btnY, w: btnW, h: btnH };
-      ctx.fillStyle = '#5a7d4a';
-      ctx.fillRect(btnX, btnY, btnW, btnH);
-      ctx.fillStyle = '#fee761';
-      ctx.textAlign = 'center';
-      ctx.fillText('Send Next', btnX + btnW / 2, btnY + btnH / 2);
-      ctx.textAlign = 'start';
+      drawWoodenButton(btnX, btnY, btnW, btnH, 'green');
+      drawTextWithShadow('Send Next', btnX + btnW / 2, btnY + btnH / 2, '#1a1a0a', 'bold 9px monospace', 'center');
     } else {
       ui.sendNextRect = null;
     }
-    // Pause widget: two vertical bars when running, right-pointing triangle
-    // when paused.
-    ctx.fillStyle = '#2a2f3e';
-    ctx.fillRect(ui.pauseRect.x, ui.pauseRect.y, ui.pauseRect.w, ui.pauseRect.h);
+
+    // Pause widget (re-themed, same hit rect).
+    drawWoodenButton(ui.pauseRect.x, ui.pauseRect.y, ui.pauseRect.w, ui.pauseRect.h, 'wood');
     ctx.fillStyle = '#fee761';
     if (game.paused) {
       ctx.beginPath();
@@ -2443,18 +2464,12 @@ body.has-ant-buster-page {
       ctx.fillRect(ui.pauseRect.x + 5, ui.pauseRect.y + 4, 2, 8);
       ctx.fillRect(ui.pauseRect.x + 9, ui.pauseRect.y + 4, 2, 8);
     }
-    // Speed widget — 1x or 2x label.
-    ctx.fillStyle = '#2a2f3e';
-    ctx.fillRect(ui.speedRect.x, ui.speedRect.y, ui.speedRect.w, ui.speedRect.h);
-    ctx.fillStyle = '#fee761';
-    ctx.font = '10px monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+
+    // Speed widget (re-themed, same hit rect).
+    drawWoodenButton(ui.speedRect.x, ui.speedRect.y, ui.speedRect.w, ui.speedRect.h, 'wood');
     var speedLabel;
     if (game.speed === 2) { speedLabel = '2x'; } else { speedLabel = '1x'; }
-    ctx.fillText(speedLabel, ui.speedRect.x + ui.speedRect.w / 2, ui.speedRect.y + ui.speedRect.h / 2);
-    ctx.textAlign = 'start';
-    ctx.textBaseline = 'alphabetic';
+    drawTextWithShadow(speedLabel, ui.speedRect.x + ui.speedRect.w / 2, ui.speedRect.y + ui.speedRect.h / 2, '#fee761', 'bold 9px monospace', 'center');
   }
 
   // Layer 13a: drag preview (ghost cannon under the cursor while dragging from
