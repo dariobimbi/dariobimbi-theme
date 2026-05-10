@@ -78,7 +78,7 @@ body.has-ant-buster-page {
 
 @media (max-aspect-ratio: 1/1) {
   .demo-ant-buster #ab-canvas {
-    aspect-ratio: 480 / 600;
+    aspect-ratio: 480 / 540;
     width: 480px;
   }
 }
@@ -129,11 +129,11 @@ body.has-ant-buster-page {
   function relayout() {
     if (isPortrait()) {
       WIDTH = 480;
-      HEIGHT = 600;
+      HEIGHT = 540;
       PLAYFIELD_W = 480;
       PLAYFIELD_H = 336;
       SHOP_W = 0;
-      STRIP_H = 240;
+      STRIP_H = 180;
     } else {
       WIDTH = 640;
       HEIGHT = 360;
