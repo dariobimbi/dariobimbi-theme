@@ -2339,11 +2339,21 @@ body.has-ant-buster-page {
 
   function drawTowerPanel(c) {
     var sk = CANNON_KINDS[c.kind];
+    drawShopBackground();
+
+    if (isPortrait()) {
+      drawTowerPanelPortrait(c, sk);
+    } else {
+      drawTowerPanelLandscape(c, sk);
+    }
+  }
+
+  // Landscape: vertical stack in the right sidebar. Lifted verbatim from the
+  // pre-portrait drawTowerPanel — no behavior change.
+  function drawTowerPanelLandscape(c, sk) {
     var px = PLAYFIELD_W + 6;
     var pw = SHOP_W - 12;
     var py = 26;
-
-    drawShopBackground();
 
     // Back button — wooden chrome to match the info panel's back button and
     // the rest of the game's button language (sell / targeting / send-next).
@@ -2381,19 +2391,93 @@ body.has-ant-buster-page {
     // Targeting row + label (extra y-padding below the stats tag)
     var afterTargetingY = drawTargetingRow(c, px + 8, py + 110);
 
-    // Upgrade rows.
+    // Upgrade rows + sell — shared helpers so portrait can render the same.
+    drawTowerPanelUpgrades(c, sk, px, pw, afterTargetingY + 6, /*upgRowH=*/ 42);
+    drawTowerPanelSell(c, px, pw, HEIGHT - 30, /*sellH=*/ 24, /*variant=*/ 'red');
+  }
+
+  // Portrait: two-column horizontal layout in the bottom strip.
+  // STRIP_H = 180. Back button at the top, then left column (name + stats +
+  // targeting) and right column (3 upgrade rows + sell) side by side.
+  function drawTowerPanelPortrait(c, sk) {
+    var stripY = HEIGHT - STRIP_H;
+
+    // Back button — full strip-width wooden chrome.
+    var bbX = 16;
+    var bbY = stripY + 4;
+    var bbW = WIDTH - 32;
+    var bbH = 16;
+    drawWoodenButton(bbX, bbY, bbW, bbH, 'wood');
+    drawTextWithShadow('< BACK TO CANNONS', bbX + bbW / 2, bbY + bbH / 2, '#fee761', 'bold 9px monospace', 'center');
+    ui.detailBackRect = { x: bbX, y: bbY, w: bbW, h: bbH };
+
+    // Two columns
+    var colTop = stripY + 22;
+    var colH = STRIP_H - 26;     // 154 with STRIP_H = 180
+    var leftX = 4;
+    var leftW = 276;
+    var rightX = 284;
+    var rightW = WIDTH - rightX - 4;
+
+    // === LEFT COLUMN: name, family, stats, targeting ===
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+    ctx.fillRect(leftX, colTop, leftW, colH);
+    ctx.fillStyle = '#2a1810';
+    ctx.fillRect(leftX, colTop, leftW, 1);
+
+    // Name
+    var detailNameFitP = fitFont(sk.name, leftW - 16, 'bold __PX__px monospace', 14, 9);
+    drawTextWithShadow(detailNameFitP.text, leftX + 8, colTop + 12, '#fee761', detailNameFitP.font, 'start');
+    drawTextWithShadow(sk.family + ' family', leftX + 8, colTop + 26, '#c8a868', 'bold 8px monospace', 'start');
+
+    // 4-stat row in 4 even columns (DMG / RATE / RNG / KILLS)
+    var statsY = colTop + 40;
+    var statsH = 28;
+    drawWoodenTag(leftX + 4, statsY, leftW - 8, statsH);
+    var colW = (leftW - 8) / 4;
+    var killCountP;
+    if (c.kills) { killCountP = c.kills; } else { killCountP = 0; }
+    var labelsP = ['DMG', 'RATE', 'RNG', 'KILLS'];
+    var valuesP = ['' + sk.damage, '' + sk.fireRate, '' + sk.range, '' + killCountP];
+    var valColorsP = ['#f5e6c8', '#f5e6c8', '#f5e6c8', '#fee761'];
+    for (var iP = 0; iP < 4; iP++) {
+      var cxP = leftX + 4 + colW * iP + colW / 2;
+      drawTextWithShadow(labelsP[iP], cxP, statsY + 9, '#c8a868', 'bold 7px monospace', 'center');
+      drawTextWithShadow(valuesP[iP], cxP, statsY + 20, valColorsP[iP], 'bold 11px monospace', 'center');
+    }
+
+    // Targeting row — sits below the stats tag. drawTargetingRow renders
+    // 5 buttons starting at (x, y) and adds a "TARGETING X" label below them.
+    drawTargetingRow(c, leftX + 8, statsY + statsH + 10);
+
+    // === RIGHT COLUMN: upgrade rows + sell ===
+    var sellH = 20;
+    var upgTop = colTop;
+    var upgBottom = colTop + colH - sellH - 4;
+    var upgArea = upgBottom - upgTop;     // ~130 with colH 154
+    // 3 upgrade rows with 4 px gaps = 3*rh + 2*4 = upgArea; so rh = (upgArea - 8) / 3
+    var upgRowH = Math.floor((upgArea - 8) / 3);
+    drawTowerPanelUpgrades(c, sk, rightX, rightW, upgTop, upgRowH);
+
+    // Sell button at the bottom of the right column
+    drawTowerPanelSell(c, rightX, rightW, upgBottom + 4, sellH, 'red');
+  }
+
+  // Shared upgrade-row renderer. Renders up to 3 upgrade buttons starting
+  // at baseY, each upgRowH tall with a 5 px gap. Populates ui.upgradeRects
+  // and ui.detailUpgradeInfoRects.
+  function drawTowerPanelUpgrades(c, sk, px, pw, baseY, upgRowH) {
     var upgrades = sk.upgradesTo;
     if (!upgrades) { upgrades = []; }
     var hoveredLockedRect = null;
-    var upgradeBaseY = afterTargetingY + 6;
     ui.upgradeRects = [null, null, null];
     ui.detailUpgradeInfoRects = [null, null, null];
     for (var i2 = 0; i2 < upgrades.length; i2++) {
       var uk = upgrades[i2];
       var udef = CANNON_KINDS[uk];
       if (!udef) { continue; }
-      var rh = 42;
-      var by = upgradeBaseY + i2 * (rh + 5);
+      var rh = upgRowH;
+      var by = baseY + i2 * (rh + 5);
       var canAfford = (game.gold >= udef.cost);
       var isGod = (udef.tier === 'god');
       var isLocked = false;
@@ -2485,7 +2569,6 @@ body.has-ant-buster-page {
       ctx.restore();
 
       ui.upgradeRects[i2] = { x: px + 2, y: by, w: pw - 4, h: rh, toKind: uk, locked: isLocked };
-      if (!ui.detailUpgradeInfoRects) { ui.detailUpgradeInfoRects = [null, null, null]; }
       ui.detailUpgradeInfoRects[i2] = { x: ihtX, y: ihtY, w: ihtW, h: ihtH, kind: uk };
 
       if (isLocked) {
@@ -2508,14 +2591,13 @@ body.has-ant-buster-page {
       drawWoodenTag(tipX, tipY, hoveredLockedRect.w, 16);
       drawTextWithShadow('Unlocks at wave 15', tipX + hoveredLockedRect.w / 2, tipY + 8, '#fee761', 'bold 8px monospace', 'center');
     }
+  }
 
-    // Sell button — pinned near the bottom
+  function drawTowerPanelSell(c, px, pw, sbY, sbH, variant) {
     var refund = sellRefund(c);
     var sbW = pw - 4;
-    var sbH = 24;
     var sbX = px + 2;
-    var sbY = HEIGHT - sbH - 6;
-    drawWoodenButton(sbX, sbY, sbW, sbH, 'red');
+    drawWoodenButton(sbX, sbY, sbW, sbH, variant);
     drawTextWithShadow('Sell · +' + refund, sbX + sbW / 2, sbY + sbH / 2, '#fee761', 'bold 10px monospace', 'center');
     ui.sellRect = { x: sbX, y: sbY, w: sbW, h: sbH };
   }
