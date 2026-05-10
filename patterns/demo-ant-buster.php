@@ -1742,8 +1742,12 @@ body.has-ant-buster-page {
       ctx.fillRect(spX, spY, 1, 32);
       ctx.fillRect(spX + 31, spY, 1, 32);
       ctx.fillRect(spX, spY + 31, 32, 1);
+      // Render the full cannon (base + turret) so the shop card matches the
+      // in-game silhouette. Match the in-game offsets: base centered in the
+      // 32x32 tile, turret offset +6 px on x.
+      ctx.drawImage(game.sprites.cannonBase, spX, spY);
       var turret = game.sprites.turrets[k];
-      if (turret) { ctx.drawImage(turret, spX, spY); }
+      if (turret) { ctx.drawImage(turret, spX + 6, spY); }
 
       // Name
       drawTextWithShadow(sk.name, spX + 36, cy + 14, '#fee761', 'bold 11px monospace', 'start');
@@ -2683,13 +2687,30 @@ body.has-ant-buster-page {
       var btnY = 2;
       ui.sendNextRect = { x: btnX, y: btnY, w: btnW, h: btnH };
       drawWoodenButton(btnX, btnY, btnW, btnH, 'green');
-      drawTextWithShadow('Send Next', btnX + btnW / 2, btnY + btnH / 2, '#1a1a0a', 'bold 9px monospace', 'center');
+      ctx.font = 'bold 10px monospace';
+      ctx.fillStyle = '#1a1a0a';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('Send Next', btnX + btnW / 2, btnY + btnH / 2);
+      ctx.textAlign = 'start';
+      ctx.textBaseline = 'alphabetic';
     } else {
       ui.sendNextRect = null;
     }
 
-    // Pause widget (re-themed, same hit rect).
-    drawWoodenButton(ui.pauseRect.x, ui.pauseRect.y, ui.pauseRect.w, ui.pauseRect.h, 'wood');
+    // Pause icon — drawn directly on the plaque, with a 1-px dark stamp for legibility.
+    ctx.fillStyle = '#2a1810';
+    if (game.paused) {
+      ctx.beginPath();
+      ctx.moveTo(ui.pauseRect.x + 5 + 1, ui.pauseRect.y + 4 + 1);
+      ctx.lineTo(ui.pauseRect.x + 12 + 1, ui.pauseRect.y + 8 + 1);
+      ctx.lineTo(ui.pauseRect.x + 5 + 1, ui.pauseRect.y + 12 + 1);
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      ctx.fillRect(ui.pauseRect.x + 5 + 1, ui.pauseRect.y + 4 + 1, 2, 8);
+      ctx.fillRect(ui.pauseRect.x + 9 + 1, ui.pauseRect.y + 4 + 1, 2, 8);
+    }
     ctx.fillStyle = '#fee761';
     if (game.paused) {
       ctx.beginPath();
@@ -2703,8 +2724,7 @@ body.has-ant-buster-page {
       ctx.fillRect(ui.pauseRect.x + 9, ui.pauseRect.y + 4, 2, 8);
     }
 
-    // Speed widget (re-themed, same hit rect).
-    drawWoodenButton(ui.speedRect.x, ui.speedRect.y, ui.speedRect.w, ui.speedRect.h, 'wood');
+    // Speed widget — label drawn directly on the plaque (drawTextWithShadow already includes a dark stamp).
     var speedLabel;
     if (game.speed === 2) { speedLabel = '2x'; } else { speedLabel = '1x'; }
     drawTextWithShadow(speedLabel, ui.speedRect.x + ui.speedRect.w / 2, ui.speedRect.y + ui.speedRect.h / 2, '#fee761', 'bold 9px monospace', 'center');
