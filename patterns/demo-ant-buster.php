@@ -1989,9 +1989,6 @@ body.has-ant-buster-page {
   function drawShop() {
     drawShopBackground();
 
-    // "CANNONS" header
-    drawTextWithShadow('CANNONS', PLAYFIELD_W + SHOP_W / 2, 14, '#c8a868', 'bold 9px monospace', 'center');
-
     // If shopMode is 'info', delegate to the info panel render and return.
     if (ui.shopMode === 'info') {
       drawShopInfoPanel();
@@ -2001,130 +1998,249 @@ body.has-ant-buster-page {
     var keys = ['howitzer', 'repeater', 'twingun', 'pink_pea'];
     ui.shopRects = [];
     ui.shopInfoRects = [];
-    var cardX = PLAYFIELD_W + 6;
-    var cardW = SHOP_W - 12;
-    var cardH = 78;
-    var startY = 26;
+
+    var portrait = isPortrait();
+    var cardX; var cardW; var cardH; var startY; var startX; var dx; var dy;
+    if (portrait) {
+      // 4 cards in a row, 5 px outer + 4 px inner gaps. Card 115w x 230h.
+      var stripY = HEIGHT - STRIP_H;
+      var GAP = 4;
+      cardW = (WIDTH - 5 * GAP) / 4;
+      cardH = STRIP_H - 2 * GAP - 2;
+      startX = GAP;
+      startY = stripY + GAP;
+      dx = cardW + GAP;
+      dy = 0;
+      cardX = startX;
+    } else {
+      cardX = PLAYFIELD_W + 6;
+      cardW = SHOP_W - 12;
+      cardH = 78;
+      startX = cardX;
+      startY = 26;
+      dx = 0;
+      dy = cardH + 4;
+    }
+
+    // "CANNONS" header — landscape only. Portrait uses the strip's own area
+    // and skips the standalone header to save vertical space.
+    if (!portrait) {
+      drawTextWithShadow('CANNONS', PLAYFIELD_W + SHOP_W / 2, 14, '#c8a868', 'bold 9px monospace', 'center');
+    }
 
     for (var i = 0; i < keys.length; i++) {
       var k = keys[i];
       var sk = CANNON_KINDS[k];
-      var cy = startY + i * (cardH + 4);
+      var cx = startX + i * dx;
+      var cy = startY + i * dy;
       var canAfford = (game.gold >= sk.cost);
 
       // Card body
-      drawWoodenButton(cardX, cy, cardW, cardH, 'wood');
+      drawWoodenButton(cx, cy, cardW, cardH, 'wood');
 
       // Family color strip
       var stripColor = FAMILY_STRIP_COLOR[sk.family];
       if (!stripColor) { stripColor = '#888'; }
       ctx.fillStyle = stripColor;
-      ctx.fillRect(cardX + 2, cy + 2, 4, cardH - 4);
+      ctx.fillRect(cx + 2, cy + 2, 4, cardH - 4);
       ctx.fillStyle = '#2a1810';
-      ctx.fillRect(cardX + 6, cy + 2, 1, cardH - 4);
+      ctx.fillRect(cx + 6, cy + 2, 1, cardH - 4);
 
-      // Sprite tile (32x32 dark inset)
-      var spX = cardX + 10;
-      var spY = cy + 8;
-      ctx.fillStyle = '#2a1810';
-      ctx.fillRect(spX, spY, 32, 32);
-      ctx.fillStyle = '#1a0a00';
-      ctx.fillRect(spX, spY, 32, 1);
-      ctx.fillRect(spX, spY, 1, 32);
-      ctx.fillRect(spX + 31, spY, 1, 32);
-      ctx.fillRect(spX, spY + 31, 32, 1);
-      // Render the full cannon (base + turret) so the shop card matches the
-      // in-game silhouette. Match the in-game offsets: base centered in the
-      // 32x32 tile, turret offset +6 px on x.
-      ctx.drawImage(game.sprites.cannonBase, spX, spY);
-      var turret = game.sprites.turrets[k];
-      if (turret) { ctx.drawImage(turret, spX + 6, spY); }
-
-      // Name — truncate so a long name can't reach the "?" hangtag.
-      // Sprite tile ends at spX+32 (we render the name at spX+36); hangtag
-      // starts at cardX + cardW - 22 with a 4px gap.
-      ctx.font = 'bold 11px monospace';
-      var fittedShopName = truncateToWidth(sk.name, cardW - 72);
-      drawTextWithShadow(fittedShopName, spX + 36, cy + 14, '#fee761', 'bold 11px monospace', 'start');
-
-      // Cost row: coin sprite + value, vertically centered with the coin.
-      var costY = cy + 30;
-      ctx.drawImage(game.sprites.coin, spX + 36, costY - 5);
-      var costColor;
-      if (canAfford) { costColor = '#fee761'; } else { costColor = '#888'; }
-      drawTextWithShadow('' + sk.cost, spX + 52, costY + 1, costColor, 'bold 11px monospace', 'start');
-
-      // Stats row — inset from the family-color strip on the left so the
-      // box doesn't visually butt against it. cardX+12 leaves a 5px gap
-      // past the strip border at cardX+7; right edge stays at cardX+cardW-8.
-      var statsY = cy + 56;
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
-      ctx.fillRect(cardX + 12, statsY - 4, cardW - 20, 18);
-      ctx.fillStyle = '#2a1810';
-      ctx.fillRect(cardX + 12, statsY - 4, cardW - 20, 1);
-
-      // Three stats in equal-width columns, label-then-value with a fixed gap.
-      var statColW = (cardW - 20) / 3;
-      var col1X = cardX + 12;
-      var col2X = cardX + 12 + statColW;
-      var col3X = cardX + 12 + 2 * statColW;
-      drawTextWithShadow('DMG', col1X, statsY + 4, '#c8a868', 'bold 8px monospace', 'start');
-      drawTextWithShadow('' + sk.damage, col1X + 22, statsY + 4, '#f5e6c8', 'bold 10px monospace', 'start');
-      drawTextWithShadow('RATE', col2X, statsY + 4, '#c8a868', 'bold 8px monospace', 'start');
-      drawTextWithShadow('' + sk.fireRate, col2X + 26, statsY + 4, '#f5e6c8', 'bold 10px monospace', 'start');
-      drawTextWithShadow('RNG', col3X, statsY + 4, '#c8a868', 'bold 8px monospace', 'start');
-      drawTextWithShadow('' + sk.range, col3X + 22, statsY + 4, '#f5e6c8', 'bold 10px monospace', 'start');
-
-      // Cream paper "?" hangtag at the top-right — stands out against the wooden card
-      var tagW = 18;
-      var tagH = 18;
-      var tagX = cardX + cardW - tagW - 4;
-      var tagY = cy + 4;
-      // Paper body (cream)
-      ctx.fillStyle = '#fff8e8';
-      ctx.fillRect(tagX, tagY, tagW, tagH);
-      ctx.fillStyle = '#f0dfb8';
-      ctx.fillRect(tagX + 1, tagY + tagH - 3, tagW - 2, 2);
-      // Dark border
-      ctx.fillStyle = '#2a1810';
-      ctx.fillRect(tagX, tagY, tagW, 1);
-      ctx.fillRect(tagX, tagY, 1, tagH);
-      ctx.fillRect(tagX + tagW - 1, tagY, 1, tagH);
-      ctx.fillRect(tagX, tagY + tagH - 1, tagW, 1);
-      // Dark string anchor at top
-      ctx.fillStyle = '#2a1810';
-      ctx.fillRect(tagX + tagW / 2 - 1, tagY - 3, 2, 4);
-      // "?" glyph in dark on cream
-      ctx.font = 'bold 13px monospace';
-      ctx.fillStyle = '#2a1810';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('?', tagX + tagW / 2, tagY + tagH / 2 + 1);
-      ctx.textAlign = 'start';
-      ctx.textBaseline = 'alphabetic';
-      ui.shopInfoRects.push({ x: tagX, y: tagY, w: tagW, h: tagH, kind: k });
-
-      // Armed-card highlight + Tap a spot pill
-      if (ui.armedKind === k) {
-        ctx.strokeStyle = '#fee761';
-        ctx.lineWidth = 3;
-        ctx.strokeRect(cardX + 1, cy + 1, cardW - 2, cardH - 2);
-        ctx.lineWidth = 1;
-        var pillW = 60;
-        var pillH = 12;
-        var pillX = cardX + cardW / 2 - pillW / 2;
-        var pillY = cy + cardH - 6;
-        ctx.fillStyle = '#fee761';
-        ctx.fillRect(pillX, pillY, pillW, pillH);
+      if (portrait) {
+        // === PORTRAIT CARD ===
+        // Sprite tile 40x40, centered horizontally near the top.
+        var spX = cx + cardW / 2 - 20;
+        var spY = cy + 16;
         ctx.fillStyle = '#2a1810';
-        ctx.fillRect(pillX, pillY, pillW, 1);
-        ctx.fillRect(pillX, pillY + pillH - 1, pillW, 1);
-        ctx.fillRect(pillX, pillY, 1, pillH);
-        ctx.fillRect(pillX + pillW - 1, pillY, 1, pillH);
-        drawTextWithShadow('TAP A SPOT', pillX + pillW / 2, pillY + pillH / 2, '#2a1810', 'bold 8px monospace', 'center');
+        ctx.fillRect(spX, spY, 40, 40);
+        ctx.fillStyle = '#1a0a00';
+        ctx.fillRect(spX, spY, 40, 1);
+        ctx.fillRect(spX, spY, 1, 40);
+        ctx.fillRect(spX + 39, spY, 1, 40);
+        ctx.fillRect(spX, spY + 39, 40, 1);
+        // Render the cannon (base + turret) in the centered tile. Sprites are
+        // 32x32 so center inside the 40x40 inset with a 4 px margin.
+        ctx.drawImage(game.sprites.cannonBase, spX + 4, spY + 4);
+        var turret = game.sprites.turrets[k];
+        if (turret) { ctx.drawImage(turret, spX + 10, spY + 4); }
+
+        // Name centered under sprite. Truncate to fit card width minus 8 px.
+        ctx.font = 'bold 11px monospace';
+        var fittedName = truncateToWidth(sk.name, cardW - 8);
+        drawTextWithShadow(fittedName, cx + cardW / 2, cy + 70, '#fee761', 'bold 11px monospace', 'center');
+
+        // Cost row: coin + value, centered.
+        ctx.font = 'bold 11px monospace';
+        var costStr = '' + sk.cost;
+        var costTextW = ctx.measureText(costStr).width;
+        var rowW = 12 + 4 + costTextW;
+        var rowStartX = cx + (cardW - rowW) / 2;
+        ctx.drawImage(game.sprites.coin, rowStartX, cy + 90 - 6);
+        var costColor;
+        if (canAfford) { costColor = '#fee761'; } else { costColor = '#888'; }
+        drawTextWithShadow(costStr, rowStartX + 16, cy + 90, costColor, 'bold 11px monospace', 'start');
+
+        // DMG / RATE inline (RNG omitted — too tight for 3 columns at 115 wide).
+        drawTextWithShadow('DMG ' + sk.damage + '   RATE ' + sk.fireRate, cx + cardW / 2, cy + 110, '#c8a868', 'bold 8px monospace', 'center');
+
+        // Stats card-internal row at the bottom — recessed to match desktop visual.
+        var statsY = cy + cardH - 32;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+        ctx.fillRect(cx + 12, statsY, cardW - 24, 18);
+        ctx.fillStyle = '#2a1810';
+        ctx.fillRect(cx + 12, statsY, cardW - 24, 1);
+        drawTextWithShadow('RNG', cx + cardW / 2 - 18, statsY + 9, '#c8a868', 'bold 8px monospace', 'start');
+        drawTextWithShadow('' + sk.range, cx + cardW / 2 + 8, statsY + 9, '#f5e6c8', 'bold 10px monospace', 'start');
+
+        // ? hangtag at top-right. Larger than landscape (16 vs 18) for tappability.
+        var tagW = 18;
+        var tagH = 18;
+        var tagX = cx + cardW - tagW - 4;
+        var tagY = cy + 4;
+        ctx.fillStyle = '#fff8e8';
+        ctx.fillRect(tagX, tagY, tagW, tagH);
+        ctx.fillStyle = '#f0dfb8';
+        ctx.fillRect(tagX + 1, tagY + tagH - 3, tagW - 2, 2);
+        ctx.fillStyle = '#2a1810';
+        ctx.fillRect(tagX, tagY, tagW, 1);
+        ctx.fillRect(tagX, tagY, 1, tagH);
+        ctx.fillRect(tagX + tagW - 1, tagY, 1, tagH);
+        ctx.fillRect(tagX, tagY + tagH - 1, tagW, 1);
+        ctx.fillStyle = '#2a1810';
+        ctx.fillRect(tagX + tagW / 2 - 1, tagY - 3, 2, 4);
+        ctx.font = 'bold 13px monospace';
+        ctx.fillStyle = '#2a1810';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('?', tagX + tagW / 2, tagY + tagH / 2 + 1);
+        ctx.textAlign = 'start';
+        ctx.textBaseline = 'alphabetic';
+        ui.shopInfoRects.push({ x: tagX, y: tagY, w: tagW, h: tagH, kind: k });
+
+        // Armed-card highlight + Tap a spot pill
+        if (ui.armedKind === k) {
+          ctx.strokeStyle = '#fee761';
+          ctx.lineWidth = 3;
+          ctx.strokeRect(cx + 1, cy + 1, cardW - 2, cardH - 2);
+          ctx.lineWidth = 1;
+          var pillW = cardW - 16;
+          var pillH = 14;
+          var pillX = cx + 8;
+          var pillY = cy + cardH - 10;
+          ctx.fillStyle = '#fee761';
+          ctx.fillRect(pillX, pillY, pillW, pillH);
+          ctx.fillStyle = '#2a1810';
+          ctx.fillRect(pillX, pillY, pillW, 1);
+          ctx.fillRect(pillX, pillY + pillH - 1, pillW, 1);
+          ctx.fillRect(pillX, pillY, 1, pillH);
+          ctx.fillRect(pillX + pillW - 1, pillY, 1, pillH);
+          drawTextWithShadow('TAP A SPOT', pillX + pillW / 2, pillY + pillH / 2, '#2a1810', 'bold 8px monospace', 'center');
+        }
+      } else {
+        // === LANDSCAPE CARD === (existing visual coherence layout, unchanged)
+        // Sprite tile (32x32 dark inset)
+        var spXL = cx + 10;
+        var spYL = cy + 8;
+        ctx.fillStyle = '#2a1810';
+        ctx.fillRect(spXL, spYL, 32, 32);
+        ctx.fillStyle = '#1a0a00';
+        ctx.fillRect(spXL, spYL, 32, 1);
+        ctx.fillRect(spXL, spYL, 1, 32);
+        ctx.fillRect(spXL + 31, spYL, 1, 32);
+        ctx.fillRect(spXL, spYL + 31, 32, 1);
+        // Render the full cannon (base + turret) so the shop card matches the
+        // in-game silhouette. Match the in-game offsets: base centered in the
+        // 32x32 tile, turret offset +6 px on x.
+        ctx.drawImage(game.sprites.cannonBase, spXL, spYL);
+        var turretL = game.sprites.turrets[k];
+        if (turretL) { ctx.drawImage(turretL, spXL + 6, spYL); }
+
+        // Name — truncate so a long name can't reach the "?" hangtag.
+        // Sprite tile ends at spXL+32 (we render the name at spXL+36); hangtag
+        // starts at cx + cardW - 22 with a 4px gap.
+        ctx.font = 'bold 11px monospace';
+        var fittedShopName = truncateToWidth(sk.name, cardW - 72);
+        drawTextWithShadow(fittedShopName, spXL + 36, cy + 14, '#fee761', 'bold 11px monospace', 'start');
+
+        // Cost row: coin sprite + value, vertically centered with the coin.
+        var costYL = cy + 30;
+        ctx.drawImage(game.sprites.coin, spXL + 36, costYL - 5);
+        var costColorL;
+        if (canAfford) { costColorL = '#fee761'; } else { costColorL = '#888'; }
+        drawTextWithShadow('' + sk.cost, spXL + 52, costYL + 1, costColorL, 'bold 11px monospace', 'start');
+
+        // Stats row — inset from the family-color strip on the left so the
+        // box doesn't visually butt against it. cx+12 leaves a 5px gap
+        // past the strip border at cx+7; right edge stays at cx+cardW-8.
+        var statsYL = cy + 56;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+        ctx.fillRect(cx + 12, statsYL - 4, cardW - 20, 18);
+        ctx.fillStyle = '#2a1810';
+        ctx.fillRect(cx + 12, statsYL - 4, cardW - 20, 1);
+
+        // Three stats in equal-width columns, label-then-value with a fixed gap.
+        var statColW = (cardW - 20) / 3;
+        var col1X = cx + 12;
+        var col2X = cx + 12 + statColW;
+        var col3X = cx + 12 + 2 * statColW;
+        drawTextWithShadow('DMG', col1X, statsYL + 4, '#c8a868', 'bold 8px monospace', 'start');
+        drawTextWithShadow('' + sk.damage, col1X + 22, statsYL + 4, '#f5e6c8', 'bold 10px monospace', 'start');
+        drawTextWithShadow('RATE', col2X, statsYL + 4, '#c8a868', 'bold 8px monospace', 'start');
+        drawTextWithShadow('' + sk.fireRate, col2X + 26, statsYL + 4, '#f5e6c8', 'bold 10px monospace', 'start');
+        drawTextWithShadow('RNG', col3X, statsYL + 4, '#c8a868', 'bold 8px monospace', 'start');
+        drawTextWithShadow('' + sk.range, col3X + 22, statsYL + 4, '#f5e6c8', 'bold 10px monospace', 'start');
+
+        // Cream paper "?" hangtag at the top-right — stands out against the wooden card
+        var tagWL = 18;
+        var tagHL = 18;
+        var tagXL = cx + cardW - tagWL - 4;
+        var tagYL = cy + 4;
+        // Paper body (cream)
+        ctx.fillStyle = '#fff8e8';
+        ctx.fillRect(tagXL, tagYL, tagWL, tagHL);
+        ctx.fillStyle = '#f0dfb8';
+        ctx.fillRect(tagXL + 1, tagYL + tagHL - 3, tagWL - 2, 2);
+        // Dark border
+        ctx.fillStyle = '#2a1810';
+        ctx.fillRect(tagXL, tagYL, tagWL, 1);
+        ctx.fillRect(tagXL, tagYL, 1, tagHL);
+        ctx.fillRect(tagXL + tagWL - 1, tagYL, 1, tagHL);
+        ctx.fillRect(tagXL, tagYL + tagHL - 1, tagWL, 1);
+        // Dark string anchor at top
+        ctx.fillStyle = '#2a1810';
+        ctx.fillRect(tagXL + tagWL / 2 - 1, tagYL - 3, 2, 4);
+        // "?" glyph in dark on cream
+        ctx.font = 'bold 13px monospace';
+        ctx.fillStyle = '#2a1810';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('?', tagXL + tagWL / 2, tagYL + tagHL / 2 + 1);
+        ctx.textAlign = 'start';
+        ctx.textBaseline = 'alphabetic';
+        ui.shopInfoRects.push({ x: tagXL, y: tagYL, w: tagWL, h: tagHL, kind: k });
+
+        // Armed-card highlight + Tap a spot pill
+        if (ui.armedKind === k) {
+          ctx.strokeStyle = '#fee761';
+          ctx.lineWidth = 3;
+          ctx.strokeRect(cx + 1, cy + 1, cardW - 2, cardH - 2);
+          ctx.lineWidth = 1;
+          var pillWL = 60;
+          var pillHL = 12;
+          var pillXL = cx + cardW / 2 - pillWL / 2;
+          var pillYL = cy + cardH - 6;
+          ctx.fillStyle = '#fee761';
+          ctx.fillRect(pillXL, pillYL, pillWL, pillHL);
+          ctx.fillStyle = '#2a1810';
+          ctx.fillRect(pillXL, pillYL, pillWL, 1);
+          ctx.fillRect(pillXL, pillYL + pillHL - 1, pillWL, 1);
+          ctx.fillRect(pillXL, pillYL, 1, pillHL);
+          ctx.fillRect(pillXL + pillWL - 1, pillYL, 1, pillHL);
+          drawTextWithShadow('TAP A SPOT', pillXL + pillWL / 2, pillYL + pillHL / 2, '#2a1810', 'bold 8px monospace', 'center');
+        }
       }
 
-      ui.shopRects.push({ x: cardX, y: cy, w: cardW, h: cardH, kind: k });
+      ui.shopRects.push({ x: cx, y: cy, w: cardW, h: cardH, kind: k });
     }
   }
 
