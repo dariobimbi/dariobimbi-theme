@@ -2746,36 +2746,52 @@ body.has-ant-buster-page {
       ui.sendNextRect = null;
     }
 
-    // Pause icon — drawn directly on the plaque, with a 1-px dark stamp for legibility.
+    // Pause and speed widgets — repositioned inline with the Send Next button.
+    // Wooden tag underneath each so they read as part of the HUD chrome on
+    // the right edge. Pause and speed sit at fixed positions; Send Next
+    // appears to their right during prep.
+    ui.pauseRect.x = PLAYFIELD_W - 122;
+    ui.pauseRect.y = 2;
+    ui.pauseRect.w = 22;
+    ui.pauseRect.h = HUD_H - 4;
+    ui.speedRect.x = PLAYFIELD_W - 96;
+    ui.speedRect.y = 2;
+    ui.speedRect.w = 22;
+    ui.speedRect.h = HUD_H - 4;
+
+    drawWoodenTag(ui.pauseRect.x, ui.pauseRect.y, ui.pauseRect.w, ui.pauseRect.h);
+    // Pause icon centered in the 22x20 tag (icon is 7x10).
+    var pIconX = ui.pauseRect.x + (ui.pauseRect.w - 7) / 2;
+    var pIconY = ui.pauseRect.y + (ui.pauseRect.h - 10) / 2;
     ctx.fillStyle = '#2a1810';
     if (game.paused) {
       ctx.beginPath();
-      ctx.moveTo(ui.pauseRect.x + 5 + 1, ui.pauseRect.y + 4 + 1);
-      ctx.lineTo(ui.pauseRect.x + 12 + 1, ui.pauseRect.y + 8 + 1);
-      ctx.lineTo(ui.pauseRect.x + 5 + 1, ui.pauseRect.y + 12 + 1);
+      ctx.moveTo(pIconX + 1, pIconY + 1);
+      ctx.lineTo(pIconX + 8, pIconY + 6);
+      ctx.lineTo(pIconX + 1, pIconY + 11);
       ctx.closePath();
       ctx.fill();
     } else {
-      ctx.fillRect(ui.pauseRect.x + 5 + 1, ui.pauseRect.y + 4 + 1, 2, 8);
-      ctx.fillRect(ui.pauseRect.x + 9 + 1, ui.pauseRect.y + 4 + 1, 2, 8);
+      ctx.fillRect(pIconX + 1, pIconY + 1, 2, 10);
+      ctx.fillRect(pIconX + 5, pIconY + 1, 2, 10);
     }
     ctx.fillStyle = '#fee761';
     if (game.paused) {
       ctx.beginPath();
-      ctx.moveTo(ui.pauseRect.x + 5, ui.pauseRect.y + 4);
-      ctx.lineTo(ui.pauseRect.x + 12, ui.pauseRect.y + 8);
-      ctx.lineTo(ui.pauseRect.x + 5, ui.pauseRect.y + 12);
+      ctx.moveTo(pIconX, pIconY);
+      ctx.lineTo(pIconX + 7, pIconY + 5);
+      ctx.lineTo(pIconX, pIconY + 10);
       ctx.closePath();
       ctx.fill();
     } else {
-      ctx.fillRect(ui.pauseRect.x + 5, ui.pauseRect.y + 4, 2, 8);
-      ctx.fillRect(ui.pauseRect.x + 9, ui.pauseRect.y + 4, 2, 8);
+      ctx.fillRect(pIconX, pIconY, 2, 10);
+      ctx.fillRect(pIconX + 4, pIconY, 2, 10);
     }
 
-    // Speed widget — label drawn directly on the plaque (drawTextWithShadow already includes a dark stamp).
+    drawWoodenTag(ui.speedRect.x, ui.speedRect.y, ui.speedRect.w, ui.speedRect.h);
     var speedLabel;
     if (game.speed === 2) { speedLabel = '2x'; } else { speedLabel = '1x'; }
-    drawTextWithShadow(speedLabel, ui.speedRect.x + ui.speedRect.w / 2, ui.speedRect.y + ui.speedRect.h / 2, '#fee761', 'bold 9px monospace', 'center');
+    drawTextWithShadow(speedLabel, ui.speedRect.x + ui.speedRect.w / 2, ui.speedRect.y + ui.speedRect.h / 2, '#fee761', 'bold 11px monospace', 'center');
   }
 
   // Layer 13a: drag preview (ghost cannon under the cursor while dragging from
