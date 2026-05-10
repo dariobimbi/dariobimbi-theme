@@ -2155,6 +2155,137 @@ body.has-ant-buster-page {
     }
   }
 
+  // Visual coherence pass — shared wooden chrome primitives.
+  // drawWoodenPlaque: filled wood gradient with edge highlights and a deep border.
+  // Used as the HUD strip background and as the body of larger signs.
+  function drawWoodenPlaque(x, y, w, h) {
+    var grd = ctx.createLinearGradient(x, y, x, y + h);
+    grd.addColorStop(0, '#6a4a2e');
+    grd.addColorStop(1, '#4a3220');
+    ctx.fillStyle = grd;
+    ctx.fillRect(x, y, w, h);
+    // Top edge highlight (wood-edge)
+    ctx.fillStyle = '#5a3a20';
+    ctx.fillRect(x, y, w, 1);
+    // Bottom edge highlight (wood-light)
+    ctx.fillStyle = '#8a6a4e';
+    ctx.fillRect(x, y + h - 2, w, 2);
+    // Bottom border (wood-deep)
+    ctx.fillStyle = '#2a1810';
+    ctx.fillRect(x, y + h - 1, w, 1);
+  }
+
+  // drawWoodenTag: a small recessed wooden box for HUD readouts and stat cells.
+  // Body is a darker wood gradient than the plaque so tags sit IN the plaque.
+  function drawWoodenTag(x, y, w, h) {
+    var grd = ctx.createLinearGradient(x, y, x, y + h);
+    grd.addColorStop(0, '#5a3a20');
+    grd.addColorStop(1, '#3a2210');
+    ctx.fillStyle = grd;
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#2a1810';
+    ctx.fillRect(x, y, w, 1);                    // top dark inset
+    ctx.fillRect(x, y, 1, h);
+    ctx.fillRect(x + w - 1, y, 1, h);
+    ctx.fillRect(x, y + h - 1, w, 1);
+    ctx.fillStyle = '#8a6a4e';
+    ctx.fillRect(x + 1, y + h - 2, w - 2, 1);    // light bottom inset
+  }
+
+  // drawWoodenSign: full wooden sign with two metal nails at the top corners
+  // and a bottom drop shadow. Used by all four full-screen overlays plus the
+  // wave intro banner (at smaller scale).
+  function drawWoodenSign(x, y, w, h) {
+    // Drop shadow first so it sits behind the body
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+    ctx.fillRect(x + 2, y + h, w, 4);
+    // Body (lighter than tags so the sign reads as foreground)
+    var grd = ctx.createLinearGradient(x, y, x, y + h);
+    grd.addColorStop(0, '#6a4a2e');
+    grd.addColorStop(1, '#4a3220');
+    ctx.fillStyle = grd;
+    ctx.fillRect(x, y, w, h);
+    // 3 px deep border
+    ctx.fillStyle = '#2a1810';
+    ctx.fillRect(x, y, w, 3);
+    ctx.fillRect(x, y, 3, h);
+    ctx.fillRect(x + w - 3, y, 3, h);
+    ctx.fillRect(x, y + h - 3, w, 3);
+    // Inset edge highlights
+    ctx.fillStyle = '#5a3a20';
+    ctx.fillRect(x + 3, y + 3, w - 6, 1);
+    ctx.fillStyle = '#8a6a4e';
+    ctx.fillRect(x + 3, y + h - 4, w - 6, 1);
+    // Two metal nails at top corners
+    ctx.fillStyle = '#444';
+    ctx.fillRect(x + 6, y + 5, 4, 4);
+    ctx.fillRect(x + w - 10, y + 5, 4, 4);
+    ctx.fillStyle = '#888';
+    ctx.fillRect(x + 7, y + 6, 2, 2);
+    ctx.fillRect(x + w - 9, y + 6, 2, 2);
+  }
+
+  // drawWoodenButton: a chunky button with a top light inset and a bottom
+  // shadow inset. Three variants:
+  //   'green'  PLAY / Send Next / affordable upgrade row
+  //   'red'    Sell / Restart Run
+  //   'wood'   Targeting buttons and back link (neutral)
+  function drawWoodenButton(x, y, w, h, variant) {
+    var topColor; var bottomColor; var borderColor; var lightColor; var shadowColor;
+    if (variant === 'red') {
+      topColor = '#a04040';
+      bottomColor = '#6a2020';
+      borderColor = '#2a0a0a';
+      lightColor = '#c06060';
+      shadowColor = '#6a2020';
+    } else if (variant === 'wood') {
+      topColor = '#5a3a20';
+      bottomColor = '#3a2210';
+      borderColor = '#2a1810';
+      lightColor = '#8a6a4e';
+      shadowColor = '#3a2210';
+    } else {
+      // green default
+      topColor = '#9ac870';
+      bottomColor = '#6a9840';
+      borderColor = '#2a1810';
+      lightColor = '#b8e890';
+      shadowColor = '#88b860';
+    }
+    var grd = ctx.createLinearGradient(x, y, x, y + h);
+    grd.addColorStop(0, topColor);
+    grd.addColorStop(1, bottomColor);
+    ctx.fillStyle = grd;
+    ctx.fillRect(x, y, w, h);
+    // 2 px border
+    ctx.fillStyle = borderColor;
+    ctx.fillRect(x, y, w, 2);
+    ctx.fillRect(x, y, 2, h);
+    ctx.fillRect(x + w - 2, y, 2, h);
+    ctx.fillRect(x, y + h - 2, w, 2);
+    // Top light inset
+    ctx.fillStyle = lightColor;
+    ctx.fillRect(x + 2, y + 2, w - 4, 2);
+    // Bottom shadow inset
+    ctx.fillStyle = shadowColor;
+    ctx.fillRect(x + 2, y + h - 4, w - 4, 2);
+  }
+
+  // drawTextWithShadow: drops a 1-px wood-deep shadow behind the text so
+  // numbers and labels stand off the wood. Used by every readout, label,
+  // and title in the visual pass.
+  function drawTextWithShadow(text, x, y, color, font, align) {
+    ctx.font = font;
+    if (align) { ctx.textAlign = align; } else { ctx.textAlign = 'start'; }
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#2a1810';
+    ctx.fillText(text, x + 1, y + 1);
+    ctx.fillStyle = color;
+    ctx.fillText(text, x, y);
+    ctx.textAlign = 'start';
+    ctx.textBaseline = 'alphabetic';
+  }
+
   // Layer 11: HUD strip across the top of the playfield. Gold, cake, lost,
   // wave index, prep timer, send-next button, pause + speed widgets.
   function drawHud() {
