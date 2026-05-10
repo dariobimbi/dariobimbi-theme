@@ -172,6 +172,28 @@ body.has-ant-buster-page {
     { x: 320, y: 320, size: 1, rot:  2.09 }
   ];
 
+  // Portrait variant: 15 ants distributed across a 480x540 canvas. Roughly
+  // 4 in the HUD area (y < 24, decorative -- they're behind the HUD plaque
+  // but visible in idle splash before the plaque renders solid), 7 across
+  // the playfield (y 24..360), 4 in the strip area (y 360..540).
+  var IDLE_ANT_LAYOUT_PORTRAIT = [
+    { x:  30, y:  10, size: 2, rot:  0.6 },
+    { x: 360, y:  14, size: 1, rot: -0.35 },
+    { x: 110, y:  60, size: 0, rot:  1.92 },
+    { x: 420, y:  90, size: 1, rot:  1.31 },
+    { x:  50, y: 130, size: 1, rot: -0.87 },
+    { x: 430, y: 180, size: 2, rot: -1.92 },
+    { x:  40, y: 230, size: 0, rot:  0.35 },
+    { x: 380, y: 260, size: 1, rot:  2.79 },
+    { x: 100, y: 310, size: 1, rot: -1.22 },
+    { x: 270, y: 340, size: 2, rot:  0.7 },
+    { x:  60, y: 390, size: 0, rot: -0.5 },
+    { x: 410, y: 410, size: 1, rot:  1.0 },
+    { x: 200, y: 450, size: 0, rot:  2.1 },
+    { x: 100, y: 490, size: 1, rot: -1.7 },
+    { x: 380, y: 510, size: 2, rot:  0.3 }
+  ];
+
   // Static layout for win-splash confetti. Each: { x, color }. y is animated.
   var WIN_CONFETTI_LAYOUT = [
     { x:  60, color: '#fee761' },
@@ -3527,29 +3549,48 @@ body.has-ant-buster-page {
   }
 
   function drawIdleOverlay() {
+    var portrait = isPortrait();
+
     // Dim layer
     ctx.fillStyle = 'rgba(20, 10, 4, 0.55)';
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
     // 15 scattered ants, behind the cake and sign.
-    for (var i = 0; i < IDLE_ANT_LAYOUT.length; i++) {
-      var a = IDLE_ANT_LAYOUT[i];
+    var layoutAnts;
+    if (portrait) { layoutAnts = IDLE_ANT_LAYOUT_PORTRAIT; }
+    else { layoutAnts = IDLE_ANT_LAYOUT; }
+    for (var i = 0; i < layoutAnts.length; i++) {
+      var a = layoutAnts[i];
       drawSplashAnt(a.x, a.y, a.size, a.rot);
     }
 
-    // Hero cake — 96x72 sprite scaled 2.92x to render at ~280x210, top-edge y=14.
-    var cakeW = 280;
-    var cakeH = 210;
-    var cakeX = (WIDTH - cakeW) / 2;
-    var cakeY = 14;
+    // Hero cake -- landscape: 280x210 at y=14, centered. Portrait: smaller
+    // 192x144 sit near the top of the playfield (HUD_H + 24) so there's
+    // room below for the sign and PLAY button within the 336-tall playfield.
+    var cakeW; var cakeH; var cakeX; var cakeY;
+    if (portrait) {
+      cakeW = 192;
+      cakeH = 144;
+      cakeX = (WIDTH - cakeW) / 2;
+      cakeY = HUD_H + 24;
+    } else {
+      cakeW = 280;
+      cakeH = 210;
+      cakeX = (WIDTH - cakeW) / 2;
+      cakeY = 14;
+    }
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(game.sprites.titleCake, cakeX, cakeY, cakeW, cakeH);
 
-    // Title sign — 380x140, bottom edge y=320, overlaps cake's lower portion.
+    // Title sign -- 380x140. Landscape: bottom edge y=HEIGHT-40. Portrait:
+    // positioned so it overlaps the cake's lower portion (same visual idea
+    // as landscape), with PLAY button sitting just below cake area.
     var signW = 380;
     var signH = 140;
     var signX = (WIDTH - signW) / 2;
-    var signY = HEIGHT - 40 - signH;
+    var signY;
+    if (portrait) { signY = HUD_H + 144; }
+    else { signY = HEIGHT - 40 - signH; }
     drawWoodenSign(signX, signY, signW, signH);
 
     // Eyebrow
