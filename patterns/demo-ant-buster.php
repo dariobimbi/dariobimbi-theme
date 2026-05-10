@@ -137,6 +137,14 @@ body.has-ant-buster-page {
     { x: 340, y: 330, size: 2, rot: -0.3 }
   ];
 
+  // Family-color strip lookup for shop cards.
+  var FAMILY_STRIP_COLOR = {
+    heavy:  '#888',
+    quick:  '#b0d04a',
+    status: '#8a5ac8',
+    rubber: '#ff77a8'
+  };
+
   // === DEBUG MODE ===
   // Captured once at parse time from the URL. ?debug=1 enables the T hotkey
   // (cycles spawning each ant kind at the anthill). The check uses a plain
@@ -1546,52 +1554,151 @@ body.has-ant-buster-page {
   // Note: cake sprite is regenerated in render() per frame because it depends on slice count.
 
   // === RENDERING ===
+  // Wood-grain panel background filling the right shop column.
+  // Vertical 4-px stripes alternating two wood tones plus a top-to-bottom
+  // gradient overlay to read as planks.
+  function drawShopBackground() {
+    var sx = PLAYFIELD_W;
+    var sy = 0;
+    var sw = SHOP_W;
+    var sh = HEIGHT;
+    // Stripes
+    for (var i = 0; i < sw; i = i + 4) {
+      if ((i / 4) % 2 === 0) {
+        ctx.fillStyle = '#4a3220';
+      } else {
+        ctx.fillStyle = '#5a3a26';
+      }
+      ctx.fillRect(sx + i, sy, 4, sh);
+    }
+    // Vertical darken gradient
+    var grd = ctx.createLinearGradient(sx, sy, sx, sy + sh);
+    grd.addColorStop(0, 'rgba(90, 58, 38, 0.0)');
+    grd.addColorStop(1, 'rgba(58, 32, 16, 0.6)');
+    ctx.fillStyle = grd;
+    ctx.fillRect(sx, sy, sw, sh);
+    // Left edge dark border
+    ctx.fillStyle = '#2a1810';
+    ctx.fillRect(sx, sy, 2, sh);
+  }
+
+  // Stub. Task 10 replaces this with the full info panel.
+  function drawShopInfoPanel() {
+    drawTextWithShadow('Info panel coming in Task 10', PLAYFIELD_W + SHOP_W / 2, HEIGHT / 2, '#c8a868', 'bold 10px monospace', 'center');
+  }
+
   function drawShop() {
-    var cardX = PLAYFIELD_W + 8;
-    var startY = 32;
-    var cardH = 70;
-    var cardW = SHOP_W - 16;
-    // Plan 4: Pink Pea joins the base-cannon shop column as the 4th card.
-    // The Pink Rubber Family is a "casual / approachable" 4th family per
-    // Plan 3 §9 — available from wave 1 with no gating.
+    drawShopBackground();
+
+    // "CANNONS" header
+    drawTextWithShadow('CANNONS', PLAYFIELD_W + SHOP_W / 2, 14, '#c8a868', 'bold 9px monospace', 'center');
+
+    // If shopMode is 'info', delegate to the info panel render and return.
+    if (ui.shopMode === 'info') {
+      drawShopInfoPanel();
+      return;
+    }
+
     var keys = ['howitzer', 'repeater', 'twingun', 'pink_pea'];
     ui.shopRects = [];
+    ui.shopInfoRects = [];
+    var cardX = PLAYFIELD_W + 6;
+    var cardW = SHOP_W - 12;
+    var cardH = 78;
+    var startY = 26;
+
     for (var i = 0; i < keys.length; i++) {
       var k = keys[i];
       var sk = CANNON_KINDS[k];
-      var cy = startY + i * (cardH + 8);
-      // card background
-      ctx.fillStyle = '#262b44';
-      ctx.fillRect(cardX, cy, cardW, cardH);
-      // turret sprite mini icon (top-left of card)
+      var cy = startY + i * (cardH + 4);
+      var canAfford = (game.gold >= sk.cost);
+
+      // Card body
+      drawWoodenButton(cardX, cy, cardW, cardH, 'wood');
+
+      // Family color strip
+      var stripColor = FAMILY_STRIP_COLOR[sk.family];
+      if (!stripColor) { stripColor = '#888'; }
+      ctx.fillStyle = stripColor;
+      ctx.fillRect(cardX + 2, cy + 2, 4, cardH - 4);
+      ctx.fillStyle = '#2a1810';
+      ctx.fillRect(cardX + 6, cy + 2, 1, cardH - 4);
+
+      // Sprite tile (32x32 dark inset)
+      var spX = cardX + 10;
+      var spY = cy + 8;
+      ctx.fillStyle = '#2a1810';
+      ctx.fillRect(spX, spY, 32, 32);
+      ctx.fillStyle = '#1a0a00';
+      ctx.fillRect(spX, spY, 32, 1);
+      ctx.fillRect(spX, spY, 1, 32);
+      ctx.fillRect(spX + 31, spY, 1, 32);
+      ctx.fillRect(spX, spY + 31, 32, 1);
       var turret = game.sprites.turrets[k];
-      if (turret) { ctx.drawImage(turret, cardX + 6, cy + 6); }
-      // name
-      ctx.fillStyle = '#fee761';
-      ctx.font = '10px monospace';
-      ctx.textAlign = 'left';
-      ctx.fillText(sk.name, cardX + 32, cy + 22);
-      // cost
-      var canAfford = game.gold >= sk.cost;
-      ctx.fillStyle = canAfford ? '#fee761' : '#888';
-      ctx.fillText(sk.cost + 'g', cardX + 32, cy + 38);
-      // tier or family hint (small)
-      ctx.fillStyle = '#999';
-      ctx.font = '8px monospace';
-      ctx.fillText(sk.family, cardX + 32, cy + 52);
-      // Armed-card highlight (Touch Input Task 5).
+      if (turret) { ctx.drawImage(turret, spX, spY); }
+
+      // Name
+      drawTextWithShadow(sk.name, spX + 36, cy + 14, '#fee761', 'bold 11px monospace', 'start');
+
+      // Cost row: coin sprite + value, vertically centered with the coin.
+      var costY = cy + 30;
+      ctx.drawImage(game.sprites.coin, spX + 36, costY - 5);
+      var costColor;
+      if (canAfford) { costColor = '#fee761'; } else { costColor = '#888'; }
+      drawTextWithShadow('' + sk.cost, spX + 52, costY + 1, costColor, 'bold 11px monospace', 'start');
+
+      // Stats row — full card width, below the sprite/name/cost zone.
+      var statsY = cy + 56;
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+      ctx.fillRect(cardX + 8, statsY - 4, cardW - 16, 18);
+      ctx.fillStyle = '#2a1810';
+      ctx.fillRect(cardX + 8, statsY - 4, cardW - 16, 1);
+
+      // Three stats space-between
+      var statX0 = cardX + 12;
+      var statX2 = cardX + cardW - 12;
+      var statXMid = (statX0 + statX2) / 2;
+      drawTextWithShadow('DMG', statX0, statsY + 4, '#c8a868', 'bold 8px monospace', 'start');
+      drawTextWithShadow('' + sk.damage, statX0 + 22, statsY + 4, '#f5e6c8', 'bold 10px monospace', 'start');
+      drawTextWithShadow('RATE', statXMid - 18, statsY + 4, '#c8a868', 'bold 8px monospace', 'start');
+      drawTextWithShadow('' + sk.fireRate, statXMid + 12, statsY + 4, '#f5e6c8', 'bold 10px monospace', 'start');
+      drawTextWithShadow('RNG', statX2 - 28, statsY + 4, '#c8a868', 'bold 8px monospace', 'start');
+      drawTextWithShadow('' + sk.range, statX2 - 4, statsY + 4, '#f5e6c8', 'bold 10px monospace', 'end');
+
+      // "?" wooden hangtag at the top-right
+      var tagW = 16;
+      var tagH = 16;
+      var tagX = cardX + cardW - tagW - 4;
+      var tagY = cy + 2;
+      drawWoodenTag(tagX, tagY, tagW, tagH);
+      // Dark string anchor
+      ctx.fillStyle = '#2a1810';
+      ctx.fillRect(tagX + tagW / 2 - 1, tagY - 3, 2, 4);
+      drawTextWithShadow('?', tagX + tagW / 2, tagY + tagH / 2, '#fee761', 'bold 12px monospace', 'center');
+      ui.shopInfoRects.push({ x: tagX, y: tagY, w: tagW, h: tagH, kind: k });
+
+      // Armed-card highlight + Tap a spot pill
       if (ui.armedKind === k) {
         ctx.strokeStyle = '#fee761';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 3;
         ctx.strokeRect(cardX + 1, cy + 1, cardW - 2, cardH - 2);
-        ctx.fillStyle = '#aaa';
-        ctx.font = '8px monospace';
-        ctx.fillText('tap a spot', cardX + 32, cy + 64);
+        ctx.lineWidth = 1;
+        var pillW = 60;
+        var pillH = 12;
+        var pillX = cardX + cardW / 2 - pillW / 2;
+        var pillY = cy + cardH - 6;
+        ctx.fillStyle = '#fee761';
+        ctx.fillRect(pillX, pillY, pillW, pillH);
+        ctx.fillStyle = '#2a1810';
+        ctx.fillRect(pillX, pillY, pillW, 1);
+        ctx.fillRect(pillX, pillY + pillH - 1, pillW, 1);
+        ctx.fillRect(pillX, pillY, 1, pillH);
+        ctx.fillRect(pillX + pillW - 1, pillY, 1, pillH);
+        drawTextWithShadow('TAP A SPOT', pillX + pillW / 2, pillY + pillH / 2, '#2a1810', 'bold 8px monospace', 'center');
       }
+
       ui.shopRects.push({ x: cardX, y: cy, w: cardW, h: cardH, kind: k });
     }
-    ctx.font = '10px monospace';   // restore default
-    ctx.textAlign = 'start';
   }
 
   // Sell refund = 70% of the floored sum of every kind ever owned (kindHistory
@@ -5910,7 +6017,11 @@ body.has-ant-buster-page {
     hoveredUpgrade: null,   // when hovering an upgrade button, the target kind key (for range preview)
     sellRect: null,         // sell button in the tower panel
     targetingRects: [],     // Plan 7 — five mode-button rects (or empty for aura cannons)
-    shopRects: []           // populated by drawShop; one rect per shop card
+    shopRects: [],          // populated by drawShop; one rect per shop card
+    shopMode: 'list',       // 'list' | 'info' — Task 9 visual coherence shop sidebar
+    shopInfoKind: null,     // selected kind when shopMode === 'info' (Task 10)
+    shopInfoRects: [],      // populated by drawShop; one rect per "?" hangtag
+    idlePlayRect: null
   };
 
   function canvasToGame(evt) {
