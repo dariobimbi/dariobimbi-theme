@@ -6921,6 +6921,38 @@ body.has-ant-buster-page {
     };
   }
 
+  // Returns true when the point is inside the playfield rect (between the
+  // HUD and the bottom of the playable area, and within the playfield
+  // width). Centralizes the orientation-aware check so the pointer handler
+  // doesn't need to special-case landscape vs portrait. Replaces the old
+  // `p.x < PLAYFIELD_W` shorthand, which incorrectly returned true for the
+  // bottom strip in portrait (strip x range is 0..480, same as playfield).
+  function inPlayfield(p) {
+    if (p.x < 0) { return false; }
+    if (p.x >= PLAYFIELD_W) { return false; }
+    if (p.y < HUD_H) { return false; }
+    if (p.y >= HUD_H + PLAYFIELD_H) { return false; }
+    return true;
+  }
+
+  // Returns true when the point is inside the shop sidebar (landscape) or
+  // the bottom strip (portrait). The complement of inPlayfield for the
+  // non-HUD area. HUD-area taps (y < HUD_H) return false so they don't
+  // fire side-panel hit-tests.
+  function inSidePanel(p) {
+    if (p.y < HUD_H) { return false; }
+    if (isPortrait()) {
+      // Portrait: strip lives BELOW the playfield.
+      if (p.y < HUD_H + PLAYFIELD_H) { return false; }
+      if (p.y >= HEIGHT) { return false; }
+      return true;
+    }
+    // Landscape: sidebar lives to the RIGHT of the playfield.
+    if (p.x < PLAYFIELD_W) { return false; }
+    if (p.x >= WIDTH) { return false; }
+    return true;
+  }
+
   canvas.addEventListener('pointerdown', function (evt) {
     if (ui.activePointerId !== null) { return; }   // single-pointer lock
     canvas.setPointerCapture(evt.pointerId);
@@ -6963,14 +6995,12 @@ body.has-ant-buster-page {
       // Playfield: enter Placing (ghost will render via drawDragPreview).
       // Skipped while paused so the pause-overlay's Restart Run check downstream
       // can still receive the gesture. Armed survives the paused tap.
-      if (p.x < PLAYFIELD_W) {
-        if (p.y >= HUD_H) {
-          if (!game.paused) {
-            // Note: do not call placeCannon here. Placement commits on
-            // pointerup (Step 2 below) so the player can slide-to-adjust.
-            canvas.classList.add('ab-dragging');
-            return;
-          }
+      if (inPlayfield(p)) {
+        if (!game.paused) {
+          // Note: do not call placeCannon here. Placement commits on
+          // pointerup (Step 2 below) so the player can slide-to-adjust.
+          canvas.classList.add('ab-dragging');
+          return;
         }
       }
       // Anything else (HUD, side panel, etc.): fall through to normal
@@ -7013,7 +7043,7 @@ body.has-ant-buster-page {
       }
     }
     if (game.state === 'playing') {
-      if (p.x < PLAYFIELD_W) {
+      if (inPlayfield(p)) {
         // If info panel is open, close it on any playfield tap.
         if (ui.shopMode === 'info') {
           ui.shopMode = 'list';
@@ -7043,7 +7073,7 @@ body.has-ant-buster-page {
       // selectedCannon silently.
       if (ui.selectedCannon) {
        if (ui.shopMode === 'list') {
-        if (p.x >= PLAYFIELD_W) {
+        if (inSidePanel(p)) {
           // Detail-panel back link: clear selection.
           if (ui.detailBackRect) {
             var dbr = ui.detailBackRect;
@@ -7138,7 +7168,7 @@ body.has-ant-buster-page {
         }
       }
       // Any other tap inside the info panel: close.
-      if (p.x >= PLAYFIELD_W) {
+      if (inSidePanel(p)) {
         ui.shopMode = 'list';
         ui.shopInfoKind = null;
         ui.shopInfoFrom = null;
