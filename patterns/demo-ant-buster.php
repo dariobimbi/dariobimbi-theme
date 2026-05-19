@@ -2987,9 +2987,27 @@ body.has-ant-buster-page {
       ctx.save();
       ctx.translate(Math.round(c.x), Math.round(c.y));
       ctx.rotate(c.heading + Math.PI / 2);
-      var turretSprite = game.sprites.turrets[c.kind];
-      if (!turretSprite) { turretSprite = game.sprites.turrets.howitzer; }
-      ctx.drawImage(turretSprite, -10, -16);
+      // Try the PNG sprite first; fall back to procedural if missing, broken,
+      // or still loading. Nested ifs (no && chains) per the CLAUDE.md note about
+      // WordPress occasionally HTML-encoding && inside inline scripts.
+      var pngSprite = game.sprites.cannonTurretPNG[c.kind];
+      var pngReady = false;
+      if (pngSprite) {
+        if (pngSprite.complete) {
+          if (pngSprite.naturalWidth) { pngReady = true; }
+        }
+      }
+      var turretSprite, drawX, drawY;
+      if (pngReady) {
+        turretSprite = pngSprite;
+        drawX = -pngSprite.naturalWidth / 2;
+        drawY = -pngSprite.naturalHeight / 2;
+      } else {
+        turretSprite = game.sprites.turrets[c.kind];
+        if (!turretSprite) { turretSprite = game.sprites.turrets.howitzer; }
+        drawX = -10; drawY = -16;
+      }
+      ctx.drawImage(turretSprite, drawX, drawY);
       ctx.restore();
       // Plan 4 — muzzle flash. Renders for FLASH_DUR seconds after the cannon
       // fires; alpha fades linearly. flashScale on def scales the flash
