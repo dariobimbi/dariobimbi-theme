@@ -37,3 +37,13 @@ vendor/
 assets/projects/lost-probe/*.avi
 assets/projects/lost-probe/*.wmv
 assets/projects/lost-probe/*.exe
+
+# Sprite authoring scraps. Final exports go in assets/sprites/cannons/<class>/<kind>.png;
+# PSD sources live in tools/sprites/cannons/<class>/<kind>.psd. Anything else
+# (numbered iteration variants, "copy" suffixes, raw exports, stray PSDs in the
+# web-served tree) is workshop noise.
+assets/sprites/cannons/**/*-[0-9].png
+assets/sprites/cannons/**/*-[0-9][0-9].png
+assets/sprites/cannons/**/* copy*
+assets/sprites/cannons/**/*.raw
+assets/sprites/cannons/**/*.psd
