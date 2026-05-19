@@ -276,6 +276,11 @@ body.has-ant-buster-page {
     godTierUnlockPulseStart: 0
   };
 
+  // Theme URI and cache-bust version, injected from PHP. Used by the PNG
+  // cannon-sprite loader registered after CANNON_KINDS is declared.
+  var THEME_URI = '<?php echo esc_url( get_template_directory_uri() ); ?>';
+  var SPRITE_VER = '<?php echo esc_js( wp_get_theme()->get('Version') ); ?>';
+
   // Module-level rect helper used by HUD hit-tests. Avoids inline and-operator chains
   // (which the WP content filter occasionally HTML-encodes) and centralizes the
   // pattern that future tasks will reuse for upgrade buttons, selected-tower UI, etc.
