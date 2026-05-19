@@ -5517,6 +5517,21 @@ body.has-ant-buster-page {
     }
   };
 
+  // PNG cannon-turret preloader. Walks CANNON_KINDS and creates an Image
+  // object for every cannon kind that opts in via `spriteFile:`. Loads run
+  // asynchronously and never block the game; cannons without a spriteFile
+  // entry are skipped, and any cannon whose image is still loading or
+  // failed (404) falls through to the procedural sprite in drawCannonTurrets.
+  game.sprites.cannonTurretPNG = {};
+  for (var __spritePreloadKey in CANNON_KINDS) {
+    var __spritePreloadFile = CANNON_KINDS[__spritePreloadKey].spriteFile;
+    if (__spritePreloadFile) {
+      var __spritePreloadImg = new Image();
+      __spritePreloadImg.src = THEME_URI + '/assets/sprites/cannons/' + __spritePreloadFile + '?v=' + SPRITE_VER;
+      game.sprites.cannonTurretPNG[__spritePreloadKey] = __spritePreloadImg;
+    }
+  }
+
   function cannonAt(x, y) {
     for (var i = 0; i < game.cannons.length; i++) {
       var c = game.cannons[i];
