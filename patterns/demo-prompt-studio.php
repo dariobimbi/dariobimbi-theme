@@ -270,6 +270,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
       history.pushState(null, '', newHash);
     }
     routeFromHash();
+    scheduleSave();
   }
 
   // ---- Render ----
@@ -554,9 +555,62 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     text += '\n\nBegin your review now based on the criteria above.';
     return { text: text, instructionsOnly: instructionsOnly, contentOnly: contentOnly };
   }
-  function scheduleSave()  { /* Task 7 fills this in */ }
+  // ---- Persistence ----
+  const STORAGE_KEY = 'dariobimbi.promptStudio.v1';
+  let saveTimer = null;
+
+  function scheduleSave() {
+    if (saveTimer) { clearTimeout(saveTimer); }
+    saveTimer = setTimeout(saveNow, 200);
+  }
+
+  function saveNow() {
+    saveTimer = null;
+    try {
+      const payload = {
+        currentType: state.currentType,
+        currentMode: state.currentMode,
+        drafts: state.drafts,
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    } catch (e) {
+      // Quota or disabled storage: silently drop.
+    }
+  }
+
+  function loadFromStorage() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) { return; }
+      const parsed = JSON.parse(raw);
+      if (!parsed) { return; }
+      if (TYPES.indexOf(parsed.currentType) !== -1) {
+        state.currentType = parsed.currentType;
+      }
+      if (MODES.indexOf(parsed.currentMode) !== -1) {
+        state.currentMode = parsed.currentMode;
+      }
+      if (parsed.drafts) {
+        for (let i = 0; i < TYPES.length; i++) {
+          const t = TYPES[i];
+          if (parsed.drafts[t]) {
+            for (const k in state.drafts[t]) {
+              if (k in parsed.drafts[t]) {
+                state.drafts[t][k] = parsed.drafts[t][k];
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      // Corrupt JSON or denied access: ignore.
+    }
+  }
 
   // ---- Init ----
+  // Order matters: load storage first (defaults for type/mode), then routeFromHash()
+  // — the URL hash wins over storage per spec §2.
+  loadFromStorage();
   routeFromHash();
 })();
 </script>
