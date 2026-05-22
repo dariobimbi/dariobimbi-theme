@@ -23,7 +23,11 @@
         <!-- wp:column {"width":"60%"} -->
         <div class="wp-block-column" style="flex-basis:60%">
             <!-- wp:paragraph {"fontSize":"large","style":{"typography":{"lineHeight":"1.55"}}} -->
-            <p class="has-large-font-size" style="line-height:1.55">I started in game development at DePaul University, and that is where I picked up the habit of caring how a site feels, not just whether it loads. Day to day at Clicks I build custom WordPress themes, write functions and widgets, run PHPUnit and Jest, review pull requests from my team, and spend a fair amount of time talking with clients about what their site really needs to do. I have also shipped a couple of Flutter mobile apps for Clicks, with a Firestore and Google Cloud backend behind them, and on the database side I am in MySQL most days. That client conversation part is honestly half the work, since most clients need a little help putting the goal into words.</p>
+            <p class="has-large-font-size" style="line-height:1.55">I got my start in game development at DePaul University, which is where I developed an eye for how digital experiences feel, not just whether they function. Day to day at Clicks I build custom WordPress themes, write functions and widgets, run PHPUnit and Jest, and review pull requests from the team. I also spend a fair amount of time talking with clients about what their site really needs to do.</p>
+            <!-- /wp:paragraph -->
+
+            <!-- wp:paragraph {"fontSize":"large","style":{"typography":{"lineHeight":"1.55"}}} -->
+            <p class="has-large-font-size" style="line-height:1.55">Outside the WordPress work I have also shipped a couple of Flutter mobile apps for Clicks with a Firestore and Google Cloud backend. That client conversation part is honestly half the work, since most clients know what they want but need a little help turning it into something you can actually build.</p>
             <!-- /wp:paragraph -->
         </div>
         <!-- /wp:column -->
