@@ -68,7 +68,142 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
 <script>
 (function () {
   'use strict';
-  // Phase 1 placeholder. Router and state arrive in Task 3.
+
   document.body.classList.add('has-prompt-studio-page');
+
+  // ---- State ----
+  const TYPES = ['write', 'image', 'review'];
+  const MODES = ['build', 'lint', 'library'];
+
+  const state = {
+    currentType: 'write',
+    currentMode: 'build',
+    drafts: {
+      write:  { role:'', task:'', context:'', outputFormat:'', constraints:'', examples:'', audience:'', tone:'', advancedOpen:false },
+      image:  { subject:'', style:'', composition:'', medium:'', colorLighting:'', cameraLens:'', mood:'', negative:'', aspectRatio:'', advancedOpen:false },
+      review: { content:'', criteria:'', audience:'', outputFormat:'', severity:'', tone:'', examples:'', advancedOpen:false },
+    },
+    lint:    { input:'', detectedType:null, lastResult:null },
+    library: { search:'', category:'all', openTemplateId:null },
+  };
+
+  // ---- Hash parsing ----
+  function parseHash() {
+    const raw = (location.hash || '').replace(/^#/, '');
+    if (!raw) { return { type:null, mode:null, templateId:null }; }
+    const [path, query] = raw.split('?');
+    const parts = (path || '').split('/');
+    const type = TYPES.indexOf(parts[0]) === -1 ? null : parts[0];
+    const mode = MODES.indexOf(parts[1]) === -1 ? null : parts[1];
+    let templateId = null;
+    if (query) {
+      const params = new URLSearchParams(query);
+      templateId = params.get('t');
+    }
+    return { type: type, mode: mode, templateId: templateId };
+  }
+
+  function buildHash(type, mode, templateId) {
+    let h = '#' + type + '/' + mode;
+    if (templateId) { h += '?t=' + encodeURIComponent(templateId); }
+    return h;
+  }
+
+  // ---- Router (idempotent) ----
+  // Click handlers update the hash via pushState. A single popstate listener
+  // reads the hash, overwrites state.currentType/currentMode, and renders.
+  function routeFromHash() {
+    const parsed = parseHash();
+    if (parsed.type) { state.currentType = parsed.type; }
+    if (parsed.mode) { state.currentMode = parsed.mode; }
+    state.library.openTemplateId = parsed.templateId;
+    render();
+  }
+
+  function pushRoute(type, mode, templateId) {
+    const targetType = type || state.currentType;
+    const targetMode = mode || state.currentMode;
+    const newHash = buildHash(targetType, targetMode, templateId || null);
+    if (location.hash !== newHash) {
+      history.pushState(null, '', newHash);
+    }
+    routeFromHash();
+  }
+
+  // ---- Render ----
+  function render() {
+    // Type chips
+    const typeChips = document.querySelectorAll('.ps-type-chip');
+    for (let i = 0; i < typeChips.length; i++) {
+      const chip = typeChips[i];
+      const isActive = chip.getAttribute('data-type') === state.currentType;
+      chip.classList.toggle('is-active', isActive);
+      chip.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    }
+    // Mode tabs
+    const modeTabs = document.querySelectorAll('.ps-mode-tab');
+    for (let i = 0; i < modeTabs.length; i++) {
+      const tab = modeTabs[i];
+      const isActive = tab.getAttribute('data-mode') === state.currentMode;
+      tab.classList.toggle('is-active', isActive);
+      tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    }
+    // View containers
+    const views = { build: document.getElementById('view-build'), lint: document.getElementById('view-lint'), library: document.getElementById('view-library') };
+    for (const key in views) {
+      if (views[key]) { views[key].hidden = (key !== state.currentMode); }
+    }
+    // Per-view renderers arrive in later tasks. For now the stub text is fine.
+  }
+
+  // ---- Click handlers (push hash only, do not render directly) ----
+  document.addEventListener('click', function (ev) {
+    const typeChip = ev.target.closest('.ps-type-chip');
+    if (typeChip) {
+      pushRoute(typeChip.getAttribute('data-type'), null, null);
+      return;
+    }
+    const modeTab = ev.target.closest('.ps-mode-tab');
+    if (modeTab) {
+      pushRoute(null, modeTab.getAttribute('data-mode'), null);
+      return;
+    }
+  });
+
+  // ---- Keyboard nav on tablists ----
+  document.addEventListener('keydown', function (ev) {
+    const target = ev.target;
+    if (!target) { return; }
+    if (target.classList.contains('ps-type-chip')) {
+      handleTabArrow(ev, target, 'ps-type-chip', TYPES, 'data-type', function (v) { pushRoute(v, null, null); });
+      return;
+    }
+    if (target.classList.contains('ps-mode-tab')) {
+      handleTabArrow(ev, target, 'ps-mode-tab', MODES, 'data-mode', function (v) { pushRoute(null, v, null); });
+    }
+  });
+
+  function handleTabArrow(ev, target, klass, values, attr, apply) {
+    const key = ev.key;
+    if (key !== 'ArrowLeft') {
+      if (key !== 'ArrowRight') { return; }
+    }
+    ev.preventDefault();
+    const current = target.getAttribute(attr);
+    const idx = values.indexOf(current);
+    let nextIdx;
+    if (key === 'ArrowRight') { nextIdx = (idx + 1) % values.length; }
+    else { nextIdx = (idx - 1 + values.length) % values.length; }
+    const nextValue = values[nextIdx];
+    apply(nextValue);
+    const newTarget = document.querySelector('.' + klass + '[' + attr + '="' + nextValue + '"]');
+    if (newTarget) { newTarget.focus(); }
+  }
+
+  // ---- popstate ----
+  window.addEventListener('popstate', routeFromHash);
+
+  // ---- Init ----
+  routeFromHash();
 })();
 </script>
