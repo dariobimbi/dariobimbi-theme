@@ -89,10 +89,12 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
 
   // ---- Hash parsing ----
   function parseHash() {
-    const raw = (location.hash || '').replace(/^#/, '');
+    const rawHash = location.hash ? location.hash : '';
+    const raw = rawHash.replace(/^#/, '');
     if (!raw) { return { type:null, mode:null, templateId:null }; }
     const [path, query] = raw.split('?');
-    const parts = (path || '').split('/');
+    const safePath = path ? path : '';
+    const parts = safePath.split('/');
     const type = TYPES.indexOf(parts[0]) === -1 ? null : parts[0];
     const mode = MODES.indexOf(parts[1]) === -1 ? null : parts[1];
     let templateId = null;
@@ -121,9 +123,12 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
   }
 
   function pushRoute(type, mode, templateId) {
-    const targetType = type || state.currentType;
-    const targetMode = mode || state.currentMode;
-    const newHash = buildHash(targetType, targetMode, templateId || null);
+    // Avoid || here — WordPress entity-encoding inside inline <script> can
+    // mangle it the same way it mangles &&. Use explicit ternary checks.
+    const targetType = type !== null ? type : state.currentType;
+    const targetMode = mode !== null ? mode : state.currentMode;
+    const targetTemplateId = templateId !== null ? templateId : null;
+    const newHash = buildHash(targetType, targetMode, targetTemplateId);
     if (location.hash !== newHash) {
       history.pushState(null, '', newHash);
     }
