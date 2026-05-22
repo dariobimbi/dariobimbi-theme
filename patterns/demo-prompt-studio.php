@@ -103,6 +103,29 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
 .prompt-studio .ps-lint-actions button { appearance: none; border: 1px solid var(--wp--preset--color--primary); background: var(--wp--preset--color--primary); color: var(--wp--preset--color--background); padding: 0.5rem 1rem; border-radius: 999px; cursor: pointer; font: inherit; }
 .prompt-studio .ps-lint-actions button.ps-link-button { background: transparent; color: var(--wp--preset--color--muted); border-color: transparent; text-decoration: underline; }
 @keyframes psPulse { 0% { transform: scale(0.95); } 100% { transform: scale(1); } }
+
+.prompt-studio .ps-lint-result { display: flex; flex-direction: column; gap: var(--wp--preset--spacing--30); }
+.prompt-studio .ps-lint-result-head { display: flex; align-items: center; gap: var(--wp--preset--spacing--30); }
+.prompt-studio .ps-score-wrap { position: relative; width: 100px; height: 100px; display: grid; place-items: center; }
+.prompt-studio .ps-score-ring { position: absolute; inset: 0; width: 100%; height: 100%; }
+.prompt-studio .ps-score-green { color: #16a34a; }
+.prompt-studio .ps-score-amber { color: #d97706; }
+.prompt-studio .ps-score-red   { color: #dc2626; }
+.prompt-studio .ps-score-value { font-size: 1.6rem; font-weight: 700; }
+.prompt-studio .ps-verdict { font-size: 1rem; color: var(--wp--preset--color--muted); }
+.prompt-studio .ps-checklist { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.4rem; }
+.prompt-studio .ps-check { display: grid; grid-template-columns: 1.5rem auto 1fr; gap: 0.5rem; align-items: baseline; padding: 0.3rem 0; border-bottom: 1px dashed var(--wp--preset--color--subtle); }
+.prompt-studio .ps-check-ok .ps-check-icon { color: #16a34a; }
+.prompt-studio .ps-check-partial .ps-check-icon { color: #d97706; }
+.prompt-studio .ps-check-fail .ps-check-icon { color: #dc2626; }
+.prompt-studio .ps-check-detail { color: var(--wp--preset--color--muted); font-size: var(--wp--preset--font-size--small); }
+.prompt-studio .ps-flags { display: flex; flex-direction: column; gap: 0.5rem; }
+.prompt-studio .ps-flag { background: var(--wp--preset--color--background); border-left: 3px solid var(--wp--preset--color--accent); padding: 0.6rem 0.85rem; border-radius: 6px; }
+.prompt-studio .ps-flag h4 { margin: 0 0 0.2rem; font-size: var(--wp--preset--font-size--medium); }
+.prompt-studio .ps-flag p { margin: 0; color: var(--wp--preset--color--muted); font-size: var(--wp--preset--font-size--small); }
+.prompt-studio .ps-lint-result-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.prompt-studio .ps-lint-result-actions button { appearance: none; border: 1px solid var(--wp--preset--color--primary); background: var(--wp--preset--color--primary); color: var(--wp--preset--color--background); padding: 0.5rem 1rem; border-radius: 999px; cursor: pointer; font: inherit; }
+.prompt-studio .ps-lint-result-actions .ps-link-button { background: transparent; color: var(--wp--preset--color--muted); border-color: transparent; text-decoration: underline; padding: 0.5rem; }
 </style>
 
 <script>
@@ -440,7 +463,56 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
   }
 
   function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
-  function renderLintResults(result) { return '<pre>' + escapeHtml(JSON.stringify(result, null, 2)) + '</pre>'; }
+
+  function renderLintResults(result) {
+    if (!result) { return ''; }
+    const score = result.score;
+    let band = 'red';
+    if (score >= 80) { band = 'green'; }
+    else if (score >= 50) { band = 'amber'; }
+
+    // SVG score ring (simple stroke arc)
+    const radius = 38;
+    const circumference = 2 * Math.PI * radius;
+    const dash = (score / 100) * circumference;
+    const ringHtml =
+      '<svg class="ps-score-ring ps-score-' + band + '" viewBox="0 0 100 100" aria-hidden="true">' +
+        '<circle cx="50" cy="50" r="' + radius + '" fill="none" stroke="currentColor" stroke-opacity="0.15" stroke-width="10" />' +
+        '<circle cx="50" cy="50" r="' + radius + '" fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="round" stroke-dasharray="' + dash + ' ' + circumference + '" transform="rotate(-90 50 50)" />' +
+      '</svg>';
+
+    let checklist = '';
+    for (let i = 0; i < result.checks.length; i++) {
+      const c = result.checks[i];
+      let icon;
+      if (c.strength >= 0.8) { icon = '✓'; }
+      else if (c.strength > 0) { icon = '~'; }
+      else { icon = '✗'; }
+      checklist += '<li class="ps-check ps-check-' + (c.strength >= 0.8 ? 'ok' : (c.strength > 0 ? 'partial' : 'fail')) + '"><span class="ps-check-icon" aria-hidden="true">' + icon + '</span><span class="ps-check-label">' + escapeHtml(c.label) + '</span><span class="ps-check-detail">' + escapeHtml(c.detail) + '</span></li>';
+    }
+
+    let flagsHtml = '';
+    for (let i = 0; i < result.flags.length; i++) {
+      const f = result.flags[i];
+      flagsHtml += '<div class="ps-flag"><h4>' + escapeHtml(f.label) + '</h4><p>' + escapeHtml(f.detail) + '</p></div>';
+    }
+
+    return (
+      '<div class="ps-lint-result">' +
+        '<header class="ps-lint-result-head">' +
+          '<div class="ps-score-wrap">' + ringHtml + '<span class="ps-score-value">' + score + '</span></div>' +
+          '<div class="ps-verdict"><strong>' + escapeHtml(result.verdict) + '</strong><br><span>(' + escapeHtml(capitalize(result.type)) + ' rubric)</span></div>' +
+        '</header>' +
+        '<ul class="ps-checklist">' + checklist + '</ul>' +
+        (flagsHtml ? '<section class="ps-flags"><h3>Flags</h3>' + flagsHtml + '</section>' : '') +
+        '<div class="ps-lint-result-actions">' +
+          '<button type="button" data-action="lint-refine">Refine in Builder</button>' +
+          '<button type="button" data-action="lint-copy-results" class="ps-link-button">Copy results</button>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
   function renderLibraryView() { /* Task 11 fills this in */ }
 
   // ---- Click handlers (push hash only, do not render directly) ----
@@ -670,9 +742,134 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     text += '\n\nBegin your review now based on the criteria above.';
     return { text: text, instructionsOnly: instructionsOnly, contentOnly: contentOnly };
   }
-  // ---- Lint runner (stub — Task 9 replaces with real scoring) ----
+  // ---- Lint rules ----
+  // Each rule: { key, label, check(text) → { present:bool, strength:0..1, detail:'' } }
+  const LINT_RULES = {
+    write: [
+      { key:'role',        label:'Role / persona',  check: function (t) { return checkPattern(t, /(you are|act as)/i, 'Mentions a role'); } },
+      { key:'task',        label:'Clear task',      check: function (t) { return checkTaskVerb(t); } },
+      { key:'context',     label:'Context',         check: function (t) { return checkLength(t, 60, 'Has enough context'); } },
+      { key:'outputFormat',label:'Output format',   check: function (t) { return checkPattern(t, /(format|as (a |an )?(json|markdown|list|table|bulleted|csv|diff))/i, 'Specifies output format'); } },
+      { key:'constraints', label:'Constraints',     check: function (t) { return checkPattern(t, /(do not|don'?t|never|must not|avoid|without|exclude|only|stay within|no more than)/i, 'Lists constraints'); } },
+    ],
+    image: [
+      { key:'subject',     label:'Subject',         check: function (t) { return { present: t.length > 0, strength: t.length > 12 ? 1 : 0.5, detail: t.length > 0 ? 'Subject implied' : 'No subject' }; } },
+      { key:'style',       label:'Style',           check: function (t) { return checkAnyKeyword(t, IMAGE_STYLE_KEYWORDS, 'Mentions a recognized style'); } },
+      { key:'composition', label:'Composition',     check: function (t) { return checkPattern(t, /(close-?up|wide|low angle|high angle|portrait|landscape|rule of thirds|symmetrical|over the shoulder|aerial)/i, 'Frames the shot'); } },
+      { key:'lighting',    label:'Color / light',   check: function (t) { return checkPattern(t, /(light|lit|sunset|dawn|shadow|amber|cool|warm|neon|backlit|golden hour|moody)/i, 'Mentions light or color'); } },
+      { key:'params',      label:'Parameters',      check: function (t) { return checkPattern(t, /(--ar\s+\d|--v\s*\d|--niji|--style|aspect|\d{3,4}\s*x\s*\d{3,4})/i, 'Includes platform parameters'); } },
+    ],
+    review: [
+      { key:'content',     label:'Content present', check: function (t) { return { present: /```|"""/.test(t), strength: /```[\s\S]+```|"""[\s\S]+"""/.test(t) ? 1 : 0.4, detail: /```|"""/.test(t) ? 'Fenced block detected' : 'No fenced content block' }; } },
+      { key:'criteria',    label:'Criteria',        check: function (t) { return checkPattern(t, /(criteria|evaluate|assess|judge|grade|rubric)/i, 'Names criteria'); } },
+      { key:'audience',    label:'Audience',        check: function (t) { return checkPattern(t, /(audience|for the|reader|reviewer)/i, 'Names the audience'); } },
+      { key:'outputFormat',label:'Output format',   check: function (t) { return checkPattern(t, /(bulleted|list|table|grouped by|severity|format)/i, 'Specifies output format'); } },
+    ],
+  };
+
+  const ANTI_PATTERNS = [
+    { id:'polite_filler',  appliesTo:['write','review'], label:'Polite filler', detail:'LLMs do not weight courtesy as instruction. Drop the pleasantries.', test: function (t) { return /\b(please|thanks in advance|thank you|kindly)\b/i.test(t); } },
+    { id:'vague_qualifier',appliesTo:['write','review'], label:'Vague qualifier', detail:'Replace "comprehensive" / "thoroughly" / "in detail" with a concrete length or list.', test: function (t) { return /\b(comprehensive|thoroughly|in detail|extensively|holistic)\b/i.test(t); } },
+    { id:'soft_verb',      appliesTo:['write'], label:'Soft task verb', detail:'Rewrite "help me with..." or "I want..." as an imperative.', test: function (t) { return /(help me (with|to)|i want|i need|can you|could you)/i.test(t); } },
+    { id:'dont_bias',      appliesTo:['write'], label:'"Don\'t" bias', detail:'LLMs follow affirmative instructions better than negatives. Pair "don\'t X" with "instead, do Y".', test: function (t) {
+        const dontMatches = t.match(/\b(do not|don'?t|never|avoid)\b/gi);
+        const dontCount = dontMatches ? dontMatches.length : 0;
+        if (dontCount < 2) { return false; }
+        const insteadMatches = t.match(/\b(instead|rather|prefer)\b/gi);
+        const insteadCount = insteadMatches ? insteadMatches.length : 0;
+        return insteadCount === 0;
+      } },
+    { id:'conflict_style', appliesTo:['image'], label:'Conflicting styles', detail:'Mixing incompatible style keywords confuses the model.', test: function (t) {
+        const tl = t.toLowerCase();
+        const pairs = [['photorealistic','anime'],['watercolor','3d render'],['oil painting','vector'],['pixel art','photorealistic']];
+        for (let i = 0; i < pairs.length; i++) {
+          if (tl.indexOf(pairs[i][0]) !== -1) {
+            if (tl.indexOf(pairs[i][1]) !== -1) { return true; }
+          }
+        }
+        return false;
+      } },
+    { id:'style_soup',     appliesTo:['image'], label:'Style soup', detail:'More than 5 quality / style keywords. Modern models ignore the noise or degrade.', test: function (t) {
+        const tl = t.toLowerCase();
+        const soup = ['8k','octane render','unreal engine','trending on artstation','masterpiece','hyperdetailed','best quality','award winning','intricate','ultra detailed'];
+        let hits = 0;
+        for (let i = 0; i < soup.length; i++) {
+          if (tl.indexOf(soup[i]) !== -1) { hits += 1; }
+        }
+        return hits > 5;
+      } },
+    { id:'missing_ar',     appliesTo:['image'], label:'Missing aspect ratio', detail:'Most platforms expect --ar or equivalent.', test: function (t) { return !IMAGE_FLAG_REGEX.test(t); } },
+    { id:'unfenced',       appliesTo:['review'], label:'Unfenced content', detail:'Content runs into instructions. Wrap the artifact in triple backticks.', test: function (t) { return !/```|"""/.test(t); } },
+  ];
+
+  function checkPattern(text, regex, presentDetail) {
+    const ok = regex.test(text);
+    return { present: ok, strength: ok ? 1 : 0, detail: ok ? presentDetail : 'Not detected' };
+  }
+  function checkAnyKeyword(text, list, presentDetail) {
+    const tl = text.toLowerCase();
+    for (let i = 0; i < list.length; i++) {
+      if (tl.indexOf(list[i]) !== -1) {
+        return { present: true, strength: 1, detail: presentDetail };
+      }
+    }
+    return { present: false, strength: 0, detail: 'Not detected' };
+  }
+  function checkLength(text, minChars, presentDetail) {
+    if (text.length >= minChars) {
+      return { present: true, strength: 1, detail: presentDetail };
+    }
+    if (text.length > 0) {
+      return { present: true, strength: 0.4, detail: 'Some text, but might be too thin (' + text.length + ' chars)' };
+    }
+    return { present: false, strength: 0, detail: 'Empty' };
+  }
+  function checkTaskVerb(text) {
+    // Imperative verbs at the start of a sentence
+    if (/(?:^|[\.\n]\s*)(refactor|review|generate|explain|write|summarize|translate|extract|compare|classify|debug|fix|optimize|design|name|brainstorm|outline|rewrite|critique|evaluate|analyze)\b/i.test(text)) {
+      return { present: true, strength: 1, detail: 'Imperative task verb' };
+    }
+    if (text.length > 0) {
+      return { present: true, strength: 0.3, detail: 'No clear task verb' };
+    }
+    return { present: false, strength: 0, detail: 'Empty' };
+  }
+
+  // ---- Lint runner ----
   function runLint() {
-    state.lint.lastResult = { stub: true, type: state.lint.detectedType, length: (state.lint.input ? state.lint.input.length : 0) };
+    const rawInput = state.lint.input;
+    const text = rawInput ? rawInput : '';
+    const rawType = state.lint.detectedType;
+    const type = rawType ? rawType : detectPromptType(text);
+    state.lint.detectedType = type;
+
+    const rules = LINT_RULES[type];
+    const checks = [];
+    let totalStrength = 0;
+    for (let i = 0; i < rules.length; i++) {
+      const r = rules[i].check(text);
+      checks.push({ key: rules[i].key, label: rules[i].label, present: r.present, strength: r.strength, detail: r.detail });
+      totalStrength += r.strength;
+    }
+    const maxScore = rules.length;
+    let score = maxScore === 0 ? 0 : Math.round((totalStrength / maxScore) * 100);
+
+    const flags = [];
+    for (let i = 0; i < ANTI_PATTERNS.length; i++) {
+      const ap = ANTI_PATTERNS[i];
+      if (ap.appliesTo.indexOf(type) === -1) { continue; }
+      if (ap.test(text)) {
+        flags.push({ id: ap.id, label: ap.label, detail: ap.detail });
+        score = Math.max(0, score - 8);
+      }
+    }
+
+    let verdict;
+    if (score >= 80) { verdict = 'Strong'; }
+    else if (score >= 50) { verdict = 'Workable'; }
+    else { verdict = 'Needs work'; }
+
+    state.lint.lastResult = { type: type, score: score, verdict: verdict, checks: checks, flags: flags };
     renderLintView();
   }
 
