@@ -398,7 +398,94 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
   }
 
   // Stubs that arrive in later tasks. Defined now so the renderer can call them.
-  function refreshPreview() { /* Task 5 fills this in */ }
+  function refreshPreview() {
+    const preview = document.getElementById('ps-preview-text');
+    const meter = document.getElementById('ps-token-meter');
+    if (!preview) { return; }
+    const type = state.currentType;
+    const assembled = assemblePrompt(type, state.drafts[type]);
+    preview.textContent = assembled.text;
+    if (meter) {
+      const cap = RUBRICS[type].softTokenCap;
+      if (type === 'review') {
+        const instrTokens = tokenEstimate(assembled.instructionsOnly);
+        const contentTokens = tokenEstimate(assembled.contentOnly);
+        const contentCap = RUBRICS.review.contentSoftCap;
+        meter.textContent = '~ Instructions: ' + instrTokens + ' tok · Content: ' + contentTokens + ' tok';
+        meter.classList.remove('is-amber', 'is-red');
+        if (instrTokens > cap) { meter.classList.add('is-red'); }
+        else if (instrTokens > cap * 0.75) { meter.classList.add('is-amber'); }
+        if (contentTokens > contentCap) { meter.classList.add('is-red'); }
+      } else {
+        const total = tokenEstimate(assembled.text);
+        meter.textContent = '~ ' + total + ' tok';
+        meter.classList.remove('is-amber', 'is-red');
+        if (total > cap) { meter.classList.add('is-red'); }
+        else if (total > cap * 0.75) { meter.classList.add('is-amber'); }
+      }
+    }
+  }
+
+  function tokenEstimate(text) {
+    if (!text) { return 0; }
+    return Math.ceil(text.length / 4);
+  }
+
+  function assemblePrompt(type, draft) {
+    if (type === 'write')  { return assembleWrite(draft); }
+    if (type === 'image')  { return assembleImage(draft); }
+    if (type === 'review') { return assembleReview(draft); }
+    return { text: '', instructionsOnly: '', contentOnly: '' };
+  }
+
+  function assembleWrite(d) {
+    const lines = [];
+    if (d.role)         { lines.push('Role: ' + d.role); }
+    if (d.task)         { lines.push('Task: ' + d.task); }
+    if (d.context)      { lines.push('Context: ' + d.context); }
+    if (d.examples)     { lines.push('Examples:\n' + d.examples); }
+    if (d.outputFormat) { lines.push('Output format: ' + d.outputFormat); }
+    if (d.constraints)  { lines.push('Constraints: ' + d.constraints); }
+    if (d.tone)         { lines.push('Tone: ' + d.tone); }
+    if (d.audience)     { lines.push('Audience: ' + d.audience); }
+    const text = lines.join('\n\n');
+    return { text: text, instructionsOnly: text, contentOnly: '' };
+  }
+
+  function assembleImage(d) {
+    const descriptors = [];
+    if (d.subject)       { descriptors.push(d.subject); }
+    if (d.style)         { descriptors.push(d.style); }
+    if (d.composition)   { descriptors.push(d.composition); }
+    if (d.medium)        { descriptors.push(d.medium); }
+    if (d.colorLighting) { descriptors.push(d.colorLighting); }
+    if (d.cameraLens)    { descriptors.push(d.cameraLens); }
+    if (d.mood)          { descriptors.push(d.mood); }
+    let main = descriptors.join(', ');
+    if (d.aspectRatio)   { main = (main ? main + ' ' : '') + d.aspectRatio.trim(); }
+    let text = main;
+    if (d.negative)      { text = (text ? text + '\n' : '') + 'Negative: ' + d.negative; }
+    return { text: text, instructionsOnly: text, contentOnly: '' };
+  }
+
+  function assembleReview(d) {
+    const instr = [];
+    instr.push('Review the following content.');
+    if (d.criteria)     { instr.push('Criteria: ' + d.criteria); }
+    if (d.audience)     { instr.push('Audience for feedback: ' + d.audience); }
+    if (d.outputFormat) { instr.push('Output format: ' + d.outputFormat); }
+    if (d.severity)     { instr.push('Severity scale: ' + d.severity); }
+    if (d.tone)         { instr.push('Tone: ' + d.tone); }
+    if (d.examples)     { instr.push('Examples:\n' + d.examples); }
+    const instructionsOnly = instr.join('\n\n');
+    const contentOnly = d.content ? d.content : '';
+    let text = instructionsOnly;
+    if (contentOnly) {
+      text += '\n\n```\n' + contentOnly + '\n```';
+    }
+    text += '\n\nBegin your review now based on the criteria above.';
+    return { text: text, instructionsOnly: instructionsOnly, contentOnly: contentOnly };
+  }
   function scheduleSave()  { /* Task 7 fills this in */ }
 
   // ---- Init ----
