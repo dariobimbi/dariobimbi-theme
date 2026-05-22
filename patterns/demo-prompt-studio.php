@@ -63,6 +63,31 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
 @media (max-width: 480px) {
   .prompt-studio .ps-type-chip { flex: 1 1 auto; text-align: center; }
 }
+
+.prompt-studio .ps-build { display: grid; grid-template-columns: 1fr; gap: var(--wp--preset--spacing--40); }
+@media (min-width: 900px) { .prompt-studio .ps-build { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); } }
+
+.prompt-studio .ps-form { display: flex; flex-direction: column; gap: var(--wp--preset--spacing--30); margin: 0; }
+.prompt-studio .ps-field { display: flex; flex-direction: column; gap: 0.35rem; }
+.prompt-studio .ps-field-label { font-weight: 600; color: var(--wp--preset--color--foreground); }
+.prompt-studio .ps-field-help { color: var(--wp--preset--color--muted); font-size: var(--wp--preset--font-size--small); }
+.prompt-studio .ps-field input, .prompt-studio .ps-field textarea { width: 100%; padding: 0.6rem 0.75rem; border-radius: 10px; border: 1px solid var(--wp--preset--color--subtle); background: var(--wp--preset--color--background); color: var(--wp--preset--color--foreground); font: inherit; box-sizing: border-box; }
+.prompt-studio .ps-field input:focus, .prompt-studio .ps-field textarea:focus { outline: 2px solid var(--wp--preset--color--primary); outline-offset: 1px; border-color: var(--wp--preset--color--primary); }
+.prompt-studio .ps-field textarea { resize: vertical; min-height: 4.5rem; font-family: inherit; }
+
+.prompt-studio .ps-advanced-toggle { align-self: flex-start; appearance: none; background: transparent; border: 1px dashed var(--wp--preset--color--subtle); color: var(--wp--preset--color--foreground); padding: 0.4rem 0.85rem; border-radius: 999px; cursor: pointer; font: inherit; }
+.prompt-studio .ps-advanced { display: flex; flex-direction: column; gap: var(--wp--preset--spacing--30); }
+.prompt-studio .ps-advanced[hidden] { display: none; }
+
+.prompt-studio .ps-preview { background: var(--wp--preset--color--surface-card, var(--wp--preset--color--background)); background-image: var(--wp--preset--gradient--surface-card, none); border: 1px solid var(--wp--preset--color--subtle); border-radius: 14px; padding: var(--wp--preset--spacing--30); display: flex; flex-direction: column; gap: var(--wp--preset--spacing--20); position: sticky; top: var(--wp--preset--spacing--20); align-self: start; }
+.prompt-studio .ps-preview-header { display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
+.prompt-studio .ps-preview-text { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.9rem; white-space: pre-wrap; word-break: break-word; background: var(--wp--preset--color--background); color: var(--wp--preset--color--foreground); border-radius: 10px; padding: var(--wp--preset--spacing--20); margin: 0; min-height: 6rem; max-height: 24rem; overflow: auto; }
+.prompt-studio .ps-preview-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.prompt-studio .ps-preview-actions button { appearance: none; border: 1px solid var(--wp--preset--color--primary); background: var(--wp--preset--color--primary); color: var(--wp--preset--color--background); padding: 0.5rem 1rem; border-radius: 999px; cursor: pointer; font: inherit; }
+.prompt-studio .ps-preview-actions button.ps-link-button { background: transparent; color: var(--wp--preset--color--muted); border-color: transparent; text-decoration: underline; padding: 0.5rem; }
+.prompt-studio .ps-token-meter { font-size: var(--wp--preset--font-size--small); color: var(--wp--preset--color--muted); }
+.prompt-studio .ps-token-meter.is-amber { color: var(--wp--preset--color--accent); }
+.prompt-studio .ps-token-meter.is-red { color: var(--wp--preset--color--hot); }
 </style>
 
 <script>
@@ -70,6 +95,62 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
   'use strict';
 
   document.body.classList.add('has-prompt-studio-page');
+
+  // ---- Rubrics (field definitions per type) ----
+  const RUBRICS = {
+    write: {
+      visible: [
+        { key:'role',          label:'Role',          help:'Who the model is acting as.',           placeholder:'You are a senior staff engineer who reviews Python.' },
+        { key:'task',          label:'Task',          help:'Explicit verb and object.',             placeholder:'Refactor the function below to remove the duplicated branches.' },
+        { key:'context',       label:'Context',       help:'Background the model needs.',           placeholder:'This runs on a Raspberry Pi, memory matters.' },
+        { key:'outputFormat',  label:'Output format', help:'Shape of the answer.',                  placeholder:'Return a unified diff, no prose.' },
+        { key:'constraints',   label:'Constraints',   help:'What to avoid or stay within.',         placeholder:'Do not change the public function signature.' },
+      ],
+      advanced: [
+        { key:'examples',      label:'Examples',      help:'Few-shot input / output pairs.',        placeholder:'Input: …  Output: …' },
+        { key:'audience',      label:'Audience',      help:'Who the output is for.',                placeholder:'The junior dev who wrote the code.' },
+        { key:'tone',          label:'Tone',          help:'Voice for the answer.',                 placeholder:'Direct but kind, no hedging.' },
+      ],
+      multiline: ['context','examples','outputFormat','constraints'],
+      softTokenCap: 400,
+    },
+    image: {
+      visible: [
+        { key:'subject',       label:'Subject',       help:'The main thing.',                       placeholder:'A red fox curled asleep on a worn leather chair.' },
+        { key:'style',         label:'Style',         help:'Artistic style.',                       placeholder:'Oil painting, Sargent influence.' },
+        { key:'composition',   label:'Composition',   help:'Framing and angle.',                    placeholder:'Close-up, low angle, rule of thirds.' },
+        { key:'medium',        label:'Medium',        help:'Physical or digital medium.',           placeholder:'Watercolor on rough paper.' },
+        { key:'colorLighting', label:'Color & light', help:'Palette and light.',                    placeholder:'Warm amber light, deep shadows.' },
+      ],
+      advanced: [
+        { key:'cameraLens',    label:'Camera / lens', help:'For photoreal shots.',                  placeholder:'35mm, f/1.8, shallow depth of field.' },
+        { key:'mood',          label:'Mood',          help:'Feel of the image.',                    placeholder:'Quiet, contemplative.' },
+        { key:'negative',      label:'Negative prompt', help:'What to exclude.',                    placeholder:'no text, no watermark, no extra limbs' },
+        { key:'aspectRatio',   label:'Parameters',    help:'Aspect ratio and model flags.',         placeholder:'--ar 16:9 --v 6' },
+      ],
+      multiline: ['subject','negative'],
+      softTokenCap: 80,
+    },
+    review: {
+      visible: [
+        { key:'content',       label:'Content to review', help:'Paste the thing being critiqued.',  placeholder:'Paste your code, copy, or document here.' },
+        { key:'criteria',      label:'Criteria',      help:'What to evaluate against.',             placeholder:'Clarity, correctness, performance.' },
+        { key:'audience',      label:'Audience for feedback', help:'Who reads the review.',         placeholder:'The junior dev who wrote it.' },
+        { key:'outputFormat',  label:'Output format', help:'Shape of the review.',                  placeholder:'Bulleted list grouped by severity, no rewrite.' },
+      ],
+      advanced: [
+        { key:'severity',      label:'Severity scale', help:'Define levels.',                       placeholder:'blocker / major / minor / nit' },
+        { key:'tone',          label:'Tone',          help:'Voice of the feedback.',                placeholder:'Direct but kind, no hedging.' },
+        { key:'examples',      label:'Examples of good / bad', help:'Calibration anchors.',          placeholder:'Good: …  Bad: …' },
+      ],
+      multiline: ['content','examples','criteria','outputFormat'],
+      softTokenCap: 600,
+      contentSoftCap: 3000,
+    },
+  };
+
+  // Placeholder cycling (chosen once on page load, never while typing)
+  const PLACEHOLDER_VARIANTS = {}; // populated by pickPlaceholders() — single-shot
 
   // ---- State ----
   const TYPES = ['write', 'image', 'review'];
@@ -158,7 +239,69 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     for (const key in views) {
       if (views[key]) { views[key].hidden = (key !== state.currentMode); }
     }
-    // Per-view renderers arrive in later tasks. For now the stub text is fine.
+    if (state.currentMode === 'build') { renderBuildView(); }
+  }
+
+  // ---- Build view ----
+  function renderBuildView() {
+    const root = document.getElementById('view-build');
+    if (!root) { return; }
+    const type = state.currentType;
+    const rubric = RUBRICS[type];
+    const draft = state.drafts[type];
+
+    const parts = [];
+    parts.push('<div class="ps-build">');
+    parts.push('<form class="ps-form" autocomplete="off" novalidate>');
+
+    // Visible fields
+    for (let i = 0; i < rubric.visible.length; i++) {
+      parts.push(renderField(rubric.visible[i], draft, rubric.multiline));
+    }
+
+    // Advanced toggle + fields
+    parts.push('<button type="button" class="ps-advanced-toggle" aria-expanded="' + (draft.advancedOpen ? 'true' : 'false') + '" data-action="toggle-advanced">' + (draft.advancedOpen ? 'Hide advanced' : 'Show advanced') + '</button>');
+    parts.push('<div class="ps-advanced" ' + (draft.advancedOpen ? '' : 'hidden') + '>');
+    for (let i = 0; i < rubric.advanced.length; i++) {
+      parts.push(renderField(rubric.advanced[i], draft, rubric.multiline));
+    }
+    parts.push('</div>');
+    parts.push('</form>');
+
+    // Preview + actions
+    parts.push('<aside class="ps-preview">');
+    parts.push('  <header class="ps-preview-header"><span>Assembled prompt</span><span class="ps-token-meter" id="ps-token-meter"></span></header>');
+    parts.push('  <pre class="ps-preview-text" id="ps-preview-text" aria-live="polite"></pre>');
+    parts.push('  <div class="ps-preview-actions">');
+    parts.push('    <button type="button" data-action="copy-prompt">Copy</button>');
+    parts.push('    <button type="button" data-action="lint-this">Lint this</button>');
+    parts.push('    <button type="button" class="ps-link-button" data-action="reset-draft">Reset draft</button>');
+    parts.push('  </div>');
+    parts.push('</aside>');
+
+    parts.push('</div>');
+    root.innerHTML = parts.join('');
+    refreshPreview();
+  }
+
+  function renderField(field, draft, multilineKeys) {
+    const id = 'ps-field-' + field.key;
+    const value = (draft[field.key] != null ? String(draft[field.key]) : '');
+    const isMultiline = multilineKeys.indexOf(field.key) !== -1;
+    const placeholder = field.placeholder.replace(/"/g, '&quot;');
+    const help = field.help;
+    let input;
+    if (isMultiline) {
+      input = '<textarea id="' + id + '" name="' + field.key + '" rows="3" placeholder="' + placeholder + '" aria-describedby="' + id + '-help">' + escapeHtml(value) + '</textarea>';
+    } else {
+      input = '<input id="' + id + '" name="' + field.key + '" type="text" value="' + escapeHtml(value).replace(/"/g, '&quot;') + '" placeholder="' + placeholder + '" aria-describedby="' + id + '-help" />';
+    }
+    return '<label class="ps-field" for="' + id + '"><span class="ps-field-label">' + escapeHtml(field.label) + '</span><span class="ps-field-help" id="' + id + '-help">' + escapeHtml(help) + '</span>' + input + '</label>';
+  }
+
+  function escapeHtml(s) {
+    if (s == null) { return ''; }
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
   // ---- Click handlers (push hash only, do not render directly) ----
@@ -207,6 +350,56 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
 
   // ---- popstate ----
   window.addEventListener('popstate', routeFromHash);
+
+  // Field input → mutate state.drafts[type][field] + refresh preview only
+  document.addEventListener('input', function (ev) {
+    const target = ev.target;
+    if (!target) { return; }
+    const name = target.getAttribute('name');
+    if (!name) { return; }
+    const type = state.currentType;
+    if (!state.drafts[type]) { return; }
+    if (!(name in state.drafts[type])) { return; }
+    state.drafts[type][name] = target.value;
+    refreshPreview();
+    scheduleSave();
+  });
+
+  // Action buttons (advanced toggle, copy, lint-this, reset)
+  document.addEventListener('click', function (ev) {
+    const btn = ev.target.closest('[data-action]');
+    if (!btn) { return; }
+    const action = btn.getAttribute('data-action');
+    if (action === 'toggle-advanced') {
+      state.drafts[state.currentType].advancedOpen = !state.drafts[state.currentType].advancedOpen;
+      renderBuildView();
+      scheduleSave();
+      return;
+    }
+    if (action === 'reset-draft') {
+      const ok = confirm('Reset this draft? All fields for the current type will be cleared.');
+      if (ok) {
+        resetDraft(state.currentType);
+        renderBuildView();
+        scheduleSave();
+      }
+      return;
+    }
+    // copy-prompt, lint-this wired in Task 6.
+  });
+
+  function resetDraft(type) {
+    const fresh = {
+      write:  { role:'', task:'', context:'', outputFormat:'', constraints:'', examples:'', audience:'', tone:'', advancedOpen:false },
+      image:  { subject:'', style:'', composition:'', medium:'', colorLighting:'', cameraLens:'', mood:'', negative:'', aspectRatio:'', advancedOpen:false },
+      review: { content:'', criteria:'', audience:'', outputFormat:'', severity:'', tone:'', examples:'', advancedOpen:false },
+    };
+    state.drafts[type] = fresh[type];
+  }
+
+  // Stubs that arrive in later tasks. Defined now so the renderer can call them.
+  function refreshPreview() { /* Task 5 fills this in */ }
+  function scheduleSave()  { /* Task 7 fills this in */ }
 
   // ---- Init ----
   routeFromHash();
