@@ -92,6 +92,17 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
 .ps-toast-host { position: fixed; right: 1rem; bottom: 1rem; display: flex; flex-direction: column; gap: 0.5rem; z-index: 9999; }
 .ps-toast { background: var(--wp--preset--color--foreground); color: var(--wp--preset--color--background); padding: 0.65rem 1rem; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); max-width: 22rem; font-size: var(--wp--preset--font-size--small); }
 .ps-toast-warn { background: var(--wp--preset--color--accent); }
+
+.prompt-studio .ps-lint { display: flex; flex-direction: column; gap: var(--wp--preset--spacing--30); }
+.prompt-studio .ps-lint-detect { display: flex; flex-direction: column; gap: 0.4rem; }
+.prompt-studio .ps-lint-chips { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.prompt-studio .ps-lint-chip { appearance: none; border: 1px solid var(--wp--preset--color--subtle); background: var(--wp--preset--color--background); color: var(--wp--preset--color--foreground); padding: 0.35rem 0.75rem; border-radius: 999px; cursor: pointer; font: inherit; font-size: var(--wp--preset--font-size--small); }
+.prompt-studio .ps-lint-chip.is-active { background: var(--wp--preset--color--foreground); color: var(--wp--preset--color--background); border-color: var(--wp--preset--color--foreground); animation: psPulse 0.5s ease-out; }
+.prompt-studio .ps-lint-hint { color: var(--wp--preset--color--muted); font-size: var(--wp--preset--font-size--small); margin: 0; }
+.prompt-studio .ps-lint-actions { display: flex; gap: 0.5rem; }
+.prompt-studio .ps-lint-actions button { appearance: none; border: 1px solid var(--wp--preset--color--primary); background: var(--wp--preset--color--primary); color: var(--wp--preset--color--background); padding: 0.5rem 1rem; border-radius: 999px; cursor: pointer; font: inherit; }
+.prompt-studio .ps-lint-actions button.ps-link-button { background: transparent; color: var(--wp--preset--color--muted); border-color: transparent; text-decoration: underline; }
+@keyframes psPulse { 0% { transform: scale(0.95); } 100% { transform: scale(1); } }
 </style>
 
 <script>
@@ -152,6 +163,37 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
       contentSoftCap: 3000,
     },
   };
+
+  // ---- Lint helpers ----
+  const IMAGE_STYLE_KEYWORDS = ['photorealistic','oil painting','watercolor','35mm','octane render','unreal engine','midjourney','stable diffusion','digital art','concept art','anime','pixel art','low poly','hyperdetailed','masterpiece','trending on artstation','8k','cinematic'];
+  const IMAGE_FLAG_REGEX = /(--ar\s+\d|--v\s*\d|--niji|--style|--chaos|--stylize|--quality)/i;
+  const REVIEW_WORDS = ['review','critique','feedback','evaluate','rate','assess'];
+
+  function detectPromptType(text) {
+    if (!text) { return 'write'; }
+    const t = text.toLowerCase();
+    // Image checks
+    if (IMAGE_FLAG_REGEX.test(text)) { return 'image'; }
+    let styleHits = 0;
+    for (let i = 0; i < IMAGE_STYLE_KEYWORDS.length; i++) {
+      if (t.indexOf(IMAGE_STYLE_KEYWORDS[i]) !== -1) { styleHits += 1; }
+    }
+    const commaMatches = text.match(/,/g);
+    const commaCount = commaMatches ? commaMatches.length : 0;
+    const sentenceMatches = text.match(/[.!?]/g);
+    const sentenceCount = sentenceMatches ? sentenceMatches.length : 0;
+    if (styleHits >= 2) { return 'image'; }
+    if (commaCount >= 4) {
+      if (sentenceCount <= 1) { return 'image'; }
+    }
+    // Review checks
+    if (text.indexOf('```') !== -1) { return 'review'; }
+    if (text.indexOf('"""') !== -1) { return 'review'; }
+    for (let i = 0; i < REVIEW_WORDS.length; i++) {
+      if (t.indexOf(REVIEW_WORDS[i]) !== -1) { return 'review'; }
+    }
+    return 'write';
+  }
 
   // Placeholder cycling (chosen once on page load, never while typing)
   const PLACEHOLDER_VARIANTS = {};
@@ -296,7 +338,9 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     for (const key in views) {
       if (views[key]) { views[key].hidden = (key !== state.currentMode); }
     }
-    if (state.currentMode === 'build') { renderBuildView(); }
+    if (state.currentMode === 'build')   { renderBuildView(); }
+    if (state.currentMode === 'lint')    { renderLintView(); }
+    if (state.currentMode === 'library') { renderLibraryView(); }
   }
 
   // ---- Build view ----
@@ -361,6 +405,44 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
+  // ---- Lint view ----
+  function renderLintView() {
+    const root = document.getElementById('view-lint');
+    if (!root) { return; }
+    const inputValue = state.lint.input ? state.lint.input : '';
+    const detected = state.lint.detectedType;
+    const overrideHint = detected ? ('Auto-detected: ' + capitalize(detected) + ' · click a chip to override') : 'Type-detect runs on paste.';
+
+    let chips = '';
+    for (let i = 0; i < TYPES.length; i++) {
+      const t = TYPES[i];
+      const isActive = (detected === t);
+      chips += '<button type="button" class="ps-lint-chip' + (isActive ? ' is-active' : '') + '" data-action="lint-set-type" data-type="' + t + '">' + capitalize(t) + '</button>';
+    }
+
+    const resultHtml = state.lint.lastResult ? renderLintResults(state.lint.lastResult) : '<p class="ps-stub">Click Analyze to score the prompt above.</p>';
+
+    root.innerHTML =
+      '<div class="ps-lint">' +
+        '<label class="ps-field"><span class="ps-field-label">Paste a prompt to analyze</span>' +
+          '<textarea id="ps-lint-input" rows="8" placeholder="Paste a prompt here.">' + escapeHtml(inputValue) + '</textarea>' +
+        '</label>' +
+        '<div class="ps-lint-detect">' +
+          '<div class="ps-lint-chips" role="tablist" aria-label="Detected type">' + chips + '</div>' +
+          '<p class="ps-lint-hint">' + escapeHtml(overrideHint) + '</p>' +
+        '</div>' +
+        '<div class="ps-lint-actions">' +
+          '<button type="button" data-action="lint-analyze">Analyze</button>' +
+          '<button type="button" data-action="lint-clear" class="ps-link-button">Clear</button>' +
+        '</div>' +
+        '<div class="ps-lint-results" id="ps-lint-results">' + resultHtml + '</div>' +
+      '</div>';
+  }
+
+  function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+  function renderLintResults(result) { return '<pre>' + escapeHtml(JSON.stringify(result, null, 2)) + '</pre>'; }
+  function renderLibraryView() { /* Task 11 fills this in */ }
+
   // ---- Click handlers (push hash only, do not render directly) ----
   document.addEventListener('click', function (ev) {
     const typeChip = ev.target.closest('.ps-type-chip');
@@ -412,6 +494,23 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
   document.addEventListener('input', function (ev) {
     const target = ev.target;
     if (!target) { return; }
+
+    // Lint input
+    if (target.id === 'ps-lint-input') {
+      state.lint.input = target.value;
+      state.lint.detectedType = detectPromptType(target.value);
+      // Update only the detect chips + hint, not the textarea (preserve focus).
+      const chips = document.querySelectorAll('.ps-lint-chip');
+      for (let i = 0; i < chips.length; i++) {
+        const chip = chips[i];
+        chip.classList.toggle('is-active', chip.getAttribute('data-type') === state.lint.detectedType);
+      }
+      const hint = document.querySelector('.ps-lint-hint');
+      if (hint) { hint.textContent = 'Auto-detected: ' + capitalize(state.lint.detectedType) + ' · click a chip to override'; }
+      return;
+    }
+
+    // Builder field
     const name = target.getAttribute('name');
     if (!name) { return; }
     const type = state.currentType;
@@ -453,6 +552,22 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
       state.lint.detectedType = state.currentType;
       state.lint.lastResult = null;
       pushRoute(null, 'lint', null);
+      return;
+    }
+    if (action === 'lint-set-type') {
+      state.lint.detectedType = btn.getAttribute('data-type');
+      renderLintView();
+      return;
+    }
+    if (action === 'lint-analyze') {
+      runLint();
+      return;
+    }
+    if (action === 'lint-clear') {
+      state.lint.input = '';
+      state.lint.detectedType = null;
+      state.lint.lastResult = null;
+      renderLintView();
       return;
     }
   });
@@ -555,6 +670,12 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     text += '\n\nBegin your review now based on the criteria above.';
     return { text: text, instructionsOnly: instructionsOnly, contentOnly: contentOnly };
   }
+  // ---- Lint runner (stub — Task 9 replaces with real scoring) ----
+  function runLint() {
+    state.lint.lastResult = { stub: true, type: state.lint.detectedType, length: (state.lint.input ? state.lint.input.length : 0) };
+    renderLintView();
+  }
+
   // ---- Persistence ----
   const STORAGE_KEY = 'dariobimbi.promptStudio.v1';
   let saveTimer = null;
