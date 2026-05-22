@@ -288,7 +288,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     const id = 'ps-field-' + field.key;
     const value = (draft[field.key] != null ? String(draft[field.key]) : '');
     const isMultiline = multilineKeys.indexOf(field.key) !== -1;
-    const placeholder = field.placeholder.replace(/"/g, '&quot;');
+    const placeholder = escapeHtml(field.placeholder).replace(/"/g, '&quot;');
     const help = field.help;
     let input;
     if (isMultiline) {
