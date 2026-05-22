@@ -126,6 +126,26 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
 .prompt-studio .ps-lint-result-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .prompt-studio .ps-lint-result-actions button { appearance: none; border: 1px solid var(--wp--preset--color--primary); background: var(--wp--preset--color--primary); color: var(--wp--preset--color--background); padding: 0.5rem 1rem; border-radius: 999px; cursor: pointer; font: inherit; }
 .prompt-studio .ps-lint-result-actions .ps-link-button { background: transparent; color: var(--wp--preset--color--muted); border-color: transparent; text-decoration: underline; padding: 0.5rem; }
+
+.prompt-studio .ps-library { display: flex; flex-direction: column; gap: var(--wp--preset--spacing--30); }
+.prompt-studio .ps-lib-toolbar { display: flex; flex-direction: column; gap: 0.6rem; }
+@media (min-width: 720px) { .prompt-studio .ps-lib-toolbar { flex-direction: row; justify-content: space-between; align-items: center; } }
+.prompt-studio .ps-lib-chips { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.prompt-studio .ps-lib-chip { appearance: none; border: 1px solid var(--wp--preset--color--subtle); background: var(--wp--preset--color--background); color: var(--wp--preset--color--foreground); padding: 0.35rem 0.75rem; border-radius: 999px; cursor: pointer; font: inherit; font-size: var(--wp--preset--font-size--small); }
+.prompt-studio .ps-lib-chip.is-active { background: var(--wp--preset--color--foreground); color: var(--wp--preset--color--background); border-color: var(--wp--preset--color--foreground); }
+.prompt-studio .ps-lib-grid { display: grid; grid-template-columns: 1fr; gap: var(--wp--preset--spacing--30); }
+@media (min-width: 721px) { .prompt-studio .ps-lib-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1024px) { .prompt-studio .ps-lib-grid { grid-template-columns: repeat(3, 1fr); } }
+.prompt-studio .ps-lib-card { display: grid; grid-template-columns: 1fr; gap: 0.45rem; text-align: left; appearance: none; background: var(--wp--preset--color--surface-card, var(--wp--preset--color--background)); background-image: var(--wp--preset--gradient--surface-card, none); border: 1px solid var(--wp--preset--color--subtle); border-radius: 14px; padding: var(--wp--preset--spacing--30); cursor: pointer; font: inherit; color: var(--wp--preset--color--foreground); transition: transform 0.15s ease, box-shadow 0.15s ease; position: relative; overflow: hidden; }
+.prompt-studio .ps-lib-card:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(0,0,0,0.1); }
+.prompt-studio .ps-lib-card-stripe { position: absolute; top: 0; left: 0; right: 0; height: 5px; }
+.prompt-studio .ps-lib-stripe-write { background: var(--wp--preset--color--primary); }
+.prompt-studio .ps-lib-stripe-image { background: var(--wp--preset--color--accent); }
+.prompt-studio .ps-lib-stripe-review { background: var(--wp--preset--color--hot); }
+.prompt-studio .ps-lib-card-cat { font-size: var(--wp--preset--font-size--small); color: var(--wp--preset--color--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.prompt-studio .ps-lib-card-title { font-weight: 700; font-size: var(--wp--preset--font-size--medium); }
+.prompt-studio .ps-lib-card-summary { color: var(--wp--preset--color--muted); font-size: var(--wp--preset--font-size--small); }
+.prompt-studio .ps-lib-toolbar input[type="search"] { padding: 0.5rem 0.85rem; border: 1px solid var(--wp--preset--color--subtle); border-radius: 999px; background: var(--wp--preset--color--background); color: var(--wp--preset--color--foreground); font: inherit; min-width: 14rem; }
 </style>
 
 <script>
@@ -186,6 +206,67 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
       contentSoftCap: 3000,
     },
   };
+
+  // ---- Templates ----
+  const TEMPLATES = [
+    // ─── WRITE TEMPLATES ──────────────────────────────────────────
+    {
+      id: 'write-code-pr-review',
+      type: 'write',
+      category: 'code',
+      title: 'PR review request',
+      summary: 'Ask the LLM to review a pull-request diff against a clear rubric.',
+      fields: {
+        role: 'You are a senior staff engineer reviewing a teammate\'s pull request.',
+        task: 'Review the diff below and surface anything that would block merge or that the author should reconsider.',
+        context: 'The repo is a TypeScript React app. The team values readable diffs over clever code. The author is mid-level.',
+        outputFormat: 'Bulleted list grouped by severity (blocker, major, minor, nit). One line per item, with a line reference where possible.',
+        constraints: 'Do not rewrite the code yourself. Only flag and explain. Do not comment on formatting issues that a linter would catch.',
+        examples: '',
+        audience: 'The mid-level engineer who wrote the diff.',
+        tone: 'Direct but kind, no hedging.',
+        advancedOpen: false,
+      },
+    },
+    // ─── IMAGE TEMPLATES ──────────────────────────────────────────
+    {
+      id: 'image-photo-fox',
+      type: 'image',
+      category: 'photorealistic',
+      title: 'Animal portrait, golden-hour photo',
+      summary: 'A photorealistic animal portrait with cinematic lighting.',
+      fields: {
+        subject: 'A red fox curled asleep on a worn leather chair, paws tucked under chest',
+        style: 'photorealistic, editorial photography',
+        composition: 'close-up, low angle, shallow depth of field',
+        medium: 'digital photograph',
+        colorLighting: 'warm amber backlight, deep shadows, golden hour',
+        cameraLens: '85mm, f/1.8',
+        mood: 'quiet, contemplative',
+        negative: 'no text, no watermark, no extra limbs',
+        aspectRatio: '--ar 3:2 --v 6',
+        advancedOpen: false,
+      },
+    },
+    // ─── REVIEW TEMPLATES ─────────────────────────────────────────
+    {
+      id: 'review-code-diff',
+      type: 'review',
+      category: 'code-diffs',
+      title: 'Code-diff review with severity',
+      summary: 'Have the LLM grade a code diff against a fixed rubric with severity levels.',
+      fields: {
+        content: 'PASTE_DIFF_HERE',
+        criteria: 'Correctness, readability, error handling, performance, test coverage.',
+        audience: 'The engineer who authored the diff.',
+        outputFormat: 'Markdown table with columns: Severity | Location | Issue | Suggested fix.',
+        severity: 'blocker / major / minor / nit',
+        tone: 'Direct but kind, no hedging.',
+        examples: '',
+        advancedOpen: false,
+      },
+    },
+  ];
 
   // ---- Lint helpers ----
   const IMAGE_STYLE_KEYWORDS = ['photorealistic','oil painting','watercolor','35mm','octane render','unreal engine','midjourney','stable diffusion','digital art','concept art','anime','pixel art','low poly','hyperdetailed','masterpiece','trending on artstation','8k','cinematic'];
@@ -513,7 +594,87 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     );
   }
 
-  function renderLibraryView() { /* Task 11 fills this in */ }
+  // ---- Library view ----
+  function renderLibraryView() {
+    const root = document.getElementById('view-library');
+    if (!root) { return; }
+    const type = state.currentType;
+    const cats = libraryCategoriesFor(type);
+    const search = (state.library.search ? state.library.search : '').toLowerCase();
+    const active = state.library.category ? state.library.category : 'all';
+
+    let chipsHtml = '<button type="button" class="ps-lib-chip' + (active === 'all' ? ' is-active' : '') + '" data-action="lib-cat" data-cat="all">All</button>';
+    for (let i = 0; i < cats.length; i++) {
+      chipsHtml += '<button type="button" class="ps-lib-chip' + (active === cats[i].key ? ' is-active' : '') + '" data-action="lib-cat" data-cat="' + escapeHtml(cats[i].key) + '">' + escapeHtml(cats[i].label) + '</button>';
+    }
+
+    const templates = TEMPLATES.filter(function (t) {
+      if (t.type !== type) { return false; }
+      if (active !== 'all') { if (t.category !== active) { return false; } }
+      if (search) {
+        const blob = (t.title + ' ' + t.summary).toLowerCase();
+        if (blob.indexOf(search) === -1) { return false; }
+      }
+      return true;
+    });
+
+    let cardsHtml = '';
+    if (templates.length === 0) {
+      cardsHtml = '<p class="ps-stub">No templates match. Try clearing the search or category.</p>';
+    } else {
+      for (let i = 0; i < templates.length; i++) {
+        const t = templates[i];
+        cardsHtml += '<button type="button" class="ps-lib-card" data-action="lib-open" data-id="' + escapeHtml(t.id) + '">' +
+          '<span class="ps-lib-card-stripe ps-lib-stripe-' + escapeHtml(t.type) + '"></span>' +
+          '<span class="ps-lib-card-cat">' + escapeHtml(labelFor(cats, t.category)) + '</span>' +
+          '<span class="ps-lib-card-title">' + escapeHtml(t.title) + '</span>' +
+          '<span class="ps-lib-card-summary">' + escapeHtml(t.summary) + '</span>' +
+        '</button>';
+      }
+    }
+
+    root.innerHTML =
+      '<div class="ps-library">' +
+        '<div class="ps-lib-toolbar">' +
+          '<div class="ps-lib-chips">' + chipsHtml + '</div>' +
+          '<input type="search" id="ps-lib-search" placeholder="Search templates" value="' + escapeHtml(search).replace(/"/g, '&quot;') + '" aria-label="Search templates" />' +
+        '</div>' +
+        '<div class="ps-lib-grid">' + cardsHtml + '</div>' +
+      '</div>';
+
+    // If a template is open in the URL, render modal too
+    if (state.library.openTemplateId) {
+      let tmpl = null;
+      for (let i = 0; i < TEMPLATES.length; i++) {
+        if (TEMPLATES[i].id === state.library.openTemplateId) { tmpl = TEMPLATES[i]; break; }
+      }
+      if (tmpl) {
+        if (tmpl.type === state.currentType) { openTemplateModal(tmpl); }
+      }
+    }
+  }
+
+  function libraryCategoriesFor(type) {
+    if (type === 'write')  { return [ {key:'code', label:'Code'}, {key:'creative', label:'Creative / Long-form'}, {key:'strategy', label:'Strategy / Learning'} ]; }
+    if (type === 'image')  { return [ {key:'photorealistic', label:'Photorealistic'}, {key:'illustration', label:'Illustration / Art'}, {key:'ui-design', label:'UI / Design Assets'} ]; }
+    if (type === 'review') { return [ {key:'code-diffs', label:'Code / Diffs'}, {key:'copy-marketing', label:'Copy / Marketing'}, {key:'structural', label:'Structural / Documents'} ]; }
+    return [];
+  }
+
+  function labelFor(cats, key) {
+    for (let i = 0; i < cats.length; i++) {
+      if (cats[i].key === key) { return cats[i].label; }
+    }
+    return key;
+  }
+
+  function openTemplateModal(/* tmpl */) {
+    // Real modal arrives in Task 12.
+  }
+
+  function root_querySafe(selector) {
+    try { return document.querySelector(selector); } catch (e) { return null; }
+  }
 
   // ---- Click handlers (push hash only, do not render directly) ----
   document.addEventListener('click', function (ev) {
@@ -566,6 +727,24 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
   document.addEventListener('input', function (ev) {
     const target = ev.target;
     if (!target) { return; }
+
+    // Library search input
+    if (target.id === 'ps-lib-search') {
+      state.library.search = target.value;
+      // Only re-render the grid, not the input. Preserve caret position.
+      const grid = root_querySafe('.ps-lib-grid');
+      if (grid) {
+        const focused = document.activeElement;
+        const caret = focused ? focused.selectionStart : null;
+        renderLibraryView();
+        const newFocused = document.getElementById('ps-lib-search');
+        if (newFocused) {
+          newFocused.focus();
+          if (caret != null) { newFocused.setSelectionRange(caret, caret); }
+        }
+      }
+      return;
+    }
 
     // Lint input
     if (target.id === 'ps-lint-input') {
@@ -662,6 +841,16 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
         }
       }
       copyToClipboard(out);
+      return;
+    }
+    if (action === 'lib-cat') {
+      state.library.category = btn.getAttribute('data-cat');
+      renderLibraryView();
+      return;
+    }
+    if (action === 'lib-open') {
+      const id = btn.getAttribute('data-id');
+      pushRoute(state.currentType, 'library', id);
       return;
     }
   });
