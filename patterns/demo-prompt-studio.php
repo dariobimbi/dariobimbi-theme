@@ -146,6 +146,21 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
 .prompt-studio .ps-lib-card-title { font-weight: 700; font-size: var(--wp--preset--font-size--medium); }
 .prompt-studio .ps-lib-card-summary { color: var(--wp--preset--color--muted); font-size: var(--wp--preset--font-size--small); }
 .prompt-studio .ps-lib-toolbar input[type="search"] { padding: 0.5rem 0.85rem; border: 1px solid var(--wp--preset--color--subtle); border-radius: 999px; background: var(--wp--preset--color--background); color: var(--wp--preset--color--foreground); font: inherit; min-width: 14rem; }
+.ps-modal-root { position: fixed; inset: 0; z-index: 9000; display: flex; align-items: center; justify-content: center; padding: 0; }
+.ps-modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.5); }
+.ps-modal { position: relative; background: var(--wp--preset--color--surface); color: var(--wp--preset--color--foreground); border-radius: 0; max-width: none; width: 100%; height: 100%; padding: var(--wp--preset--spacing--40); overflow: auto; display: flex; flex-direction: column; gap: var(--wp--preset--spacing--20); }
+@media (min-width: 1024px) {
+  .ps-modal { max-width: 720px; width: auto; height: auto; max-height: 80vh; border-radius: 18px; }
+}
+.ps-modal-header { display: flex; justify-content: space-between; align-items: start; gap: 0.75rem; }
+.ps-modal-cat { font-size: var(--wp--preset--font-size--small); color: var(--wp--preset--color--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.ps-modal-header h2 { margin: 0.2rem 0; }
+.ps-modal-header p { margin: 0; color: var(--wp--preset--color--muted); }
+.ps-modal-close { appearance: none; border: none; background: transparent; font-size: 1.6rem; line-height: 1; cursor: pointer; color: var(--wp--preset--color--foreground); padding: 0 0.5rem; }
+.ps-modal-prompt { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.9rem; background: var(--wp--preset--color--background); padding: var(--wp--preset--spacing--30); border-radius: 10px; white-space: pre-wrap; word-break: break-word; flex: 1 1 auto; overflow: auto; }
+.ps-modal-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.ps-modal-actions button { appearance: none; border: 1px solid var(--wp--preset--color--primary); background: var(--wp--preset--color--primary); color: var(--wp--preset--color--background); padding: 0.55rem 1rem; border-radius: 999px; cursor: pointer; font: inherit; }
+.ps-modal-actions button:first-child { background: transparent; color: var(--wp--preset--color--foreground); border-color: var(--wp--preset--color--subtle); }
 </style>
 
 <script>
@@ -668,8 +683,91 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     return key;
   }
 
-  function openTemplateModal(/* tmpl */) {
-    // Real modal arrives in Task 12.
+  // Module-scope so close handlers can find it
+  let modalCachedFocus = null;
+  let modalKeyHandler = null;
+
+  function openTemplateModal(tmpl) {
+    const existing = document.getElementById('ps-modal-root');
+    if (existing) { existing.remove(); }
+
+    modalCachedFocus = document.activeElement;
+
+    const assembled = assemblePrompt(tmpl.type, tmpl.fields).text;
+    const cats = libraryCategoriesFor(tmpl.type);
+    const catLabel = labelFor(cats, tmpl.category);
+
+    const root = document.createElement('div');
+    root.id = 'ps-modal-root';
+    root.className = 'ps-modal-root';
+    root.innerHTML =
+      '<div class="ps-modal-backdrop" data-action="modal-close"></div>' +
+      '<div class="ps-modal" role="dialog" aria-modal="true" aria-labelledby="ps-modal-title">' +
+        '<header class="ps-modal-header">' +
+          '<div>' +
+            '<span class="ps-modal-cat">' + escapeHtml(catLabel) + '</span>' +
+            '<h2 id="ps-modal-title">' + escapeHtml(tmpl.title) + '</h2>' +
+            '<p>' + escapeHtml(tmpl.summary) + '</p>' +
+          '</div>' +
+          '<button type="button" class="ps-modal-close" data-action="modal-close" aria-label="Close">×</button>' +
+        '</header>' +
+        '<pre class="ps-modal-prompt" aria-label="Assembled prompt">' + escapeHtml(assembled) + '</pre>' +
+        '<footer class="ps-modal-actions">' +
+          '<button type="button" data-action="modal-copy" data-id="' + escapeHtml(tmpl.id) + '">Copy</button>' +
+          '<button type="button" data-action="modal-use" data-id="' + escapeHtml(tmpl.id) + '">Use as starting point</button>' +
+        '</footer>' +
+      '</div>';
+    document.body.appendChild(root);
+
+    // Focus first interactive element
+    const firstFocusable = root.querySelector('.ps-modal-close');
+    if (firstFocusable) { firstFocusable.focus(); }
+
+    // Trap Tab inside the modal
+    modalKeyHandler = function (ev) {
+      if (ev.key === 'Escape') {
+        ev.preventDefault();
+        closeTemplateModal();
+        return;
+      }
+      if (ev.key !== 'Tab') { return; }
+      const focusables = root.querySelectorAll('button');
+      if (focusables.length === 0) { return; }
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (ev.shiftKey) {
+        if (document.activeElement === first) {
+          ev.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          ev.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    document.addEventListener('keydown', modalKeyHandler);
+  }
+
+  function closeTemplateModal() {
+    const root = document.getElementById('ps-modal-root');
+    if (root) { root.remove(); }
+    if (modalKeyHandler) {
+      document.removeEventListener('keydown', modalKeyHandler);
+      modalKeyHandler = null;
+    }
+    // Restore focus to the element that opened the modal
+    if (modalCachedFocus) {
+      try { modalCachedFocus.focus(); } catch (e) { /* element gone */ }
+      modalCachedFocus = null;
+    }
+    // Strip the ?t= from the URL via replaceState (modal close should not add history)
+    if (state.library.openTemplateId) {
+      state.library.openTemplateId = null;
+      const newHash = buildHash(state.currentType, state.currentMode, null);
+      history.replaceState(null, '', newHash);
+    }
   }
 
   function root_querySafe(selector) {
@@ -851,6 +949,37 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     if (action === 'lib-open') {
       const id = btn.getAttribute('data-id');
       pushRoute(state.currentType, 'library', id);
+      return;
+    }
+    if (action === 'modal-close') {
+      closeTemplateModal();
+      return;
+    }
+    if (action === 'modal-copy') {
+      const id = btn.getAttribute('data-id');
+      const tmpl = TEMPLATES.find(function (t) { return t.id === id; });
+      if (!tmpl) { return; }
+      const assembled = assemblePrompt(tmpl.type, tmpl.fields).text;
+      copyToClipboard(assembled);
+      closeTemplateModal();
+      return;
+    }
+    if (action === 'modal-use') {
+      const id = btn.getAttribute('data-id');
+      const tmpl = TEMPLATES.find(function (t) { return t.id === id; });
+      if (!tmpl) { return; }
+      if (isDraftDirty(tmpl.type)) {
+        const ok = confirm('Replace your current ' + capitalize(tmpl.type) + ' draft with this template?');
+        if (!ok) { return; }
+      }
+      const draft = state.drafts[tmpl.type];
+      for (const k in tmpl.fields) {
+        if (k in draft) { draft[k] = tmpl.fields[k]; }
+      }
+      draft.advancedOpen = false;
+      scheduleSave();
+      closeTemplateModal();
+      pushRoute(tmpl.type, 'build', null);
       return;
     }
   });
