@@ -642,6 +642,28 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
       renderLintView();
       return;
     }
+    if (action === 'lint-refine') {
+      refineFromLint();
+      return;
+    }
+    if (action === 'lint-copy-results') {
+      const result = state.lint.lastResult;
+      if (!result) { return; }
+      let out = 'Score: ' + result.score + ' (' + result.verdict + ', ' + result.type + ' rubric)\n\n';
+      out += 'Checks:\n';
+      for (let i = 0; i < result.checks.length; i++) {
+        const c = result.checks[i];
+        out += '  - ' + c.label + ': ' + c.detail + '\n';
+      }
+      if (result.flags.length) {
+        out += '\nFlags:\n';
+        for (let i = 0; i < result.flags.length; i++) {
+          out += '  - ' + result.flags[i].label + ': ' + result.flags[i].detail + '\n';
+        }
+      }
+      copyToClipboard(out);
+      return;
+    }
   });
 
   function resetDraft(type) {
@@ -651,6 +673,37 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
       review: { content:'', criteria:'', audience:'', outputFormat:'', severity:'', tone:'', examples:'', advancedOpen:false },
     };
     state.drafts[type] = fresh[type];
+  }
+
+  function refineFromLint() {
+    const text = state.lint.input ? state.lint.input : '';
+    const type = state.lint.detectedType ? state.lint.detectedType : detectPromptType(text);
+    if (!text) { showToast('Nothing to refine.', 'warn'); return; }
+    if (isDraftDirty(type)) {
+      const ok = confirm('This will replace your current ' + capitalize(type) + ' draft. Continue?');
+      if (!ok) { return; }
+    }
+    const parsed = parsePromptBack(text, type);
+    const draft = state.drafts[type];
+    for (const k in parsed.fields) {
+      if (k in draft) { draft[k] = parsed.fields[k]; }
+    }
+    scheduleSave();
+    pushRoute(type, 'build', null);
+    if (parsed.lossy) {
+      showToast('Could not auto-split into fields. Loaded into ' + (type === 'image' ? 'Subject' : (type === 'review' ? 'Content' : 'Task')) + ' for manual editing.', 'warn');
+    }
+  }
+
+  function isDraftDirty(type) {
+    const draft = state.drafts[type];
+    for (const k in draft) {
+      if (k === 'advancedOpen') { continue; }
+      if (typeof draft[k] === 'string') {
+        if (draft[k].trim().length > 0) { return true; }
+      }
+    }
+    return false;
   }
 
   // Stubs that arrive in later tasks. Defined now so the renderer can call them.
@@ -742,6 +795,107 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     text += '\n\nBegin your review now based on the criteria above.';
     return { text: text, instructionsOnly: instructionsOnly, contentOnly: contentOnly };
   }
+  // ---- Parse-back ----
+  // Returns { fields: {...rubric fields}, lossy: bool }
+  function parsePromptBack(text, type) {
+    if (type === 'write')  { return parseWriteBack(text); }
+    if (type === 'image')  { return parseImageBack(text); }
+    if (type === 'review') { return parseReviewBack(text); }
+    return { fields: {}, lossy: true };
+  }
+
+  function parseWriteBack(text) {
+    const fields = { role:'', task:'', context:'', outputFormat:'', constraints:'', examples:'', audience:'', tone:'' };
+    const sections = {
+      role: /(?:^|\n\s*)Role:\s*([\s\S]*?)(?=\n\s*(?:Task|Context|Examples|Output format|Constraints|Tone|Audience):|$)/i,
+      task: /(?:^|\n\s*)Task:\s*([\s\S]*?)(?=\n\s*(?:Role|Context|Examples|Output format|Constraints|Tone|Audience):|$)/i,
+      context: /(?:^|\n\s*)Context:\s*([\s\S]*?)(?=\n\s*(?:Role|Task|Examples|Output format|Constraints|Tone|Audience):|$)/i,
+      examples: /(?:^|\n\s*)Examples?:\s*([\s\S]*?)(?=\n\s*(?:Role|Task|Context|Output format|Constraints|Tone|Audience):|$)/i,
+      outputFormat: /(?:^|\n\s*)Output format:\s*([\s\S]*?)(?=\n\s*(?:Role|Task|Context|Examples|Constraints|Tone|Audience):|$)/i,
+      constraints: /(?:^|\n\s*)Constraints?:\s*([\s\S]*?)(?=\n\s*(?:Role|Task|Context|Examples|Output format|Tone|Audience):|$)/i,
+      tone: /(?:^|\n\s*)Tone:\s*([\s\S]*?)(?=\n\s*(?:Role|Task|Context|Examples|Output format|Constraints|Audience):|$)/i,
+      audience: /(?:^|\n\s*)Audience:\s*([\s\S]*?)(?=\n\s*(?:Role|Task|Context|Examples|Output format|Constraints|Tone):|$)/i,
+    };
+    let matched = 0;
+    for (const k in sections) {
+      const m = text.match(sections[k]);
+      if (m) { fields[k] = m[1].trim(); matched += 1; }
+    }
+    if (matched === 0) {
+      fields.task = text.trim();
+      return { fields: fields, lossy: true };
+    }
+    return { fields: fields, lossy: false };
+  }
+
+  function parseImageBack(text) {
+    const fields = { subject:'', style:'', composition:'', medium:'', colorLighting:'', cameraLens:'', mood:'', negative:'', aspectRatio:'' };
+    let workText = text;
+    // Extract Negative
+    const negMatch = workText.match(/(?:^|\n)Negative:\s*([\s\S]+?)(?:\n|$)/i);
+    if (negMatch) {
+      fields.negative = negMatch[1].trim();
+      workText = workText.replace(negMatch[0], '');
+    }
+    // Extract aspect-ratio / param flags
+    const flagMatch = workText.match(/(--ar\s+[\d:]+(?:\s+--[a-z]+\s*[\w\.:]*)*|\s--v\s*\d+|\s--niji\d*|\s--style\s+\w+)/i);
+    if (flagMatch) {
+      fields.aspectRatio = flagMatch[0].trim();
+      workText = workText.replace(flagMatch[0], '');
+    }
+    // Split on commas
+    const chunks = workText.split(',').map(function (s) { return s.trim(); }).filter(function (s) { return s.length > 0; });
+    if (chunks.length === 0) { return { fields: fields, lossy: true }; }
+    fields.subject = chunks[0];
+    for (let i = 1; i < chunks.length; i++) {
+      const c = chunks[i];
+      const cl = c.toLowerCase();
+      if (matchesAny(cl, IMAGE_STYLE_KEYWORDS)) { fields.style = appendTo(fields.style, c); continue; }
+      if (/(close-?up|wide|low angle|high angle|portrait|landscape|rule of thirds|symmetrical|over the shoulder|aerial)/i.test(c)) { fields.composition = appendTo(fields.composition, c); continue; }
+      if (/(35mm|f\/\d|lens|depth of field|bokeh|telephoto|wide-angle|macro)/i.test(c)) { fields.cameraLens = appendTo(fields.cameraLens, c); continue; }
+      if (/(light|lit|sunset|dawn|shadow|amber|cool|warm|neon|backlit|golden hour|moody|color)/i.test(c)) { fields.colorLighting = appendTo(fields.colorLighting, c); continue; }
+      if (/(watercolor|oil|paper|canvas|digital|3d|render|ink|pencil)/i.test(c)) { fields.medium = appendTo(fields.medium, c); continue; }
+      // Otherwise treat as extra subject detail
+      fields.subject = appendTo(fields.subject, c);
+    }
+    return { fields: fields, lossy: false };
+  }
+  function matchesAny(s, list) { for (let i = 0; i < list.length; i++) { if (s.indexOf(list[i]) !== -1) { return true; } } return false; }
+  function appendTo(existing, next) { return existing ? existing + ', ' + next : next; }
+
+  function parseReviewBack(text) {
+    const fields = { content:'', criteria:'', audience:'', outputFormat:'', severity:'', tone:'', examples:'' };
+    // Locate the fenced block (``` or """)
+    const fencedMatch = text.match(/(```|""")([\s\S]+?)\1/);
+    if (fencedMatch) {
+      fields.content = fencedMatch[2].trim();
+    }
+    // Instructions = everything before the fenced block, minus a trailing CTA
+    let instr = fencedMatch ? text.slice(0, text.indexOf(fencedMatch[0])) : text;
+    instr = instr.replace(/begin your review now[\s\S]*$/i, '').trim();
+    instr = instr.replace(/^review the following content\.?\s*/i, '').trim();
+    const sections = {
+      criteria: /(?:^|\n\s*)Criteria:\s*([\s\S]*?)(?=\n\s*(?:Audience(?: for feedback)?|Output format|Severity scale|Tone|Examples):|$)/i,
+      audience: /(?:^|\n\s*)Audience(?: for feedback)?:\s*([\s\S]*?)(?=\n\s*(?:Criteria|Output format|Severity scale|Tone|Examples):|$)/i,
+      outputFormat: /(?:^|\n\s*)Output format:\s*([\s\S]*?)(?=\n\s*(?:Criteria|Audience(?: for feedback)?|Severity scale|Tone|Examples):|$)/i,
+      severity: /(?:^|\n\s*)Severity(?: scale)?:\s*([\s\S]*?)(?=\n\s*(?:Criteria|Audience(?: for feedback)?|Output format|Tone|Examples):|$)/i,
+      tone: /(?:^|\n\s*)Tone:\s*([\s\S]*?)(?=\n\s*(?:Criteria|Audience(?: for feedback)?|Output format|Severity scale|Examples):|$)/i,
+      examples: /(?:^|\n\s*)Examples?:\s*([\s\S]*?)(?=\n\s*(?:Criteria|Audience(?: for feedback)?|Output format|Severity scale|Tone):|$)/i,
+    };
+    let matched = 0;
+    for (const k in sections) {
+      const m = instr.match(sections[k]);
+      if (m) { fields[k] = m[1].trim(); matched += 1; }
+    }
+    if (!fencedMatch) {
+      if (matched === 0) {
+        fields.content = text.trim();
+        return { fields: fields, lossy: true };
+      }
+    }
+    return { fields: fields, lossy: false };
+  }
+
   // ---- Lint rules ----
   // Each rule: { key, label, check(text) → { present:bool, strength:0..1, detail:'' } }
   const LINT_RULES = {
