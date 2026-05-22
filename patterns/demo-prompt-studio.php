@@ -88,6 +88,10 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
 .prompt-studio .ps-token-meter { font-size: var(--wp--preset--font-size--small); color: var(--wp--preset--color--muted); }
 .prompt-studio .ps-token-meter.is-amber { color: var(--wp--preset--color--accent); }
 .prompt-studio .ps-token-meter.is-red { color: var(--wp--preset--color--hot); }
+
+.ps-toast-host { position: fixed; right: 1rem; bottom: 1rem; display: flex; flex-direction: column; gap: 0.5rem; z-index: 9999; }
+.ps-toast { background: var(--wp--preset--color--foreground); color: var(--wp--preset--color--background); padding: 0.65rem 1rem; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); max-width: 22rem; font-size: var(--wp--preset--font-size--small); }
+.ps-toast-warn { background: var(--wp--preset--color--accent); }
 </style>
 
 <script>
@@ -150,7 +154,59 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
   };
 
   // Placeholder cycling (chosen once on page load, never while typing)
-  const PLACEHOLDER_VARIANTS = {}; // populated by pickPlaceholders() — single-shot
+  const PLACEHOLDER_VARIANTS = {};
+  // Picks one placeholder set per page load. Field renderer reads from RUBRICS
+  // directly today, so cycling here just means choosing a stable variant once
+  // on init for cosmetic freshness. Future variants can replace these.
+  function pickPlaceholders() {
+    // Intentionally a no-op for v1: RUBRICS placeholders are stable strings.
+    // Wired through so we can add per-field arrays of examples later without
+    // touching renderField.
+  }
+  pickPlaceholders();
+
+  // ---- Toast ----
+  function showToast(message, kind) {
+    const k = kind ? kind : 'info';
+    let host = document.getElementById('ps-toast-host');
+    if (!host) {
+      host = document.createElement('div');
+      host.id = 'ps-toast-host';
+      host.className = 'ps-toast-host';
+      document.body.appendChild(host);
+    }
+    const el = document.createElement('div');
+    el.className = 'ps-toast ps-toast-' + k;
+    el.setAttribute('role', k === 'warn' ? 'alert' : 'status');
+    el.textContent = message;
+    host.appendChild(el);
+    const duration = k === 'warn' ? 5000 : 2000;
+    setTimeout(function () {
+      if (el.parentNode) { el.parentNode.removeChild(el); }
+    }, duration);
+  }
+
+  function copyToClipboard(text) {
+    if (navigator.clipboard) {
+      if (navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () { showToast('Copied.'); }).catch(function () { fallbackCopy(text); });
+        return;
+      }
+    }
+    fallbackCopy(text);
+  }
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'absolute';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); showToast('Copied.'); }
+    catch (e) { showToast('Copy failed.', 'warn'); }
+    document.body.removeChild(ta);
+  }
 
   // ---- State ----
   const TYPES = ['write', 'image', 'review'];
@@ -385,7 +441,19 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
       }
       return;
     }
-    // copy-prompt, lint-this wired in Task 6.
+    if (action === 'copy-prompt') {
+      const assembled = assemblePrompt(state.currentType, state.drafts[state.currentType]).text;
+      copyToClipboard(assembled);
+      return;
+    }
+    if (action === 'lint-this') {
+      const assembled = assemblePrompt(state.currentType, state.drafts[state.currentType]).text;
+      state.lint.input = assembled;
+      state.lint.detectedType = state.currentType;
+      state.lint.lastResult = null;
+      pushRoute(null, 'lint', null);
+      return;
+    }
   });
 
   function resetDraft(type) {
