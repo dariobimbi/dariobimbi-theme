@@ -150,9 +150,40 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
 .prompt-studio .ps-field input:focus, .prompt-studio .ps-field textarea:focus { outline: 2px solid var(--wp--preset--color--primary); outline-offset: 1px; border-color: var(--wp--preset--color--primary); }
 .prompt-studio .ps-field textarea { resize: vertical; min-height: 4.5rem; font-family: inherit; }
 
-.prompt-studio .ps-advanced-toggle { align-self: flex-start; appearance: none; background: transparent; border: 1px dashed var(--wp--preset--color--subtle); color: var(--wp--preset--color--foreground); padding: 0.4rem 0.85rem; border-radius: 999px; cursor: pointer; font: inherit; }
+.prompt-studio .ps-advanced-toggle {
+  align-self: flex-start;
+  appearance: none;
+  background: var(--wp--preset--color--background);
+  border: 1px solid var(--wp--preset--color--subtle);
+  color: var(--wp--preset--color--foreground);
+  padding: 0.55rem 1rem;
+  border-radius: 12px;
+  cursor: pointer;
+  font: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.1s ease;
+}
+.prompt-studio .ps-advanced-toggle:hover { border-color: var(--wp--preset--color--primary); background: var(--wp--preset--color--surface); }
+.prompt-studio .ps-advanced-toggle:active { transform: translateY(1px); }
+.prompt-studio .ps-advanced-toggle strong { font-weight: 700; color: var(--wp--preset--color--primary); }
+.prompt-studio .ps-advanced-toggle .ps-chev { display: inline-block; transition: transform 0.2s ease; font-size: 0.7rem; opacity: 0.75; line-height: 1; }
+.prompt-studio .ps-advanced-toggle[aria-expanded="true"] .ps-chev { transform: rotate(180deg); }
 .prompt-studio .ps-advanced { display: flex; flex-direction: column; gap: var(--wp--preset--spacing--30); }
 .prompt-studio .ps-advanced[hidden] { display: none; }
+
+/* Chevron for datalist inputs — visible affordance for "click to see suggestions" */
+.prompt-studio .ps-field input[list] {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6' fill='none' stroke='%23a3aed0' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'><polyline points='1 1.5 5 4.5 9 1.5'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 0.85rem center;
+  background-size: 0.7rem auto;
+  padding-right: 2rem;
+}
+.prompt-studio .ps-field input[list]:focus {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6' fill='none' stroke='%238ab4ff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><polyline points='1 1.5 5 4.5 9 1.5'/></svg>");
+}
 
 .prompt-studio .ps-preview { background: var(--wp--preset--color--surface-card, var(--wp--preset--color--background)); background-image: var(--wp--preset--gradient--surface-card, none); border: 1px solid var(--wp--preset--color--subtle); border-radius: 14px; padding: var(--wp--preset--spacing--30); display: flex; flex-direction: column; gap: var(--wp--preset--spacing--20); position: sticky; top: var(--wp--preset--spacing--20); align-self: start; }
 .prompt-studio .ps-preview-header { display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
@@ -1000,7 +1031,10 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     }
 
     // Advanced toggle + fields
-    parts.push('<button type="button" class="ps-advanced-toggle" aria-expanded="' + (draft.advancedOpen ? 'true' : 'false') + '" data-action="toggle-advanced">' + (draft.advancedOpen ? 'Hide advanced' : 'Show advanced') + '</button>');
+    const advCount = rubric.advanced.length;
+    const advWord = advCount === 1 ? 'field' : 'fields';
+    const advLabel = draft.advancedOpen ? ('Hide <strong>' + advCount + '</strong> ' + advWord) : ('Show <strong>' + advCount + '</strong> more ' + advWord);
+    parts.push('<button type="button" class="ps-advanced-toggle" aria-expanded="' + (draft.advancedOpen ? 'true' : 'false') + '" data-action="toggle-advanced">' + advLabel + ' <span class="ps-chev" aria-hidden="true">⌄</span></button>');
     parts.push('<div class="ps-advanced" ' + (draft.advancedOpen ? '' : 'hidden') + '>');
     for (let i = 0; i < rubric.advanced.length; i++) {
       parts.push(renderField(rubric.advanced[i], draft, rubric.multiline));
