@@ -167,29 +167,34 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
 }
 .prompt-studio .ps-advanced-toggle:hover { border-color: var(--wp--preset--color--primary); background: var(--wp--preset--color--surface); }
 .prompt-studio .ps-advanced-toggle:active { transform: translateY(1px); }
-.prompt-studio .ps-advanced-toggle .ps-chev { display: inline-block; transition: transform 0.2s ease; font-size: 0.7rem; opacity: 0.75; line-height: 1; }
+.prompt-studio .ps-advanced-toggle .ps-chev { display: inline-flex; align-items: center; transition: transform 0.2s ease; opacity: 0.8; }
+.prompt-studio .ps-advanced-toggle .ps-chev svg { width: 12px; height: 9px; display: block; }
 .prompt-studio .ps-advanced-toggle[aria-expanded="true"] .ps-chev { transform: rotate(180deg); }
 .prompt-studio .ps-advanced { display: flex; flex-direction: column; gap: var(--wp--preset--spacing--30); }
 .prompt-studio .ps-advanced[hidden] { display: none; }
 
 /* Custom combobox: full-width animated dropdown panel for suggestion fields. */
 .prompt-studio .ps-combo { position: relative; }
-.prompt-studio .ps-combo input { padding-right: 2.25rem; }
+.prompt-studio .ps-combo input { padding-right: 2.6rem; }
 .prompt-studio .ps-combo-toggle {
   position: absolute;
-  right: 0.55rem;
+  right: 0.45rem;
   top: 50%;
   transform: translateY(-50%);
   background: transparent;
   border: none;
   color: var(--wp--preset--color--muted);
   cursor: pointer;
-  font-size: 0.75rem;
-  line-height: 1;
-  padding: 0.4rem 0.45rem;
-  border-radius: 6px;
+  padding: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition: transform 0.2s ease, color 0.15s ease, background-color 0.15s ease;
 }
+.prompt-studio .ps-combo-toggle svg { width: 14px; height: 10px; display: block; }
 .prompt-studio .ps-combo-toggle:hover { color: var(--wp--preset--color--foreground); background: var(--wp--preset--color--subtle); }
 .prompt-studio .ps-combo[data-open="true"] .ps-combo-toggle { transform: translateY(-50%) rotate(180deg); color: var(--wp--preset--color--primary); }
 .prompt-studio .ps-combo input:focus + .ps-combo-toggle { color: var(--wp--preset--color--primary); }
@@ -1086,7 +1091,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
 
     // Advanced toggle + fields
     const advLabel = draft.advancedOpen ? 'Hide advanced' : 'Show advanced';
-    parts.push('<button type="button" class="ps-advanced-toggle" aria-expanded="' + (draft.advancedOpen ? 'true' : 'false') + '" data-action="toggle-advanced">' + advLabel + ' <span class="ps-chev" aria-hidden="true">⌄</span></button>');
+    parts.push('<button type="button" class="ps-advanced-toggle" aria-expanded="' + (draft.advancedOpen ? 'true' : 'false') + '" data-action="toggle-advanced">' + advLabel + ' <span class="ps-chev" aria-hidden="true"><svg viewBox="0 0 12 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 1.5 6 6.5 11 1.5"/></svg></span></button>');
     parts.push('<div class="ps-advanced" ' + (draft.advancedOpen ? '' : 'hidden') + '>');
     for (let i = 0; i < rubric.advanced.length; i++) {
       parts.push(renderField(rubric.advanced[i], draft, rubric.multiline));
@@ -1135,7 +1140,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
       inputOrCombo =
         '<div class="ps-combo" data-field="' + field.key + '" data-open="false">' +
           '<input id="' + id + '" name="' + field.key + '" type="text" value="' + escapeHtml(value).replace(/"/g, '&quot;') + '" placeholder="' + placeholder + '" aria-describedby="' + id + '-help" role="combobox" aria-controls="' + panelId + '" aria-expanded="false" aria-autocomplete="list" autocomplete="off" />' +
-          '<button type="button" class="ps-combo-toggle" data-action="combo-toggle" data-field="' + field.key + '" tabindex="-1" aria-label="Show suggestions">⌄</button>' +
+          '<button type="button" class="ps-combo-toggle" data-action="combo-toggle" data-field="' + field.key + '" tabindex="-1" aria-label="Show suggestions"><svg viewBox="0 0 12 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 1.5 6 6.5 11 1.5"/></svg></button>' +
           '<div class="ps-combo-panel" id="' + panelId + '" role="listbox">' + options + '<p class="ps-combo-empty" hidden>No matches. Type your own.</p></div>' +
         '</div>';
     } else {
