@@ -10,32 +10,49 @@
 <!-- wp:group {"align":"full","className":"content-page prompt-studio","style":{"spacing":{"padding":{"top":"var:preset|spacing|70","bottom":"var:preset|spacing|70","left":"var:preset|spacing|30","right":"var:preset|spacing|30"}}},"layout":{"type":"constrained"}} -->
 <div class="wp-block-group alignfull content-page prompt-studio" style="padding-top:var(--wp--preset--spacing--70);padding-right:var(--wp--preset--spacing--30);padding-bottom:var(--wp--preset--spacing--70);padding-left:var(--wp--preset--spacing--30)">
 
-<p class="eyebrow">demo</p>
-<h1 class="has-gradient-text">Prompt Studio</h1>
-<p class="lede">Build a prompt from structured fields, audit one you already have, or borrow a template. Three prompt types: writing, image generation, and review. No API calls, no sign-in. Your drafts stay in this browser.</p>
+<div class="ps-card">
 
-<div class="ps-toolbar">
-  <div class="ps-type-bar" role="tablist" aria-label="Prompt type">
-    <button type="button" class="ps-type-chip is-active" role="tab" data-type="write" aria-selected="true">Write</button>
-    <button type="button" class="ps-type-chip" role="tab" data-type="image" aria-selected="false">Image</button>
-    <button type="button" class="ps-type-chip" role="tab" data-type="review" aria-selected="false">Review</button>
+  <header class="ps-card-head">
+    <p class="eyebrow">demo</p>
+    <h1 class="ps-title has-gradient-text">Prompt Studio</h1>
+    <p class="lede">Build a prompt from structured fields, audit a prompt you already have, or start from a template. Drafts stay in this browser.</p>
+  </header>
+
+  <hr class="ps-divider" aria-hidden="true">
+
+  <div class="ps-toolbar">
+    <div class="ps-type-bar" role="tablist" aria-label="Prompt type">
+      <button type="button" class="ps-type-chip is-active" role="tab" data-type="write" aria-selected="true">
+        <span class="ps-type-label">Write</span>
+        <span class="ps-type-sub">Draft text</span>
+      </button>
+      <button type="button" class="ps-type-chip" role="tab" data-type="image" aria-selected="false">
+        <span class="ps-type-label">Image</span>
+        <span class="ps-type-sub">Visuals</span>
+      </button>
+      <button type="button" class="ps-type-chip" role="tab" data-type="review" aria-selected="false">
+        <span class="ps-type-label">Review</span>
+        <span class="ps-type-sub">Audit a prompt</span>
+      </button>
+    </div>
+    <div class="ps-mode-bar" role="tablist" aria-label="Mode">
+      <button type="button" class="ps-mode-tab is-active" role="tab" data-mode="build" aria-selected="true">Build</button>
+      <button type="button" class="ps-mode-tab" role="tab" data-mode="lint" aria-selected="false">Lint</button>
+      <button type="button" class="ps-mode-tab" role="tab" data-mode="library" aria-selected="false">Library</button>
+    </div>
   </div>
-  <div class="ps-mode-bar" role="tablist" aria-label="Mode">
-    <button type="button" class="ps-mode-tab is-active" role="tab" data-mode="build" aria-selected="true">Build</button>
-    <button type="button" class="ps-mode-tab" role="tab" data-mode="lint" aria-selected="false">Lint</button>
-    <button type="button" class="ps-mode-tab" role="tab" data-mode="library" aria-selected="false">Library</button>
-  </div>
+
+  <section id="view-build" class="ps-view" aria-label="Build">
+    <p class="ps-stub">Build view goes here.</p>
+  </section>
+  <section id="view-lint" class="ps-view" aria-label="Lint" hidden>
+    <p class="ps-stub">Lint view goes here.</p>
+  </section>
+  <section id="view-library" class="ps-view" aria-label="Library" hidden>
+    <p class="ps-stub">Library view goes here.</p>
+  </section>
+
 </div>
-
-<section id="view-build" class="ps-view" aria-label="Build">
-  <p class="ps-stub">Build view goes here.</p>
-</section>
-<section id="view-lint" class="ps-view" aria-label="Lint" hidden>
-  <p class="ps-stub">Lint view goes here.</p>
-</section>
-<section id="view-library" class="ps-view" aria-label="Library" hidden>
-  <p class="ps-stub">Library view goes here.</p>
-</section>
 
 </div>
 <!-- /wp:group -->
@@ -44,24 +61,82 @@
 body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface) !important; }
 
 .prompt-studio { color: var(--wp--preset--color--foreground); }
-.prompt-studio .eyebrow { text-transform: uppercase; letter-spacing: 0.18em; font-size: var(--wp--preset--font-size--small); color: var(--wp--preset--color--muted); margin: 0 0 var(--wp--preset--spacing--10); }
-.prompt-studio .lede { color: var(--wp--preset--color--muted); max-width: 60ch; margin-top: var(--wp--preset--spacing--20); }
+.prompt-studio .eyebrow { text-transform: uppercase; letter-spacing: 0.18em; font-size: var(--wp--preset--font-size--small); color: var(--wp--preset--color--muted); margin: 0; }
+.prompt-studio .lede { color: var(--wp--preset--color--muted); max-width: 60ch; margin: 0; }
 
-.prompt-studio .ps-toolbar { display: flex; flex-direction: column; gap: var(--wp--preset--spacing--20); margin: var(--wp--preset--spacing--40) 0 var(--wp--preset--spacing--50); }
-.prompt-studio .ps-type-bar, .prompt-studio .ps-mode-bar { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-.prompt-studio .ps-type-chip, .prompt-studio .ps-mode-tab { appearance: none; border: 1px solid var(--wp--preset--color--subtle); background: var(--wp--preset--color--surface); color: var(--wp--preset--color--foreground); padding: 0.55rem 1rem; border-radius: 999px; font: inherit; cursor: pointer; }
-.prompt-studio .ps-type-chip:hover, .prompt-studio .ps-mode-tab:hover { border-color: var(--wp--preset--color--primary); }
-.prompt-studio .ps-type-chip.is-active[data-type="write"] { background: var(--wp--preset--color--primary); color: var(--wp--preset--color--background); border-color: var(--wp--preset--color--primary); }
-.prompt-studio .ps-type-chip.is-active[data-type="image"] { background: var(--wp--preset--color--accent); color: var(--wp--preset--color--background); border-color: var(--wp--preset--color--accent); }
-.prompt-studio .ps-type-chip.is-active[data-type="review"] { background: var(--wp--preset--color--hot); color: var(--wp--preset--color--background); border-color: var(--wp--preset--color--hot); }
-.prompt-studio .ps-mode-tab.is-active { background: var(--wp--preset--color--foreground); color: var(--wp--preset--color--background); border-color: var(--wp--preset--color--foreground); }
+.prompt-studio .ps-card {
+  background: var(--wp--preset--color--surface);
+  border: 1px solid var(--wp--preset--color--subtle);
+  border-radius: 22px;
+  padding: clamp(1.25rem, 3vw, 2.25rem);
+  display: flex;
+  flex-direction: column;
+  gap: var(--wp--preset--spacing--30);
+  max-width: 1100px;
+  margin: 0 auto;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.18);
+}
+.prompt-studio .ps-card-head { display: flex; flex-direction: column; gap: 0.4rem; }
+.prompt-studio .ps-card-head .ps-title { margin: 0; font-size: clamp(1.75rem, 4vw, 2.5rem); line-height: 1.15; }
+.prompt-studio .ps-divider { border: none; border-top: 1px solid var(--wp--preset--color--subtle); margin: 0; }
 
-.prompt-studio .ps-view { background: var(--wp--preset--color--surface); border: 1px solid var(--wp--preset--color--subtle); border-radius: 18px; padding: var(--wp--preset--spacing--40); }
+.prompt-studio .ps-toolbar { display: flex; flex-direction: column; gap: var(--wp--preset--spacing--20); }
+
+/* Type tabs: bigger cards with title + subtitle */
+.prompt-studio .ps-type-bar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; }
+.prompt-studio .ps-type-chip {
+  appearance: none;
+  border: 1px solid var(--wp--preset--color--subtle);
+  background: var(--wp--preset--color--background);
+  color: var(--wp--preset--color--foreground);
+  padding: 0.7rem 0.95rem;
+  border-radius: 14px;
+  font: inherit;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  text-align: left;
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.1s ease;
+}
+.prompt-studio .ps-type-chip:hover { border-color: var(--wp--preset--color--primary); }
+.prompt-studio .ps-type-chip:active { transform: translateY(1px); }
+.prompt-studio .ps-type-label { font-weight: 700; font-size: var(--wp--preset--font-size--medium); }
+.prompt-studio .ps-type-sub { color: var(--wp--preset--color--muted); font-size: var(--wp--preset--font-size--small); }
+.prompt-studio .ps-type-chip.is-active .ps-type-sub { color: inherit; opacity: 0.85; }
+.prompt-studio .ps-type-chip.is-active[data-type="write"]  { background: var(--wp--preset--color--primary); color: var(--wp--preset--color--background); border-color: var(--wp--preset--color--primary); }
+.prompt-studio .ps-type-chip.is-active[data-type="image"]  { background: var(--wp--preset--color--accent);  color: var(--wp--preset--color--background); border-color: var(--wp--preset--color--accent);  }
+.prompt-studio .ps-type-chip.is-active[data-type="review"] { background: var(--wp--preset--color--hot);     color: var(--wp--preset--color--background); border-color: var(--wp--preset--color--hot);     }
+
+/* Mode tabs: thinner row with active underline */
+.prompt-studio .ps-mode-bar { display: flex; gap: 0.25rem; border-bottom: 1px solid var(--wp--preset--color--subtle); flex-wrap: wrap; }
+.prompt-studio .ps-mode-tab {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--wp--preset--color--muted);
+  padding: 0.55rem 0.95rem;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  border-radius: 0;
+}
+.prompt-studio .ps-mode-tab:hover { color: var(--wp--preset--color--foreground); }
+.prompt-studio .ps-mode-tab.is-active {
+  color: var(--wp--preset--color--foreground);
+  border-bottom-color: var(--wp--preset--color--foreground);
+}
+
+/* View panel: now inside the card, no border of its own */
+.prompt-studio .ps-view { background: transparent; border: none; border-radius: 0; padding: 0; }
 .prompt-studio .ps-view[hidden] { display: none; }
 .prompt-studio .ps-stub { color: var(--wp--preset--color--muted); font-style: italic; margin: 0; }
 
-@media (max-width: 480px) {
-  .prompt-studio .ps-type-chip { flex: 1 1 auto; text-align: center; }
+@media (max-width: 540px) {
+  .prompt-studio .ps-type-bar { grid-template-columns: 1fr; }
 }
 
 .prompt-studio .ps-build { display: grid; grid-template-columns: 1fr; gap: var(--wp--preset--spacing--40); }
@@ -94,11 +169,11 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
 .ps-toast-warn { background: var(--wp--preset--color--accent); }
 
 .prompt-studio .ps-lint { display: flex; flex-direction: column; gap: var(--wp--preset--spacing--30); }
-.prompt-studio .ps-lint-detect { display: flex; flex-direction: column; gap: 0.4rem; }
-.prompt-studio .ps-lint-chips { display: flex; gap: 0.4rem; flex-wrap: wrap; }
-.prompt-studio .ps-lint-chip { appearance: none; border: 1px solid var(--wp--preset--color--subtle); background: var(--wp--preset--color--background); color: var(--wp--preset--color--foreground); padding: 0.35rem 0.75rem; border-radius: 999px; cursor: pointer; font: inherit; font-size: var(--wp--preset--font-size--small); }
-.prompt-studio .ps-lint-chip.is-active { background: var(--wp--preset--color--foreground); color: var(--wp--preset--color--background); border-color: var(--wp--preset--color--foreground); animation: psPulse 0.5s ease-out; }
-.prompt-studio .ps-lint-hint { color: var(--wp--preset--color--muted); font-size: var(--wp--preset--font-size--small); margin: 0; }
+.prompt-studio .ps-lint-detect { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.prompt-studio .ps-lint-detected-label { color: var(--wp--preset--color--muted); font-size: var(--wp--preset--font-size--small); margin: 0; }
+.prompt-studio .ps-lint-detected-label strong { color: var(--wp--preset--color--foreground); font-weight: 700; }
+.prompt-studio .ps-lint-switch { appearance: none; border: none; background: transparent; padding: 0; color: var(--wp--preset--color--primary); text-decoration: underline; cursor: pointer; font: inherit; font-size: var(--wp--preset--font-size--small); }
+.prompt-studio .ps-lint-switch:hover { color: var(--wp--preset--color--accent); }
 .prompt-studio .ps-lint-actions { display: flex; gap: 0.5rem; }
 .prompt-studio .ps-lint-actions button { appearance: none; border: 1px solid var(--wp--preset--color--primary); background: var(--wp--preset--color--primary); color: var(--wp--preset--color--background); padding: 0.5rem 1rem; border-radius: 999px; cursor: pointer; font: inherit; }
 .prompt-studio .ps-lint-actions button.ps-link-button { background: transparent; color: var(--wp--preset--color--muted); border-color: transparent; text-decoration: underline; }
@@ -957,19 +1032,25 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
   }
 
   // ---- Lint view ----
+  function buildLintDetectHtml() {
+    const input = state.lint.input ? state.lint.input : '';
+    const detected = state.lint.detectedType;
+    const current = state.currentType;
+    const curLabel = escapeHtml(capitalize(current));
+    if (!input || !detected) {
+      return '<p class="ps-lint-detected-label">Linting against the ' + curLabel + ' rubric. Paste a prompt to auto-detect its type.</p>';
+    }
+    const detLabel = escapeHtml(capitalize(detected));
+    if (detected === current) {
+      return '<p class="ps-lint-detected-label">Detected: <strong>' + detLabel + '</strong>. Linting against the ' + curLabel + ' rubric.</p>';
+    }
+    return '<p class="ps-lint-detected-label">Detected: <strong>' + detLabel + '</strong>. Currently linting as <strong>' + curLabel + '</strong>. <button type="button" class="ps-lint-switch" data-action="lint-switch-type" data-type="' + escapeHtml(detected) + '">Switch to ' + detLabel + '</button></p>';
+  }
+
   function renderLintView() {
     const root = document.getElementById('view-lint');
     if (!root) { return; }
     const inputValue = state.lint.input ? state.lint.input : '';
-    const detected = state.lint.detectedType;
-    const overrideHint = detected ? ('Auto-detected: ' + capitalize(detected) + ' · click a chip to override') : 'Type-detect runs on paste.';
-
-    let chips = '';
-    for (let i = 0; i < TYPES.length; i++) {
-      const t = TYPES[i];
-      const isActive = (detected === t);
-      chips += '<button type="button" class="ps-lint-chip' + (isActive ? ' is-active' : '') + '" data-action="lint-set-type" data-type="' + t + '">' + capitalize(t) + '</button>';
-    }
 
     const resultHtml = state.lint.lastResult ? renderLintResults(state.lint.lastResult) : '<p class="ps-stub">Click Analyze to score the prompt above.</p>';
 
@@ -978,10 +1059,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
         '<label class="ps-field"><span class="ps-field-label">Paste a prompt to analyze</span>' +
           '<textarea id="ps-lint-input" rows="8" placeholder="Paste a prompt here.">' + escapeHtml(inputValue) + '</textarea>' +
         '</label>' +
-        '<div class="ps-lint-detect">' +
-          '<div class="ps-lint-chips" role="tablist" aria-label="Detected type">' + chips + '</div>' +
-          '<p class="ps-lint-hint">' + escapeHtml(overrideHint) + '</p>' +
-        '</div>' +
+        '<div class="ps-lint-detect">' + buildLintDetectHtml() + '</div>' +
         '<div class="ps-lint-actions">' +
           '<button type="button" data-action="lint-analyze">Analyze</button>' +
           '<button type="button" data-action="lint-clear" class="ps-link-button">Clear</button>' +
@@ -1297,15 +1375,10 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     // Lint input
     if (target.id === 'ps-lint-input') {
       state.lint.input = target.value;
-      state.lint.detectedType = detectPromptType(target.value);
-      // Update only the detect chips + hint, not the textarea (preserve focus).
-      const chips = document.querySelectorAll('.ps-lint-chip');
-      for (let i = 0; i < chips.length; i++) {
-        const chip = chips[i];
-        chip.classList.toggle('is-active', chip.getAttribute('data-type') === state.lint.detectedType);
-      }
-      const hint = document.querySelector('.ps-lint-hint');
-      if (hint) { hint.textContent = 'Auto-detected: ' + capitalize(state.lint.detectedType) + ' · click a chip to override'; }
+      state.lint.detectedType = target.value ? detectPromptType(target.value) : null;
+      // Update only the detected-type indicator, not the textarea (preserve focus).
+      const indicator = document.querySelector('.ps-lint-detect');
+      if (indicator) { indicator.innerHTML = buildLintDetectHtml(); }
       return;
     }
 
@@ -1348,14 +1421,14 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     if (action === 'lint-this') {
       const assembled = assemblePrompt(state.currentType, state.drafts[state.currentType]).text;
       state.lint.input = assembled;
-      state.lint.detectedType = state.currentType;
+      state.lint.detectedType = assembled ? detectPromptType(assembled) : null;
       state.lint.lastResult = null;
       pushRoute(null, 'lint', null);
       return;
     }
-    if (action === 'lint-set-type') {
-      state.lint.detectedType = btn.getAttribute('data-type');
-      renderLintView();
+    if (action === 'lint-switch-type') {
+      const newType = btn.getAttribute('data-type');
+      pushRoute(newType, 'lint', null);
       return;
     }
     if (action === 'lint-analyze') {
@@ -1449,7 +1522,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
 
   function refineFromLint() {
     const text = state.lint.input ? state.lint.input : '';
-    const type = state.lint.detectedType ? state.lint.detectedType : detectPromptType(text);
+    const type = state.currentType;
     if (!text) { showToast('Nothing to refine.', 'warn'); return; }
     if (isDraftDirty(type)) {
       const ok = confirm('This will replace your current ' + capitalize(type) + ' draft. Continue?');
@@ -1765,9 +1838,8 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
   function runLint() {
     const rawInput = state.lint.input;
     const text = rawInput ? rawInput : '';
-    const rawType = state.lint.detectedType;
-    const type = rawType ? rawType : detectPromptType(text);
-    state.lint.detectedType = type;
+    const type = state.currentType;
+    state.lint.detectedType = text ? detectPromptType(text) : null;
 
     const rules = LINT_RULES[type];
     const checks = [];
