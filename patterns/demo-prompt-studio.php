@@ -1115,9 +1115,14 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     return key;
   }
 
-  // Module-scope so close handlers can find it
+  // Module-scope so close handlers can find it.
+  // modalCachedFocus captures whatever had focus at modal open (used as a fallback,
+  // e.g. for deep links where there's no opener card). modalOpenerCardId captures
+  // the library card's stable data-id BEFORE the library re-renders — restoring
+  // by id survives the innerHTML replacement that openTemplateModal happens after.
   let modalCachedFocus = null;
   let modalKeyHandler = null;
+  let modalOpenerCardId = null;
 
   function openTemplateModal(tmpl) {
     const existing = document.getElementById('ps-modal-root');
@@ -1189,11 +1194,24 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
       document.removeEventListener('keydown', modalKeyHandler);
       modalKeyHandler = null;
     }
-    // Restore focus to the element that opened the modal
-    if (modalCachedFocus) {
-      try { modalCachedFocus.focus(); } catch (e) { /* element gone */ }
-      modalCachedFocus = null;
+    // Restore focus to the element that opened the modal. Prefer re-querying
+    // by the captured card id, because the library grid is re-rendered when
+    // the modal opens (innerHTML replace), so modalCachedFocus may point at a
+    // detached node. The id-based lookup finds the live replacement card.
+    let restored = false;
+    if (modalOpenerCardId) {
+      const liveCard = document.querySelector('.ps-lib-card[data-id="' + modalOpenerCardId.replace(/"/g, '\\"') + '"]');
+      if (liveCard) {
+        try { liveCard.focus(); restored = true; } catch (e) { /* live card un-focusable */ }
+      }
+      modalOpenerCardId = null;
     }
+    if (!restored) {
+      if (modalCachedFocus) {
+        try { modalCachedFocus.focus(); } catch (e) { /* element gone */ }
+      }
+    }
+    modalCachedFocus = null;
     // Strip the ?t= from the URL via replaceState (modal close should not add history)
     if (state.library.openTemplateId) {
       state.library.openTemplateId = null;
@@ -1380,6 +1398,10 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     }
     if (action === 'lib-open') {
       const id = btn.getAttribute('data-id');
+      // Capture the opener id BEFORE pushRoute triggers the library re-render,
+      // which detaches the card element that has focus. closeTemplateModal()
+      // re-queries the new card by this id to restore focus correctly.
+      modalOpenerCardId = id;
       pushRoute(state.currentType, 'library', id);
       return;
     }
