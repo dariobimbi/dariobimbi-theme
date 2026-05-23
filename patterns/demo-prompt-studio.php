@@ -172,33 +172,72 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
 .prompt-studio .ps-advanced { display: flex; flex-direction: column; gap: var(--wp--preset--spacing--30); }
 .prompt-studio .ps-advanced[hidden] { display: none; }
 
-/* Chevron for datalist inputs — visible affordance for "click to see suggestions" */
-.prompt-studio .ps-field input[list] {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6' fill='none' stroke='%23a3aed0' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'><polyline points='1 1.5 5 4.5 9 1.5'/></svg>");
-  background-repeat: no-repeat;
-  background-position: right 0.85rem center;
-  background-size: 0.7rem auto;
-  padding-right: 2rem;
+/* Custom combobox: full-width animated dropdown panel for suggestion fields. */
+.prompt-studio .ps-combo { position: relative; }
+.prompt-studio .ps-combo input { padding-right: 2.25rem; }
+.prompt-studio .ps-combo-toggle {
+  position: absolute;
+  right: 0.55rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--wp--preset--color--muted);
+  cursor: pointer;
+  font-size: 0.75rem;
+  line-height: 1;
+  padding: 0.4rem 0.45rem;
+  border-radius: 6px;
+  transition: transform 0.2s ease, color 0.15s ease, background-color 0.15s ease;
 }
-.prompt-studio .ps-field input[list]:focus {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6' fill='none' stroke='%238ab4ff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><polyline points='1 1.5 5 4.5 9 1.5'/></svg>");
-}
-/* Hide the browser's native datalist indicator so it doesn't stack with ours. */
-.prompt-studio .ps-field input[list] {
-  -webkit-appearance: none;
-  appearance: none;
-}
-.prompt-studio .ps-field input[list]::-webkit-calendar-picker-indicator {
+.prompt-studio .ps-combo-toggle:hover { color: var(--wp--preset--color--foreground); background: var(--wp--preset--color--subtle); }
+.prompt-studio .ps-combo[data-open="true"] .ps-combo-toggle { transform: translateY(-50%) rotate(180deg); color: var(--wp--preset--color--primary); }
+.prompt-studio .ps-combo input:focus + .ps-combo-toggle { color: var(--wp--preset--color--primary); }
+
+.prompt-studio .ps-combo-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  background: var(--wp--preset--color--surface);
+  border: 1px solid var(--wp--preset--color--primary);
+  border-radius: 12px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.4);
+  z-index: 20;
+  max-height: 18rem;
+  overflow-y: auto;
+  padding: 0.35rem;
   opacity: 0;
-  width: 0;
-  height: 0;
-  padding: 0;
-  margin: 0;
-  background: none;
-  -webkit-appearance: none;
-  appearance: none;
+  transform: translateY(-6px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  pointer-events: none;
 }
-.prompt-studio .ps-field input[list]::-webkit-list-button { display: none; }
+.prompt-studio .ps-combo[data-open="true"] .ps-combo-panel {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.prompt-studio .ps-combo-option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--wp--preset--color--foreground);
+  padding: 0.55rem 0.85rem;
+  border-radius: 8px;
+  font: inherit;
+  font-size: var(--wp--preset--font-size--small);
+  cursor: pointer;
+  transition: background-color 0.1s ease;
+}
+.prompt-studio .ps-combo-option:hover,
+.prompt-studio .ps-combo-option.is-active {
+  background: var(--wp--preset--color--primary);
+  color: var(--wp--preset--color--background);
+}
+.prompt-studio .ps-combo-option[hidden] { display: none; }
+.prompt-studio .ps-combo-empty { padding: 0.55rem 0.85rem; color: var(--wp--preset--color--muted); font-size: var(--wp--preset--font-size--small); }
 
 .prompt-studio .ps-preview { background: var(--wp--preset--color--surface-card, var(--wp--preset--color--background)); background-image: var(--wp--preset--gradient--surface-card, none); border: 1px solid var(--wp--preset--color--subtle); border-radius: 14px; padding: var(--wp--preset--spacing--30); display: flex; flex-direction: column; gap: var(--wp--preset--spacing--20); position: sticky; top: var(--wp--preset--spacing--20); align-self: start; }
 .prompt-studio .ps-preview-header { display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
@@ -1083,23 +1122,26 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
         if (field.suggestions.length > 0) { hasSuggestions = true; }
       }
     }
-    const listId = 'ps-list-' + field.key;
-    let input;
+    let inputOrCombo;
     if (isMultiline) {
-      input = '<textarea id="' + id + '" name="' + field.key + '" rows="3" placeholder="' + placeholder + '" aria-describedby="' + id + '-help">' + escapeHtml(value) + '</textarea>';
-    } else {
-      const listAttr = hasSuggestions ? ' list="' + listId + '"' : '';
-      input = '<input id="' + id + '" name="' + field.key + '" type="text" value="' + escapeHtml(value).replace(/"/g, '&quot;') + '" placeholder="' + placeholder + '" aria-describedby="' + id + '-help"' + listAttr + ' />';
-    }
-    let datalist = '';
-    if (hasSuggestions) {
+      inputOrCombo = '<textarea id="' + id + '" name="' + field.key + '" rows="3" placeholder="' + placeholder + '" aria-describedby="' + id + '-help">' + escapeHtml(value) + '</textarea>';
+    } else if (hasSuggestions) {
+      const panelId = 'ps-combo-panel-' + field.key;
       let options = '';
       for (let i = 0; i < field.suggestions.length; i++) {
-        options += '<option value="' + escapeHtml(field.suggestions[i]).replace(/"/g, '&quot;') + '"></option>';
+        const sv = escapeHtml(field.suggestions[i]).replace(/"/g, '&quot;');
+        options += '<button type="button" class="ps-combo-option" role="option" data-action="combo-pick" data-field="' + field.key + '" data-value="' + sv + '">' + escapeHtml(field.suggestions[i]) + '</button>';
       }
-      datalist = '<datalist id="' + listId + '">' + options + '</datalist>';
+      inputOrCombo =
+        '<div class="ps-combo" data-field="' + field.key + '" data-open="false">' +
+          '<input id="' + id + '" name="' + field.key + '" type="text" value="' + escapeHtml(value).replace(/"/g, '&quot;') + '" placeholder="' + placeholder + '" aria-describedby="' + id + '-help" role="combobox" aria-controls="' + panelId + '" aria-expanded="false" aria-autocomplete="list" autocomplete="off" />' +
+          '<button type="button" class="ps-combo-toggle" data-action="combo-toggle" data-field="' + field.key + '" tabindex="-1" aria-label="Show suggestions">⌄</button>' +
+          '<div class="ps-combo-panel" id="' + panelId + '" role="listbox">' + options + '<p class="ps-combo-empty" hidden>No matches. Type your own.</p></div>' +
+        '</div>';
+    } else {
+      inputOrCombo = '<input id="' + id + '" name="' + field.key + '" type="text" value="' + escapeHtml(value).replace(/"/g, '&quot;') + '" placeholder="' + placeholder + '" aria-describedby="' + id + '-help" />';
     }
-    return '<label class="ps-field" for="' + id + '"><span class="ps-field-label">' + escapeHtml(field.label) + '</span><span class="ps-field-help" id="' + id + '-help">' + escapeHtml(help) + '</span>' + input + datalist + '</label>';
+    return '<label class="ps-field" for="' + id + '"><span class="ps-field-label">' + escapeHtml(field.label) + '</span><span class="ps-field-help" id="' + id + '-help">' + escapeHtml(help) + '</span>' + inputOrCombo + '</label>';
   }
 
   function escapeHtml(s) {
@@ -1465,6 +1507,16 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     if (!state.drafts[type]) { return; }
     if (!(name in state.drafts[type])) { return; }
     state.drafts[type][name] = target.value;
+    // If this input is inside a combo, ensure it's open and filter the options.
+    const comboParent = target.closest ? target.closest('.ps-combo') : null;
+    if (comboParent) {
+      const fieldKey = comboParent.getAttribute('data-field');
+      if (comboParent.getAttribute('data-open') !== 'true') {
+        openCombo(fieldKey);
+      } else {
+        filterCombo(fieldKey, target.value);
+      }
+    }
     refreshPreview();
     scheduleSave();
   });
@@ -1492,6 +1544,31 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     if (action === 'copy-prompt') {
       const assembled = assemblePrompt(state.currentType, state.drafts[state.currentType]).text;
       copyToClipboard(assembled);
+      return;
+    }
+    if (action === 'combo-toggle') {
+      const fieldKey = btn.getAttribute('data-field');
+      const combo = document.querySelector('.ps-combo[data-field="' + fieldKey + '"]');
+      if (!combo) { return; }
+      const isOpen = combo.getAttribute('data-open') === 'true';
+      if (isOpen) {
+        closeCombo(fieldKey);
+      } else {
+        openCombo(fieldKey);
+        const input = combo.querySelector('input');
+        if (input) { input.focus(); }
+      }
+      return;
+    }
+    if (action === 'combo-pick') {
+      const fieldKey = btn.getAttribute('data-field');
+      const newValue = btn.getAttribute('data-value');
+      const input = document.getElementById('ps-field-' + fieldKey);
+      if (input) {
+        input.value = newValue;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      closeCombo(fieldKey);
       return;
     }
     if (action === 'lint-this') {
@@ -1998,6 +2075,99 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
       // Corrupt JSON or denied access: ignore.
     }
   }
+
+  // ---- Combobox helpers (custom dropdown for suggestion fields) ----
+  function openCombo(fieldKey) {
+    closeAllCombosExcept(fieldKey);
+    const combo = document.querySelector('.ps-combo[data-field="' + fieldKey + '"]');
+    if (!combo) { return; }
+    combo.setAttribute('data-open', 'true');
+    const input = combo.querySelector('input');
+    if (input) { input.setAttribute('aria-expanded', 'true'); }
+    filterCombo(fieldKey, input ? input.value : '');
+  }
+  function closeCombo(fieldKey) {
+    const combo = document.querySelector('.ps-combo[data-field="' + fieldKey + '"]');
+    if (!combo) { return; }
+    combo.setAttribute('data-open', 'false');
+    const input = combo.querySelector('input');
+    if (input) { input.setAttribute('aria-expanded', 'false'); }
+  }
+  function closeAllCombos() {
+    const combos = document.querySelectorAll('.ps-combo[data-open="true"]');
+    for (let i = 0; i < combos.length; i++) {
+      combos[i].setAttribute('data-open', 'false');
+      const input = combos[i].querySelector('input');
+      if (input) { input.setAttribute('aria-expanded', 'false'); }
+    }
+  }
+  function closeAllCombosExcept(fieldKey) {
+    const combos = document.querySelectorAll('.ps-combo[data-open="true"]');
+    for (let i = 0; i < combos.length; i++) {
+      if (combos[i].getAttribute('data-field') !== fieldKey) {
+        combos[i].setAttribute('data-open', 'false');
+        const input = combos[i].querySelector('input');
+        if (input) { input.setAttribute('aria-expanded', 'false'); }
+      }
+    }
+  }
+  function filterCombo(fieldKey, query) {
+    const combo = document.querySelector('.ps-combo[data-field="' + fieldKey + '"]');
+    if (!combo) { return; }
+    const q = (query ? String(query) : '').toLowerCase().trim();
+    const options = combo.querySelectorAll('.ps-combo-option');
+    let visible = 0;
+    for (let i = 0; i < options.length; i++) {
+      const opt = options[i];
+      const text = opt.textContent.toLowerCase();
+      let match;
+      if (!q) { match = true; }
+      else { match = text.indexOf(q) !== -1; }
+      if (match) { opt.hidden = false; visible = visible + 1; }
+      else { opt.hidden = true; }
+    }
+    const empty = combo.querySelector('.ps-combo-empty');
+    if (empty) { empty.hidden = (visible > 0); }
+  }
+
+  // Open combo on click into its input. Close all combos on outside click.
+  document.addEventListener('click', function (ev) {
+    const t = ev.target;
+    if (!t) { return; }
+    if (t.tagName === 'INPUT') {
+      const combo = t.closest ? t.closest('.ps-combo') : null;
+      if (combo) {
+        openCombo(combo.getAttribute('data-field'));
+        return;
+      }
+    }
+    if (t.closest && t.closest('.ps-combo')) { return; }
+    closeAllCombos();
+  });
+
+  // When focus moves between fields via Tab, close combos in fields we left.
+  document.addEventListener('focusin', function (ev) {
+    const t = ev.target;
+    if (!t) { return; }
+    const combo = t.closest ? t.closest('.ps-combo') : null;
+    if (combo) {
+      closeAllCombosExcept(combo.getAttribute('data-field'));
+    } else {
+      closeAllCombos();
+    }
+  });
+
+  // Escape closes the open combo and returns focus to its input.
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key !== 'Escape') { return; }
+    const open = document.querySelector('.ps-combo[data-open="true"]');
+    if (!open) { return; }
+    const fieldKey = open.getAttribute('data-field');
+    closeCombo(fieldKey);
+    const input = open.querySelector('input');
+    if (input) { input.focus(); }
+    ev.preventDefault();
+  });
 
   // ---- Init ----
   // Order matters: load storage first (defaults for type/mode), then routeFromHash()
