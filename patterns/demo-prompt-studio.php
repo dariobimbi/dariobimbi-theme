@@ -577,6 +577,40 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
         advancedOpen: false,
       },
     },
+    {
+      id: 'review-code-test-gaps',
+      type: 'review',
+      category: 'code-diffs',
+      title: 'Test coverage gap review',
+      summary: 'Find what test cases are missing from a diff, without proposing code.',
+      fields: {
+        content: 'PASTE_DIFF_HERE',
+        criteria: 'What behaviors, edge cases, and error paths exist in the diff but have no test.',
+        audience: 'The engineer writing the tests.',
+        outputFormat: 'Bulleted list of test cases that should be written. No code, only the case descriptions.',
+        severity: '',
+        tone: 'Direct but kind, no hedging.',
+        examples: '',
+        advancedOpen: false,
+      },
+    },
+    {
+      id: 'review-code-readability',
+      type: 'review',
+      category: 'code-diffs',
+      title: 'Readability pass',
+      summary: 'Review code for naming, complexity, and structure only, ranked by impact.',
+      fields: {
+        content: 'PASTE_CODE_HERE',
+        criteria: 'Naming clarity, function length, nesting depth, comment quality, module structure.',
+        audience: 'The engineer who will maintain this code.',
+        outputFormat: 'Ranked list: each item has the change, the file location, and a one-sentence rationale.',
+        severity: '',
+        tone: 'Direct but kind, no hedging.',
+        examples: '',
+        advancedOpen: false,
+      },
+    },
   ];
 
   // ---- Lint helpers ----
