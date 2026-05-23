@@ -340,10 +340,13 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
       visible: [
         { key:'role',          label:'Role',          help:'Who the model is acting as.',           placeholder:'You are a senior staff engineer who reviews Python.',
           suggestions: ['You are a senior staff engineer', 'You are a technical writer', 'You are a senior product designer', 'You are an experienced editor', 'You are a domain expert', 'You are a thoughtful tutor', 'You are a copy editor for marketing', 'You are a startup strategist', 'You are an expert copywriter', 'You are a critical reviewer looking for edge cases'] },
-        { key:'task',          label:'Task',          help:'Explicit verb and object.',             placeholder:'Refactor the function below to remove the duplicated branches.' },
+        { key:'task',          label:'Task',          help:'Explicit verb and object.',             placeholder:'Refactor the function below to remove the duplicated branches.',
+          suggestions: ['Summarize the content below', 'Refactor the code below', 'Critique the writing below', 'Generate 5 ideas on the topic below', 'Translate the text below to plain English', 'Outline a 1000-word post on the topic below', 'Compare and contrast the options below', 'Brainstorm names for the thing below'] },
         { key:'context',       label:'Context',       help:'Background the model needs.',           placeholder:'This runs on a Raspberry Pi, memory matters.' },
-        { key:'outputFormat',  label:'Output format', help:'Shape of the answer.',                  placeholder:'Return a unified diff, no prose.' },
-        { key:'constraints',   label:'Constraints',   help:'What to avoid or stay within.',         placeholder:'Do not change the public function signature.' },
+        { key:'outputFormat',  label:'Output format', help:'Shape of the answer.',                  placeholder:'Return a unified diff, no prose.',
+          suggestions: ['Bulleted list, one idea per line', 'Numbered steps', 'Single code block, no prose', 'Markdown table', 'JSON object with named keys', 'Three short paragraphs', 'Single paragraph, under 100 words', 'Plain text, no headers'] },
+        { key:'constraints',   label:'Constraints',   help:'What to avoid or stay within.',         placeholder:'Do not change the public function signature.',
+          suggestions: ['Stay within 200 words', 'Use plain language, avoid jargon', 'Do not apologize or hedge', 'Be specific, do not generalize', 'No more than 5 items', 'Match the existing voice, do not paraphrase', 'Cite sources inline, never summarize them', 'Start with the answer only, no preamble'] },
       ],
       advanced: [
         { key:'examples',      label:'Examples',      help:'Few-shot input / output pairs.',        placeholder:'Input: …  Output: …' },
@@ -357,7 +360,8 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     },
     image: {
       visible: [
-        { key:'subject',       label:'Subject',       help:'The main thing.',                       placeholder:'A red fox curled asleep on a worn leather chair.' },
+        { key:'subject',       label:'Subject',       help:'The main thing.',                       placeholder:'A red fox curled asleep on a worn leather chair.',
+          suggestions: ['A red fox curled asleep on a worn leather chair', 'A neon-lit street market at night', 'A vintage typewriter on a sun-lit desk', 'A robot tending a garden of glowing flowers', 'An astronaut floating in zero gravity, watching Earth', 'A medieval blacksmith\'s workshop, sparks flying', 'A dragon perched on a snow-covered peak', 'A child\'s tea party with stuffed animals in a forest clearing'] },
         { key:'style',         label:'Style',         help:'Artistic style.',                       placeholder:'Oil painting, Sargent influence.',
           suggestions: ['Photorealistic', 'Cyberpunk', 'Art Deco', 'Impressionist', 'Synthwave / Vaporwave', 'Surrealism', 'Studio Ghibli', 'Film noir', 'Anime / manga', 'Concept art'] },
         { key:'composition',   label:'Composition',   help:'Framing and angle.',                    placeholder:'Close-up, low angle, rule of thirds.',
@@ -382,10 +386,12 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     review: {
       visible: [
         { key:'content',       label:'Content to review', help:'Paste the thing being critiqued.',  placeholder:'Paste your code, copy, or document here.' },
-        { key:'criteria',      label:'Criteria',      help:'What to evaluate against.',             placeholder:'Clarity, correctness, performance.' },
+        { key:'criteria',      label:'Criteria',      help:'What to evaluate against.',             placeholder:'Clarity, correctness, performance.',
+          suggestions: ['Clarity, correctness, performance', 'Accuracy and completeness', 'Tone and audience fit', 'Logical consistency', 'Reproducibility', 'Edge cases and error handling', 'Readability and naming'] },
         { key:'audience',      label:'Audience for feedback', help:'Who reads the review.',         placeholder:'The junior dev who wrote it.',
           suggestions: ['The person who wrote it', 'A mid-level engineer', 'A junior developer', 'A senior reviewer', 'A peer on the team', 'A new hire', 'A non-technical stakeholder'] },
-        { key:'outputFormat',  label:'Output format', help:'Shape of the review.',                  placeholder:'Bulleted list grouped by severity, no rewrite.' },
+        { key:'outputFormat',  label:'Output format', help:'Shape of the review.',                  placeholder:'Bulleted list grouped by severity, no rewrite.',
+          suggestions: ['Bulleted list grouped by severity', 'Numbered list, one issue per line', 'Markdown table with columns Issue / Severity / Fix', 'Inline annotations with line refs', 'Two-section split: blockers / nice-to-haves'] },
       ],
       advanced: [
         { key:'severity',      label:'Severity scale', help:'Define levels.',                       placeholder:'blocker / major / minor / nit',
@@ -894,7 +900,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
   ];
 
   // ---- Lint helpers ----
-  const IMAGE_STYLE_KEYWORDS = ['photorealistic','oil painting','watercolor','35mm','octane render','unreal engine','midjourney','stable diffusion','digital art','concept art','anime','pixel art','low poly','hyperdetailed','masterpiece','trending on artstation','8k','cinematic'];
+  const IMAGE_STYLE_KEYWORDS = ['photorealistic','oil painting','watercolor','35mm','octane render','unreal engine','midjourney','stable diffusion','digital art','concept art','anime','manga','pixel art','low poly','hyperdetailed','masterpiece','trending on artstation','8k','cinematic','cyberpunk','art deco','impressionist','synthwave','vaporwave','surrealism','surrealist','studio ghibli','ghibli','film noir','noir','gouache','ink wash','screen print','vector','clay model','graphite'];
   const IMAGE_FLAG_REGEX = /(--ar\s+\d|--v\s*\d|--niji|--style|--chaos|--stylize|--quality)/i;
   const REVIEW_WORDS = ['review','critique','feedback','evaluate','rate','assess'];
 
@@ -1932,8 +1938,8 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     image: [
       { key:'subject',     label:'Subject',         check: function (t) { return { present: t.length > 0, strength: t.length > 12 ? 1 : 0.5, detail: t.length > 0 ? 'Subject implied' : 'No subject' }; } },
       { key:'style',       label:'Style',           check: function (t) { return checkAnyKeyword(t, IMAGE_STYLE_KEYWORDS, 'Mentions a recognized style'); } },
-      { key:'composition', label:'Composition',     check: function (t) { return checkPattern(t, /(close-?up|wide|low angle|high angle|portrait|landscape|rule of thirds|symmetrical|over the shoulder|aerial)/i, 'Frames the shot'); } },
-      { key:'lighting',    label:'Color / light',   check: function (t) { return checkPattern(t, /(light|lit|sunset|dawn|shadow|amber|cool|warm|neon|backlit|golden hour|moody)/i, 'Mentions light or color'); } },
+      { key:'composition', label:'Composition',     check: function (t) { return checkPattern(t, /(close-?up|wide|low angle|high angle|portrait|landscape|rule of thirds|symmetr|over the shoulder|aerial|top-?down|dutch angle|macro|centered)/i, 'Frames the shot'); } },
+      { key:'lighting',    label:'Color / light',   check: function (t) { return checkPattern(t, /(light|lit|sunset|dawn|shadow|amber|cool|warm|neon|backlit|golden hour|moody|high-?key|low-?key|overcast|silhouette|candle|dramatic|bright)/i, 'Mentions light or color'); } },
       { key:'params',      label:'Parameters',      check: function (t) { return checkPattern(t, /(--ar\s+\d|--v\s*\d|--niji|--style|aspect|\d{3,4}\s*x\s*\d{3,4})/i, 'Includes platform parameters'); } },
     ],
     review: [
@@ -1976,7 +1982,12 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
         return hits > 5;
       } },
     { id:'missing_ar',     appliesTo:['image'], label:'Missing aspect ratio', detail:'Most platforms expect --ar or equivalent.', test: function (t) { return !IMAGE_FLAG_REGEX.test(t); } },
-    { id:'unfenced',       appliesTo:['review'], label:'Unfenced content', detail:'Content runs into instructions. Wrap the artifact in triple backticks.', test: function (t) { return !/```|"""/.test(t); } },
+    { id:'unfenced',       appliesTo:['review'], label:'Unfenced content', detail:'Content runs into instructions. Wrap the artifact in triple backticks.', test: function (t) {
+      if (/```|"""/.test(t)) { return false; }
+      // Skip when the prompt is short enough to be just the rubric scaffolding (no content pasted yet).
+      if (t.length < 350) { return false; }
+      return true;
+    } },
   ];
 
   function checkPattern(text, regex, presentDetail) {
@@ -2002,8 +2013,8 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     return { present: false, strength: 0, detail: 'Empty' };
   }
   function checkTaskVerb(text) {
-    // Imperative verbs at the start of a sentence
-    if (/(?:^|[\.\n]\s*)(refactor|review|generate|explain|write|summarize|translate|extract|compare|classify|debug|fix|optimize|design|name|brainstorm|outline|rewrite|critique|evaluate|analyze)\b/i.test(text)) {
+    // Imperative verbs at the start of a sentence, after a newline, or after a "Task:"-style label.
+    if (/(?:^|[\.\n]\s*|:\s*)(refactor|review|generate|explain|write|summarize|translate|extract|compare|classify|debug|fix|optimize|design|name|brainstorm|outline|rewrite|critique|evaluate|analyze)\b/i.test(text)) {
       return { present: true, strength: 1, detail: 'Imperative task verb' };
     }
     if (text.length > 0) {
