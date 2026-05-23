@@ -167,7 +167,6 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
 }
 .prompt-studio .ps-advanced-toggle:hover { border-color: var(--wp--preset--color--primary); background: var(--wp--preset--color--surface); }
 .prompt-studio .ps-advanced-toggle:active { transform: translateY(1px); }
-.prompt-studio .ps-advanced-toggle strong { font-weight: 700; color: var(--wp--preset--color--primary); }
 .prompt-studio .ps-advanced-toggle .ps-chev { display: inline-block; transition: transform 0.2s ease; font-size: 0.7rem; opacity: 0.75; line-height: 1; }
 .prompt-studio .ps-advanced-toggle[aria-expanded="true"] .ps-chev { transform: rotate(180deg); }
 .prompt-studio .ps-advanced { display: flex; flex-direction: column; gap: var(--wp--preset--spacing--30); }
@@ -184,6 +183,22 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
 .prompt-studio .ps-field input[list]:focus {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6' fill='none' stroke='%238ab4ff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><polyline points='1 1.5 5 4.5 9 1.5'/></svg>");
 }
+/* Hide the browser's native datalist indicator so it doesn't stack with ours. */
+.prompt-studio .ps-field input[list] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+.prompt-studio .ps-field input[list]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  padding: 0;
+  margin: 0;
+  background: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.prompt-studio .ps-field input[list]::-webkit-list-button { display: none; }
 
 .prompt-studio .ps-preview { background: var(--wp--preset--color--surface-card, var(--wp--preset--color--background)); background-image: var(--wp--preset--gradient--surface-card, none); border: 1px solid var(--wp--preset--color--subtle); border-radius: 14px; padding: var(--wp--preset--spacing--30); display: flex; flex-direction: column; gap: var(--wp--preset--spacing--20); position: sticky; top: var(--wp--preset--spacing--20); align-self: start; }
 .prompt-studio .ps-preview-header { display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
@@ -1031,9 +1046,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     }
 
     // Advanced toggle + fields
-    const advCount = rubric.advanced.length;
-    const advWord = advCount === 1 ? 'field' : 'fields';
-    const advLabel = draft.advancedOpen ? ('Hide <strong>' + advCount + '</strong> ' + advWord) : ('Show <strong>' + advCount + '</strong> more ' + advWord);
+    const advLabel = draft.advancedOpen ? 'Hide advanced' : 'Show advanced';
     parts.push('<button type="button" class="ps-advanced-toggle" aria-expanded="' + (draft.advancedOpen ? 'true' : 'false') + '" data-action="toggle-advanced">' + advLabel + ' <span class="ps-chev" aria-hidden="true">⌄</span></button>');
     parts.push('<div class="ps-advanced" ' + (draft.advancedOpen ? '' : 'hidden') + '>');
     for (let i = 0; i < rubric.advanced.length; i++) {
