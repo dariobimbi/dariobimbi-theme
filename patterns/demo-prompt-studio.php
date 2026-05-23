@@ -265,16 +265,23 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     image: {
       visible: [
         { key:'subject',       label:'Subject',       help:'The main thing.',                       placeholder:'A red fox curled asleep on a worn leather chair.' },
-        { key:'style',         label:'Style',         help:'Artistic style.',                       placeholder:'Oil painting, Sargent influence.' },
-        { key:'composition',   label:'Composition',   help:'Framing and angle.',                    placeholder:'Close-up, low angle, rule of thirds.' },
-        { key:'medium',        label:'Medium',        help:'Physical or digital medium.',           placeholder:'Watercolor on rough paper.' },
-        { key:'colorLighting', label:'Color & light', help:'Palette and light.',                    placeholder:'Warm amber light, deep shadows.' },
+        { key:'style',         label:'Style',         help:'Artistic style.',                       placeholder:'Oil painting, Sargent influence.',
+          suggestions: ['Photorealistic', 'Cyberpunk', 'Art Deco', 'Impressionist', 'Synthwave / Vaporwave', 'Surrealism', 'Studio Ghibli', 'Film noir', 'Anime / manga', 'Concept art'] },
+        { key:'composition',   label:'Composition',   help:'Framing and angle.',                    placeholder:'Close-up, low angle, rule of thirds.',
+          suggestions: ['Close-up portrait', 'Wide establishing shot', 'Rule of thirds', 'Centered symmetry', 'Low angle', 'Top-down', 'Dutch angle', 'Macro'] },
+        { key:'medium',        label:'Medium',        help:'Physical or digital medium.',           placeholder:'Watercolor on rough paper.',
+          suggestions: ['Oil on canvas', 'Watercolor on rough paper', 'Octane render', 'Unreal Engine 5', '3D clay model', 'Graphite sketch', 'Ink wash', 'Screen print', 'Gouache', 'Vector illustration'] },
+        { key:'colorLighting', label:'Color & light', help:'Palette and light.',                    placeholder:'Warm amber light, deep shadows.',
+          suggestions: ['Warm golden hour', 'Cool blue moonlight', 'High-key bright', 'Low-key dramatic', 'Neon cyberpunk', 'Soft overcast', 'Backlit silhouette', 'Candlelit'] },
       ],
       advanced: [
-        { key:'cameraLens',    label:'Camera / lens', help:'For photoreal shots.',                  placeholder:'35mm, f/1.8, shallow depth of field.' },
-        { key:'mood',          label:'Mood',          help:'Feel of the image.',                    placeholder:'Quiet, contemplative.' },
+        { key:'cameraLens',    label:'Camera / lens', help:'For photoreal shots.',                  placeholder:'35mm, f/1.8, shallow depth of field.',
+          suggestions: ['35mm, f/1.8, shallow DOF', '85mm portrait', '24mm wide', 'Macro 100mm', 'Fisheye', 'Telephoto compression', 'Shot on 35mm film', 'IMAX 70mm', 'Vintage Polaroid'] },
+        { key:'mood',          label:'Mood',          help:'Feel of the image.',                    placeholder:'Quiet, contemplative.',
+          suggestions: ['Cinematic', 'Dreamy', 'Melancholic', 'Peaceful', 'Tense', 'Whimsical', 'Gritty', 'Nostalgic'] },
         { key:'negative',      label:'Negative prompt', help:'What to exclude.',                    placeholder:'no text, no watermark, no extra limbs' },
-        { key:'aspectRatio',   label:'Parameters',    help:'Aspect ratio and model flags.',         placeholder:'--ar 16:9 --v 6' },
+        { key:'aspectRatio',   label:'Parameters',    help:'Aspect ratio and model flags.',         placeholder:'--ar 16:9 --v 6',
+          suggestions: ['--ar 16:9', '--ar 9:16', '--ar 1:1', '--ar 4:3', '--v 6', '--v 6 --style raw', '--niji 6'] },
       ],
       multiline: ['subject','negative'],
       softTokenCap: 80,
@@ -1017,13 +1024,29 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     const isMultiline = multilineKeys.indexOf(field.key) !== -1;
     const placeholder = escapeHtml(field.placeholder).replace(/"/g, '&quot;');
     const help = field.help;
+    let hasSuggestions = false;
+    if (!isMultiline) {
+      if (field.suggestions) {
+        if (field.suggestions.length > 0) { hasSuggestions = true; }
+      }
+    }
+    const listId = 'ps-list-' + field.key;
     let input;
     if (isMultiline) {
       input = '<textarea id="' + id + '" name="' + field.key + '" rows="3" placeholder="' + placeholder + '" aria-describedby="' + id + '-help">' + escapeHtml(value) + '</textarea>';
     } else {
-      input = '<input id="' + id + '" name="' + field.key + '" type="text" value="' + escapeHtml(value).replace(/"/g, '&quot;') + '" placeholder="' + placeholder + '" aria-describedby="' + id + '-help" />';
+      const listAttr = hasSuggestions ? ' list="' + listId + '"' : '';
+      input = '<input id="' + id + '" name="' + field.key + '" type="text" value="' + escapeHtml(value).replace(/"/g, '&quot;') + '" placeholder="' + placeholder + '" aria-describedby="' + id + '-help"' + listAttr + ' />';
     }
-    return '<label class="ps-field" for="' + id + '"><span class="ps-field-label">' + escapeHtml(field.label) + '</span><span class="ps-field-help" id="' + id + '-help">' + escapeHtml(help) + '</span>' + input + '</label>';
+    let datalist = '';
+    if (hasSuggestions) {
+      let options = '';
+      for (let i = 0; i < field.suggestions.length; i++) {
+        options += '<option value="' + escapeHtml(field.suggestions[i]).replace(/"/g, '&quot;') + '"></option>';
+      }
+      datalist = '<datalist id="' + listId + '">' + options + '</datalist>';
+    }
+    return '<label class="ps-field" for="' + id + '"><span class="ps-field-label">' + escapeHtml(field.label) + '</span><span class="ps-field-help" id="' + id + '-help">' + escapeHtml(help) + '</span>' + input + datalist + '</label>';
   }
 
   function escapeHtml(s) {
