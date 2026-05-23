@@ -1106,6 +1106,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     parts.push('  <div class="ps-preview-actions">');
     parts.push('    <button type="button" data-action="copy-prompt">Copy</button>');
     parts.push('    <button type="button" data-action="lint-this">Lint this</button>');
+    parts.push('    <button type="button" data-action="randomize" title="Fill suggestion fields with random picks">Randomize</button>');
     parts.push('    <button type="button" class="ps-link-button" data-action="reset-draft">Reset draft</button>');
     parts.push('  </div>');
     parts.push('</aside>');
@@ -1544,6 +1545,25 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
         renderBuildView();
         scheduleSave();
       }
+      return;
+    }
+    if (action === 'randomize') {
+      const type = state.currentType;
+      const rubric = RUBRICS[type];
+      const draft = state.drafts[type];
+      const pickRandom = function (field) {
+        if (!field.suggestions) { return; }
+        if (field.suggestions.length === 0) { return; }
+        const idx = Math.floor(Math.random() * field.suggestions.length);
+        draft[field.key] = field.suggestions[idx];
+      };
+      for (let i = 0; i < rubric.visible.length; i++) { pickRandom(rubric.visible[i]); }
+      for (let i = 0; i < rubric.advanced.length; i++) { pickRandom(rubric.advanced[i]); }
+      // Open the advanced section so newly-filled advanced fields are visible.
+      draft.advancedOpen = true;
+      renderBuildView();
+      scheduleSave();
+      showToast('Suggestion fields randomized.', 'info');
       return;
     }
     if (action === 'copy-prompt') {
