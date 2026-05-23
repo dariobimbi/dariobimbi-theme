@@ -248,7 +248,8 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
   const RUBRICS = {
     write: {
       visible: [
-        { key:'role',          label:'Role',          help:'Who the model is acting as.',           placeholder:'You are a senior staff engineer who reviews Python.' },
+        { key:'role',          label:'Role',          help:'Who the model is acting as.',           placeholder:'You are a senior staff engineer who reviews Python.',
+          suggestions: ['You are a senior staff engineer', 'You are a technical writer', 'You are a senior product designer', 'You are an experienced editor', 'You are a domain expert', 'You are a thoughtful tutor', 'You are a copy editor for marketing', 'You are a startup strategist', 'You are an expert copywriter', 'You are a critical reviewer looking for edge cases'] },
         { key:'task',          label:'Task',          help:'Explicit verb and object.',             placeholder:'Refactor the function below to remove the duplicated branches.' },
         { key:'context',       label:'Context',       help:'Background the model needs.',           placeholder:'This runs on a Raspberry Pi, memory matters.' },
         { key:'outputFormat',  label:'Output format', help:'Shape of the answer.',                  placeholder:'Return a unified diff, no prose.' },
@@ -256,8 +257,10 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
       ],
       advanced: [
         { key:'examples',      label:'Examples',      help:'Few-shot input / output pairs.',        placeholder:'Input: …  Output: …' },
-        { key:'audience',      label:'Audience',      help:'Who the output is for.',                placeholder:'The junior dev who wrote the code.' },
-        { key:'tone',          label:'Tone',          help:'Voice for the answer.',                 placeholder:'Direct but kind, no hedging.' },
+        { key:'audience',      label:'Audience',      help:'Who the output is for.',                placeholder:'The junior dev who wrote the code.',
+          suggestions: ['A mid-level engineer', 'A junior developer', 'A non-technical executive', 'A curious technical reader', 'The person who wrote the code', 'A potential customer', 'A new hire', 'An academic audience'] },
+        { key:'tone',          label:'Tone',          help:'Voice for the answer.',                 placeholder:'Direct but kind, no hedging.',
+          suggestions: ['Direct but kind, no hedging', 'Neutral and precise', 'Warm and encouraging', 'Authoritative and concise', 'Playful but informative', 'Formal and academic', 'Conversational', 'Terse and technical'] },
       ],
       multiline: ['context','examples','outputFormat','constraints'],
       softTokenCap: 400,
@@ -290,12 +293,15 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
       visible: [
         { key:'content',       label:'Content to review', help:'Paste the thing being critiqued.',  placeholder:'Paste your code, copy, or document here.' },
         { key:'criteria',      label:'Criteria',      help:'What to evaluate against.',             placeholder:'Clarity, correctness, performance.' },
-        { key:'audience',      label:'Audience for feedback', help:'Who reads the review.',         placeholder:'The junior dev who wrote it.' },
+        { key:'audience',      label:'Audience for feedback', help:'Who reads the review.',         placeholder:'The junior dev who wrote it.',
+          suggestions: ['The person who wrote it', 'A mid-level engineer', 'A junior developer', 'A senior reviewer', 'A peer on the team', 'A new hire', 'A non-technical stakeholder'] },
         { key:'outputFormat',  label:'Output format', help:'Shape of the review.',                  placeholder:'Bulleted list grouped by severity, no rewrite.' },
       ],
       advanced: [
-        { key:'severity',      label:'Severity scale', help:'Define levels.',                       placeholder:'blocker / major / minor / nit' },
-        { key:'tone',          label:'Tone',          help:'Voice of the feedback.',                placeholder:'Direct but kind, no hedging.' },
+        { key:'severity',      label:'Severity scale', help:'Define levels.',                       placeholder:'blocker / major / minor / nit',
+          suggestions: ['blocker', 'critical', 'major', 'minor', 'nit', 'high', 'medium', 'low', 'must fix', 'should fix'] },
+        { key:'tone',          label:'Tone',          help:'Voice of the feedback.',                placeholder:'Direct but kind, no hedging.',
+          suggestions: ['Direct but kind, no hedging', 'Neutral and precise', 'Warm and encouraging', 'Constructive and specific', 'Terse and technical', 'Formal and academic', 'Blunt and objective', 'Socratic, asking guiding questions'] },
         { key:'examples',      label:'Examples of good / bad', help:'Calibration anchors.',          placeholder:'Good: …  Bad: …' },
       ],
       multiline: ['content','examples','criteria','outputFormat'],
