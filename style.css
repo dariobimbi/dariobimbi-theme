@@ -4,7 +4,7 @@ Theme URI: https://dariobimbi.com
 Author: Dario Bimbi
 Author URI: https://www.linkedin.com/in/dario-bimbi-7512a36b
 Description: Personal portfolio block theme for Dario Bimbi, Web Developer at Clicks Web Design Inc. Dark, gradient-forward, system-font typography, no external dependencies.
-Version: 0.29.0
+Version: 0.30.0
 Requires at least: 6.4
 Tested up to: 6.7
 Requires PHP: 7.4
@@ -20,6 +20,31 @@ Tags: block-theme, full-site-editing, portfolio, dark-mode, custom-colors, custo
    ============================================================ */
 
 html { background: var(--wp--preset--color--background); }
+
+/* --- Cross-document view transitions -------------------------- */
+/* A quick crossfade between same-origin page loads. Between the dark
+   pages it is nearly invisible; its job is to smooth the dark→white jump
+   into the card-browser demo. Cross-document transitions only fire on
+   in-site navigations, so a cold or direct load just renders, which means
+   it covers "arriving from another page" with no referrer logic. Firefox
+   currently falls back to an instant load; reduced-motion users do too. */
+@view-transition {
+    navigation: auto;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation-duration: 0.3s;
+    animation-timing-function: ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    ::view-transition-group(*),
+    ::view-transition-old(*),
+    ::view-transition-new(*) {
+        animation-duration: 0.001ms !important;
+    }
+}
 
 a { text-underline-offset: 0.2em; }
 
