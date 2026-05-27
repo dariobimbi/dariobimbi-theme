@@ -28,7 +28,14 @@
 
         <div class="dcb-layout">
 
-            <aside class="dcb-sidebar" aria-label="Filters">
+            <div class="dcb-drawer-backdrop" hidden data-action="close-drawer"></div>
+
+            <aside class="dcb-sidebar" id="dcb-filter-sheet" aria-label="Filters">
+
+                <div class="dcb-sheet-head">
+                    <span class="dcb-sheet-title">Filters</span>
+                    <button type="button" class="dcb-sheet-close" data-action="close-drawer" aria-label="Close filters">×</button>
+                </div>
 
                 <details class="dcb-mobile-toggle" open>
                     <summary>Filters</summary>
@@ -86,11 +93,19 @@
                     <button type="button" class="dcb-clear">Clear filters</button>
                 </details>
 
+                <div class="dcb-sheet-foot">
+                    <button type="button" class="dcb-sheet-apply" data-action="close-drawer">Show results</button>
+                </div>
+
             </aside>
 
             <main class="dcb-main">
                 <div class="dcb-toolbar">
                     <input type="search" class="dcb-card-search" placeholder="Search by name…" aria-label="Search cards by name" />
+                    <button type="button" class="dcb-filter-trigger" aria-expanded="false" aria-controls="dcb-filter-sheet">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+                        Filters <span class="dcb-filter-count" hidden>0</span>
+                    </button>
                     <select class="dcb-sort" aria-label="Sort">
                         <option value="default">Default order</option>
                         <option value="price-desc">Price · High to low</option>
@@ -775,6 +790,230 @@ body:has(.demo-card-browser) .site-nav-trigger--link:focus-visible {
     0%   { background-position: 200% 0; }
     100% { background-position: -200% 0; }
 }
+
+/* === Mobile filter drawer (Direction B) =========================
+   On phones the sidebar's filter stack used to ship open and push the
+   card grid almost two screens down the page. Below 900px the sidebar
+   is re-skinned into a slide-up bottom sheet, opened from a sticky
+   toolbar button, so visitors land on the cards and pull the filters
+   up on demand. Desktop (>900px) keeps the original sticky 280px
+   sidebar untouched — every rule here is mobile-scoped. */
+
+/* Trigger pill + sheet chrome are mobile-only; hidden on desktop. */
+.demo-card-browser .dcb-filter-trigger,
+.demo-card-browser .dcb-sheet-head,
+.demo-card-browser .dcb-sheet-foot {
+    display: none;
+}
+
+.demo-card-browser .dcb-drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background: rgba(0, 0, 0, 0.5);
+}
+.demo-card-browser .dcb-drawer-backdrop[hidden] {
+    display: none;
+}
+
+.demo-card-browser .dcb-filter-trigger {
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    background: var(--dcb-surface);
+    color: var(--dcb-fg);
+    border: 1px solid var(--dcb-subtle);
+    border-radius: 8px;
+    padding: 0.5rem 0.9rem;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+.demo-card-browser .dcb-filter-trigger:hover {
+    border-color: var(--dcb-primary);
+}
+.demo-card-browser .dcb-filter-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.4em;
+    height: 1.4em;
+    padding: 0 0.35em;
+    border-radius: 999px;
+    background: var(--dcb-primary);
+    color: #ffffff;
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+.demo-card-browser .dcb-filter-count[hidden] {
+    display: none;
+}
+
+@media (max-width: 900px) {
+    /* Sticky discovery bar: search on its own row, Filters + Sort sharing
+       the row below, all pinned so they stay reachable while the grid
+       scrolls under them. The site nav scrolls away (not fixed), so
+       top:0 is the correct anchor. */
+    .demo-card-browser .dcb-toolbar {
+        position: sticky;
+        top: 0;
+        z-index: 30;
+        background: var(--dcb-bg);
+        padding-top: 0.6rem;
+        padding-bottom: 0.6rem;
+        box-shadow: 0 6px 10px -6px rgba(0, 0, 0, 0.18);
+    }
+    .demo-card-browser .dcb-toolbar .dcb-card-search {
+        flex: 1 1 100%;
+        min-width: 0;
+    }
+    .demo-card-browser .dcb-filter-trigger {
+        display: inline-flex;
+        flex: 1 1 0;
+        min-height: 44px;
+    }
+    .demo-card-browser .dcb-sort {
+        flex: 1 1 0;
+        min-height: 44px;
+    }
+
+    /* Sidebar becomes the slide-up bottom sheet. dvh sits after the vh
+       fallback so iOS Safari's shrinking toolbar doesn't clip it. */
+    .demo-card-browser .dcb-sidebar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        top: auto;
+        z-index: 50;
+        max-height: 85vh;
+        max-height: 85dvh;
+        display: flex;
+        flex-direction: column;
+        background: var(--dcb-bg);
+        border-top-left-radius: 18px;
+        border-top-right-radius: 18px;
+        box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.25);
+        transform: translateY(100%);
+        transition: transform 280ms ease;
+        will-change: transform;
+    }
+    .demo-card-browser .dcb-sidebar.is-open {
+        transform: translateY(0);
+    }
+
+    /* The filter stack is the single scroll area inside the sheet;
+       overscroll-behavior keeps swipes from chaining to the page behind
+       it — the reliable half of the iOS scroll-lock, paired with the JS
+       body lock. */
+    .demo-card-browser .dcb-mobile-toggle {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+        background: transparent;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+        padding: 0 1rem 1rem;
+        margin: 0;
+    }
+    .demo-card-browser .dcb-mobile-toggle > summary {
+        display: none;
+    }
+    /* Drop the set-list's own scroll so the sheet body is the only one. */
+    .demo-card-browser .dcb-set-list {
+        max-height: none;
+    }
+
+    .demo-card-browser .dcb-sheet-head {
+        display: flex;
+        position: relative;
+        align-items: center;
+        justify-content: space-between;
+        flex: 0 0 auto;
+        padding: 0.9rem 1rem 0.6rem;
+    }
+    /* Grab-handle affordance centered above the title. */
+    .demo-card-browser .dcb-sheet-head::before {
+        content: "";
+        position: absolute;
+        top: 0.5rem;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 36px;
+        height: 4px;
+        border-radius: 999px;
+        background: var(--dcb-border-strong);
+    }
+    .demo-card-browser .dcb-sheet-title {
+        font-weight: 800;
+        font-size: 1.1rem;
+    }
+    .demo-card-browser .dcb-sheet-close {
+        background: transparent;
+        border: 0;
+        color: var(--dcb-fg);
+        font-size: 1.6rem;
+        line-height: 1;
+        cursor: pointer;
+        padding: 0 0.5rem;
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    .demo-card-browser .dcb-sheet-foot {
+        display: block;
+        flex: 0 0 auto;
+        padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom));
+        border-top: 1px solid var(--dcb-subtle);
+        background: var(--dcb-bg);
+    }
+    .demo-card-browser .dcb-sheet-apply {
+        width: 100%;
+        background: var(--dcb-primary);
+        color: #ffffff;
+        border: 0;
+        border-radius: 999px;
+        padding: 0.85rem 1rem;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+        min-height: 48px;
+    }
+    .demo-card-browser .dcb-sheet-apply:hover {
+        background: #d3171f;
+    }
+
+    /* 44px touch targets for filter rows and set rows. */
+    .demo-card-browser .dcb-fieldset label,
+    .demo-card-browser .dcb-set-list label {
+        min-height: 44px;
+        padding-top: 0.4rem;
+        padding-bottom: 0.4rem;
+    }
+}
+
+/* Phones: guarantee a 2-up grid instead of one giant card per row, with
+   tighter gaps and padding so the card art carries the tile. */
+@media (max-width: 560px) {
+    .demo-card-browser .dcb-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.6rem;
+    }
+    .demo-card-browser .dcb-tile {
+        padding: 0.55rem;
+    }
+    .demo-card-browser .dcb-tile-name {
+        font-size: 0.85rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .demo-card-browser .dcb-sidebar {
+        transition: none;
+    }
+}
 </style>
 
 <script>
@@ -1261,6 +1500,12 @@ body:has(.demo-card-browser) .site-nav-trigger--link:focus-visible {
         var grid = ROOT.querySelector('.dcb-grid');
         var cards = getVisibleCards();
 
+        // Keep the mobile Filters badge and the sheet's "Show N results"
+        // button in sync on every grid render (covers filter, search,
+        // sort, clear, and set-change paths since they all land here).
+        updateFilterBadge();
+        updateApplyCount(cards.length);
+
         if (!cards.length) {
             if (state.loading) return;
             grid.innerHTML = '<p class="dcb-empty">No items match the current filters. Try clearing one of the filters or picking a different set.</p>';
@@ -1319,6 +1564,45 @@ body:has(.demo-card-browser) .site-nav-trigger--link:focus-visible {
         status.textContent = visible + ' of ' + state.cards.length + ' shown'
             + (state.cards.length < state.total ? ' (' + state.total + ' total in set)' : '')
             + (setName ? ' · ' + setName : '');
+    }
+
+    /* ===== Filter drawer (mobile) ===== */
+
+    function activeKeys(map) {
+        return Object.keys(map).filter(function (k) { return map[k]; });
+    }
+
+    // Count of selections that narrow the grid, shown as the (n) badge on
+    // the mobile Filters trigger. Language is left out on purpose — it
+    // swaps the *source* of sets rather than filtering the current grid.
+    function countActiveFilters() {
+        var n = 0;
+        if (state.mode !== 'all') n += 1;
+        n += activeKeys(state.rarityFilter).length;
+        n += activeKeys(state.conditionFilter).length;
+        n += activeKeys(state.printingFilter).length;
+        if (state.priceMin !== null) n += 1;
+        if (state.priceMax !== null) n += 1;
+        return n;
+    }
+
+    function updateFilterBadge() {
+        var badge = ROOT.querySelector('.dcb-filter-count');
+        if (!badge) return;
+        var n = countActiveFilters();
+        if (n > 0) {
+            badge.textContent = n;
+            badge.hidden = false;
+        } else {
+            badge.hidden = true;
+        }
+    }
+
+    function updateApplyCount(count) {
+        var btn = ROOT.querySelector('.dcb-sheet-apply');
+        if (!btn) return;
+        var n = typeof count === 'number' ? count : getVisibleCards().length;
+        btn.textContent = n === 1 ? 'Show 1 result' : 'Show ' + n + ' results';
     }
 
     /* ===== Modal ===== */
@@ -1392,6 +1676,41 @@ body:has(.demo-card-browser) .site-nav-trigger--link:focus-visible {
                 linkEl.innerHTML = '<a href="' + escapeHtml(tcgUrl) + '" target="_blank" rel="noopener noreferrer">View on TCGplayer <span aria-hidden="true">↗</span></a>';
             } else {
                 linkEl.innerHTML = '';
+            }
+        }
+    };
+
+    /* Bottom-sheet filter drawer. Reuses the sidebar markup wholesale —
+       only its skin (CSS) and open/close state are new. Focus + Esc
+       handling mirror the card modal's level (focus the close control on
+       open, return focus to the trigger on close), kept consistent on
+       purpose rather than building a heavier trap on one surface only. */
+    var drawer = {
+        sidebar: ROOT.querySelector('.dcb-sidebar'),
+        backdrop: ROOT.querySelector('.dcb-drawer-backdrop'),
+        trigger: ROOT.querySelector('.dcb-filter-trigger'),
+        isOpen: false,
+
+        open: function () {
+            if (drawer.isOpen) return;
+            drawer.isOpen = true;
+            drawer.backdrop.hidden = false;
+            drawer.sidebar.classList.add('is-open');
+            if (drawer.trigger) drawer.trigger.setAttribute('aria-expanded', 'true');
+            document.body.style.overflow = 'hidden';
+            var closeBtn = ROOT.querySelector('.dcb-sheet-close');
+            if (closeBtn) closeBtn.focus();
+        },
+
+        close: function () {
+            if (!drawer.isOpen) return;
+            drawer.isOpen = false;
+            drawer.sidebar.classList.remove('is-open');
+            drawer.backdrop.hidden = true;
+            document.body.style.overflow = '';
+            if (drawer.trigger) {
+                drawer.trigger.setAttribute('aria-expanded', 'false');
+                if (typeof drawer.trigger.focus === 'function') drawer.trigger.focus();
             }
         }
     };
@@ -1513,14 +1832,41 @@ body:has(.demo-card-browser) .site-nav-trigger--link:focus-visible {
             modal.open(parseInt(tile.dataset.cardIndex, 10));
             return;
         }
+        if (e.target.closest('.dcb-filter-trigger')) {
+            drawer.open();
+            return;
+        }
+        if (e.target.closest('[data-action="close-drawer"]')) {
+            drawer.close();
+            return;
+        }
         if (e.target.closest('[data-action="close-modal"]')) {
             modal.close();
         }
     });
 
+    // Esc closes whichever overlay is open — modal takes priority since it
+    // can be opened from within nothing else, then the filter sheet.
     document.addEventListener('keydown', function (e) {
-        if (modal.el.hidden) return;
-        if (e.key === 'Escape') { e.preventDefault(); modal.close(); }
+        if (e.key !== 'Escape') return;
+        if (!modal.el.hidden) {
+            e.preventDefault();
+            modal.close();
+            return;
+        }
+        if (drawer.isOpen) {
+            e.preventDefault();
+            drawer.close();
+        }
+    });
+
+    // If the viewport grows past the mobile breakpoint while the sheet is
+    // open (rotate / desktop resize), close it so the body scroll lock and
+    // the off-canvas transform don't linger on the now-static sidebar.
+    window.addEventListener('resize', function () {
+        if (window.innerWidth > 900) {
+            if (drawer.isOpen) drawer.close();
+        }
     });
 
     /* ===== Bootstrap ===== */
