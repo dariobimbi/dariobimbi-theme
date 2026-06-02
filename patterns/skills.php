@@ -10,7 +10,7 @@ $groups = [
     [ 'label' => 'Web',                'tone' => 'is-primary', 'items' => [ 'WordPress', 'PHP', 'JavaScript', 'TypeScript', 'HTML', 'CSS', 'Sass', 'Divi', 'Responsive design' ] ],
     [ 'label' => 'Apps & Frameworks',  'tone' => 'is-accent',  'items' => [ 'Angular', 'Flutter', 'Node.js', 'Unity3D', 'C#', 'Custom PHP CMS' ] ],
     [ 'label' => 'APIs & Data',        'tone' => 'is-primary', 'items' => [ 'REST APIs', 'MySQL', 'Firestore', 'Google Cloud' ] ],
-    [ 'label' => 'Practice & Tooling', 'tone' => 'is-hot',     'items' => [ 'Git', 'GitHub', 'PHPUnit', 'Jest', 'SEO', 'Accessibility', 'Core Web Vitals', 'Code review', 'Adobe XD', 'Photoshop' ] ],
+    [ 'label' => 'Craft & Tools',      'tone' => 'is-hot',     'items' => [ 'Git', 'GitHub', 'PHPUnit', 'Jest', 'SEO', 'Accessibility', 'Core Web Vitals', 'Code review', 'Adobe XD', 'Photoshop' ] ],
 ];
 ?>
 <!-- wp:group {"align":"full","className":"section section--surface","style":{"spacing":{"padding":{"top":"var:preset|spacing|60","bottom":"var:preset|spacing|60","left":"var:preset|spacing|30","right":"var:preset|spacing|30"},"blockGap":"var:preset|spacing|40"}},"layout":{"type":"constrained"}} -->

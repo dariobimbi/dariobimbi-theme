@@ -38,7 +38,7 @@ $meta = [
         'preview'  => 'weather',
         'blurb'    => 'Two-step fetch chain against the Open-Meteo API: geocode the city, then pull a 7-day forecast. Pretty-printed JSON pane underneath shows the actual response. No key, no library, no proxy.',
         'tech'     => [ 'fetch()', 'async/await', 'Open-Meteo' ],
-        'badge'    => 'New',
+        'badge'    => '',
     ],
     'audio' => [
         'category' => 'web',
@@ -46,7 +46,7 @@ $meta = [
         'preview'  => 'audio',
         'blurb'    => 'AudioContext → AnalyserNode → Canvas. Pick an oscillator or pipe in your microphone, then switch between bars, waveform, and circular spectrum visualizations. Headphones recommended.',
         'tech'     => [ 'Web Audio API', 'Canvas 2D', 'requestAnimationFrame' ],
-        'badge'    => 'New',
+        'badge'    => '',
     ],
     'sort' => [
         'category' => 'web',
@@ -54,7 +54,7 @@ $meta = [
         'preview'  => 'sort',
         'blurb'    => 'Four sorts (bubble, insertion, merge, quick) race the same shuffled array. Each is a step-generator yielding control between operations so the canvas can render. Watch O(n²) lose, badly.',
         'tech'     => [ 'Generators', 'Canvas 2D', 'Visualization' ],
-        'badge'    => 'New',
+        'badge'    => '',
     ],
     'life' => [
         'category' => 'web',
@@ -62,7 +62,7 @@ $meta = [
         'preview'  => 'life',
         'blurb'    => "Conway's Game of Life on a toroidal grid. Click or drag to toggle cells, drop in classic patterns (glider, pulsar, Gosper's gun), and watch a few rules turn into a surprising amount of structure.",
         'tech'     => [ 'Typed Arrays', 'Canvas 2D', 'Pointer events' ],
-        'badge'    => 'New',
+        'badge'    => '',
     ],
     'live-editor' => [
         'category' => 'web',
@@ -78,7 +78,7 @@ $meta = [
         'preview'  => 'pug-attack',
         'blurb'    => 'A small Processing sketch from a DePaul level design class, hand-ported to vanilla JavaScript and Canvas so it plays in the browser. The pug paces along the top, the cannon tracks the mouse, and clicking fires a shot at the cat scrolling along the bottom.',
         'tech'     => [ 'Vanilla JS', 'Canvas 2D', 'Original Processing' ],
-        'badge'    => 'New',
+        'badge'    => '',
     ],
     'microgame' => [
         'category' => 'ported',
@@ -86,7 +86,7 @@ $meta = [
         'preview'  => 'microgame',
         'blurb'    => 'A maze game from a DePaul intro class, ported from Processing to vanilla JavaScript and Canvas. Press Play, then Enter, and move with WASD to reach the orange goal at the bottom right before the ten-second timer runs out.',
         'tech'     => [ 'Vanilla JS', 'Canvas 2D', 'Original Processing' ],
-        'badge'    => 'New',
+        'badge'    => '',
     ],
     'pokedex' => [
         'category' => 'web',
@@ -94,7 +94,7 @@ $meta = [
         'preview'  => 'pokedex',
         'blurb'    => 'Browse all 1025 Pokémon by generation, then pick one and see every Trading Card Game card it has appeared on. Sort by release date or rarity, filter by set, and open any card for full details and current pricing from TCGPlayer and Cardmarket.',
         'tech'     => [ 'PokéAPI', 'pokemontcg.io', 'Vanilla JS' ],
-        'badge'    => 'New',
+        'badge'    => '',
     ],
     'card-browser' => [
         'category' => 'web',
@@ -102,7 +102,7 @@ $meta = [
         'preview'  => 'card-browser',
         'blurb'    => 'Browse Pokémon TCG cards and sealed products by set, in English or Japanese, with filters for rarity, condition, printing, and price. Live prices come from JustTCG through a WordPress REST proxy that keeps the API key server-side and caches against the free-tier rate limit.',
         'tech'     => [ 'JustTCG', 'WP REST API', 'Transient cache' ],
-        'badge'    => 'New',
+        'badge'    => '',
     ],
     'ant-buster' => [
         'category' => 'game',
@@ -118,7 +118,7 @@ $meta = [
         'preview'  => 'prompt-studio',
         'blurb'    => 'A little studio for writing and scoring AI prompts. Pick a task, draft a prompt, and it grades how the result came out so you can see what is actually working.',
         'tech'     => [ 'Vanilla JS', 'Single file', 'Zero deps' ],
-        'badge'    => 'New',
+        'badge'    => '',
     ],
 ];
 

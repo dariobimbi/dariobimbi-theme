@@ -28,7 +28,7 @@ $assets = esc_url( get_stylesheet_directory_uri() . '/assets/projects/dariobimbi
 
     <!-- wp:html -->
     <figure class="project-hero">
-        <img src="<?php echo $assets; ?>home.jpeg" alt="The dariobimbi.com homepage hero, showing an illustrated portrait of Dario at his desk with the tagline Build · Design · Solve · Improve" loading="lazy">
+        <img src="<?php echo $assets; ?>home.jpeg" alt="The dariobimbi.com homepage hero, an illustrated portrait of Dario at his desk with his dog, beside the headline I build websites I'd want to use myself" loading="lazy">
         <figcaption>The homepage of this site, rendered by the same theme.</figcaption>
     </figure>
     <!-- /wp:html -->
@@ -58,7 +58,7 @@ $assets = esc_url( get_stylesheet_directory_uri() . '/assets/projects/dariobimbi
     <!-- /wp:heading -->
 
     <!-- wp:paragraph -->
-    <p>The homepage has a hero, an about section, an experience timeline, a projects grid, a skills list, and a contact CTA. There is a separate <a href="<?php echo esc_url( home_url( '/demos/' ) ); ?>">/demos/</a> section with small interactive things I built (a contrast checker, a weather playground, a Conway's Game of Life canvas, two old games hand-ported from Processing), and a <a href="<?php echo esc_url( home_url( '/projects/' ) ); ?>">/projects/</a> section like the one you are reading right now.</p>
+    <p>The homepage runs as a hero, an about section, an experience timeline, a playground of live demos, a projects grid, a skills list, and a contact form. Those demos open up in full under a separate <a href="<?php echo esc_url( home_url( '/demos/' ) ); ?>">/demos/</a> section, from a tower-defense game called Ant Buster and a Pokédex that pulls from two APIs to a Pokémon card browser, an AI prompt studio, and smaller experiments like a contrast checker and Conway's Game of Life, plus a couple of old games hand-ported from Processing. There is also a <a href="<?php echo esc_url( home_url( '/projects/' ) ); ?>">/projects/</a> section like the one you are reading right now.</p>
     <!-- /wp:paragraph -->
 
     <!-- wp:heading {"level":2} -->

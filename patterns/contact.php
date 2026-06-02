@@ -17,7 +17,7 @@
         <!-- /wp:paragraph -->
 
         <!-- wp:heading {"textAlign":"center","className":"has-gradient-text","style":{"spacing":{"margin":{"top":"var:preset|spacing|20","bottom":"var:preset|spacing|30"}}}} -->
-        <h2 class="wp-block-heading has-text-align-center has-gradient-text" id="contact" style="margin-top:var(--wp--preset--spacing--20);margin-bottom:var(--wp--preset--spacing--30)">Let's build something.</h2>
+        <h2 class="wp-block-heading has-text-align-center has-gradient-text" id="contact" style="margin-top:var(--wp--preset--spacing--20);margin-bottom:var(--wp--preset--spacing--30)">Tell me what you're building.</h2>
         <!-- /wp:heading -->
 
         <!-- wp:paragraph {"align":"center","fontSize":"large","textColor":"muted","style":{"typography":{"lineHeight":"1.5"}}} -->

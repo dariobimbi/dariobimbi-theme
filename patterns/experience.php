@@ -44,7 +44,7 @@
             <h3 class="wp-block-heading">Web Developer II at Clicks Web Design Inc.</h3>
             <!-- /wp:heading -->
             <!-- wp:paragraph {"textColor":"muted"} -->
-            <p class="has-muted-color has-text-color">Most of my work here is custom WordPress, both from-scratch themes and Divi-based ones, with the pages, functions, and widgets that go with them. Day to day that also means PHPUnit and Jest tests, ongoing maintenance on an in-house PHP CMS, code reviews across the team, and the client conversations that decide what actually gets built. Mockups happen in Adobe XD, asset work in Photoshop.</p>
+            <p class="has-muted-color has-text-color">Most of my work here is custom WordPress, both from-scratch themes and Divi-based ones, with the pages, functions, and widgets that go with them. Day to day that also means PHPUnit and Jest tests, ongoing maintenance on an in-house PHP CMS, reviewing the team's work before it goes to the CEO for sign-off, and the client conversations that decide what actually gets built. Mockups happen in Adobe XD, asset work in Photoshop.</p>
             <!-- /wp:paragraph -->
         </div>
         <!-- /wp:group -->
