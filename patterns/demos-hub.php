@@ -73,7 +73,7 @@ $meta = [
         'badge'    => '',
     ],
     'pug-attack' => [
-        'category' => 'game',
+        'category' => 'ported',
         'tag'      => 'Old game, ported',
         'preview'  => 'pug-attack',
         'blurb'    => 'A small Processing sketch from a DePaul level design class, hand-ported to vanilla JavaScript and Canvas so it plays in the browser. The pug paces along the top, the cannon tracks the mouse, and clicking fires a shot at the cat scrolling along the bottom.',
@@ -81,7 +81,7 @@ $meta = [
         'badge'    => 'New',
     ],
     'microgame' => [
-        'category' => 'game',
+        'category' => 'ported',
         'tag'      => 'Old game, ported',
         'preview'  => 'microgame',
         'blurb'    => 'A maze game from a DePaul intro class, ported from Processing to vanilla JavaScript and Canvas. Press Play, then Enter, and move with WASD to reach the orange goal at the bottom right before the ten-second timer runs out.',
@@ -104,14 +104,31 @@ $meta = [
         'tech'     => [ 'JustTCG', 'WP REST API', 'Transient cache' ],
         'badge'    => 'New',
     ],
+    'ant-buster' => [
+        'category' => 'game',
+        'tag'      => 'Tower defense',
+        'preview'  => 'ant-buster',
+        'blurb'    => 'A full tower-defense game about keeping ants off the picnic. Place and upgrade your cannons, survive the waves, and try not to let the ants carry the food away. It is the biggest thing I have built just for the fun of it.',
+        'tech'     => [ 'Vanilla JS', 'Canvas 2D', 'Zero deps' ],
+        'badge'    => 'Playable',
+    ],
+    'prompt-studio' => [
+        'category' => 'web',
+        'tag'      => 'AI · Tooling',
+        'preview'  => 'prompt-studio',
+        'blurb'    => 'A little studio for writing and scoring AI prompts. Pick a task, draft a prompt, and it grades how the result came out so you can see what is actually working.',
+        'tech'     => [ 'Vanilla JS', 'Single file', 'Zero deps' ],
+        'badge'    => 'New',
+    ],
 ];
 
 /* Default category for any child page without a $meta entry. */
 $default_category = 'web';
 
 /* Rotating accent palette — each card picks one based on its position so a
-   row of 3 has a blue / purple / pink rhythm without any per-card config. */
-$accents = [ 'blue', 'purple', 'pink', 'yellow' ];
+   row alternates a warm pink / yellow rhythm without any per-card config.
+   (The cool blue/purple accents were retired with the warm repalette.) */
+$accents = [ 'pink', 'yellow' ];
 
 /* Default fallback for any child page without an entry in $meta. */
 $default_meta = [
@@ -123,8 +140,9 @@ $default_meta = [
     'badge'    => '',
 ];
 
-/* Bucket children by category so we can render two sections (web + game). */
-$buckets = [ 'web' => [], 'game' => [] ];
+/* Bucket children by category so we can render the sections in order
+   (web demos, games I built, old games ported). */
+$buckets = [ 'web' => [], 'game' => [], 'ported' => [] ];
 foreach ( $children as $child ) {
     $cslug = $child->post_name;
     $cat   = isset( $meta[ $cslug ]['category'] ) ? $meta[ $cslug ]['category'] : $default_category;
@@ -142,6 +160,12 @@ $section_labels = [
         'lab'     => 'A focus-trap explainer, a tiny SQL-style query builder, and a few other ideas. I have sketched them out, but they are not quite ready to ship yet. Check back soon, or <a href="' . esc_url( home_url( '/#contact' ) ) . '">tell me which one you would want first</a>.',
     ],
     'game' => [
+        'eyebrow' => 'games',
+        'title'   => 'Games',
+        'lead'    => 'Games I built from scratch and put right in the browser, using nothing but JavaScript and a canvas.',
+        'lab'     => 'I have a few more game ideas sitting in a notebook that I would like to build out next. They take a while, but I will add them here as they come together.',
+    ],
+    'ported' => [
         'eyebrow' => 'old games, ported',
         'title'   => 'Old games',
         'lead'    => 'Old Processing sketches I made in school, hand-ported to vanilla JavaScript and Canvas so they run in a browser without any plugins.',
@@ -291,6 +315,22 @@ $section_labels = [
                         <span class="cp-tcg-card cp-tcg-card-1"></span>
                         <span class="cp-tcg-card cp-tcg-card-2"></span>
                         <span class="cp-tcg-card cp-tcg-card-3"></span>
+                    <?php elseif ( $m['preview'] === 'ant-buster' ) : ?>
+                        <span class="cp-ab-cannon"></span>
+                        <span class="cp-ab-shot"></span>
+                        <span class="cp-ab-crumb"></span>
+                        <span class="cp-ab-ant"></span>
+                        <span class="cp-ab-ant"></span>
+                        <span class="cp-ab-ant"></span>
+                    <?php elseif ( $m['preview'] === 'prompt-studio' ) : ?>
+                        <span class="cp-ps-panel">
+                            <span class="cp-ps-line cp-ps-line-1"></span>
+                            <span class="cp-ps-line cp-ps-line-2"></span>
+                            <span class="cp-ps-caret"></span>
+                        </span>
+                        <span class="cp-ps-spark cp-ps-spark-1"></span>
+                        <span class="cp-ps-spark cp-ps-spark-2"></span>
+                        <span class="cp-ps-spark cp-ps-spark-3"></span>
                     <?php else : ?>
                         <span class="cp-default"></span>
                         <span class="cp-default"></span>

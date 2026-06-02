@@ -23,7 +23,7 @@
         <!-- wp:column {"width":"60%"} -->
         <div class="wp-block-column" style="flex-basis:60%">
             <!-- wp:paragraph {"fontSize":"large","style":{"typography":{"lineHeight":"1.55"}}} -->
-            <p class="has-large-font-size" style="line-height:1.55">I got my start in game development at DePaul University, which is where I developed an eye for how digital experiences feel, not just whether they function. Day to day at Clicks I build custom WordPress themes, write functions and widgets, run PHPUnit and Jest, and review pull requests from the team. I also spend a fair amount of time talking with clients about what their site really needs to do.</p>
+            <p class="has-large-font-size" style="line-height:1.55">I started out in game design at DePaul University, and even though I ended up building for the web instead of for consoles, the habit stuck: I care how a site feels to use, the same way a game has to feel right in your hands. Day to day at Clicks I build custom WordPress themes, write functions and widgets, run PHPUnit and Jest, and review pull requests from the team. I also spend a fair amount of time talking with clients about what their site really needs to do.</p>
             <!-- /wp:paragraph -->
 
             <!-- wp:paragraph {"fontSize":"large","style":{"typography":{"lineHeight":"1.55"}}} -->
@@ -49,6 +49,7 @@
                     <!-- wp:list-item --><li><strong>Stack:</strong> WordPress, PHP, JavaScript, Angular, Flutter</li><!-- /wp:list-item -->
                     <!-- wp:list-item --><li><strong>Data:</strong> MySQL, Firestore, Google Cloud</li><!-- /wp:list-item -->
                     <!-- wp:list-item --><li><strong>Tools:</strong> Adobe XD, Photoshop, Premiere, PHPUnit, Jest, GitHub</li><!-- /wp:list-item -->
+                    <!-- wp:list-item --><li><strong>Logo model:</strong> George, our mini schnauzer</li><!-- /wp:list-item -->
                 </ul>
                 <!-- /wp:list -->
 

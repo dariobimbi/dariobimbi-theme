@@ -9,8 +9,8 @@
 <!-- wp:group {"style":{"spacing":{"padding":{"top":"var:preset|spacing|70","bottom":"var:preset|spacing|70"}}},"layout":{"type":"constrained"}} -->
 <div class="wp-block-group" style="padding-top:var(--wp--preset--spacing--70);padding-bottom:var(--wp--preset--spacing--70)">
 
-    <!-- wp:group {"className":"has-neon-glow","style":{"spacing":{"padding":{"top":"var:preset|spacing|60","right":"var:preset|spacing|50","bottom":"var:preset|spacing|60","left":"var:preset|spacing|50"},"blockGap":"var:preset|spacing|30"},"border":{"radius":"20px"},"color":{"background":"#0d1326"}},"layout":{"type":"constrained","contentSize":"640px","justifyContent":"center"}} -->
-    <div class="wp-block-group has-neon-glow has-background" style="border-radius:20px;background-color:#0d1326;padding:var(--wp--preset--spacing--60) var(--wp--preset--spacing--50)">
+    <!-- wp:group {"className":"has-neon-glow","style":{"spacing":{"padding":{"top":"var:preset|spacing|60","right":"var:preset|spacing|50","bottom":"var:preset|spacing|60","left":"var:preset|spacing|50"},"blockGap":"var:preset|spacing|30"},"border":{"radius":"20px"},"color":{"background":"#1b1712"}},"layout":{"type":"constrained","contentSize":"640px","justifyContent":"center"}} -->
+    <div class="wp-block-group has-neon-glow has-background" style="border-radius:20px;background-color:#1b1712;padding:var(--wp--preset--spacing--60) var(--wp--preset--spacing--50)">
 
         <!-- wp:paragraph {"align":"center","className":"eyebrow"} -->
         <p class="has-text-align-center eyebrow">get in touch</p>

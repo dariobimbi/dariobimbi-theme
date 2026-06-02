@@ -4,7 +4,7 @@ Theme URI: https://dariobimbi.com
 Author: Dario Bimbi
 Author URI: https://www.linkedin.com/in/dario-bimbi-7512a36b
 Description: Personal portfolio block theme for Dario Bimbi, Web Developer at Clicks Web Design Inc. Warm dark, Dragon-Pink-led, system-font typography, no external dependencies.
-Version: 0.32.0
+Version: 0.33.0
 Requires at least: 6.4
 Tested up to: 6.7
 Requires PHP: 7.4
@@ -130,8 +130,8 @@ a { text-underline-offset: 0.2em; }
         color 220ms ease,
         box-shadow 220ms ease;
 }
-.skill-pill.is-primary { border-color: rgba(59,130,246,0.45); color: var(--wp--preset--color--primary-soft); }
-.skill-pill.is-accent  { border-color: rgba(168,85,247,0.45); color: var(--wp--preset--color--accent-soft); }
+.skill-pill.is-primary { border-color: rgba(244,63,94,0.45); color: var(--wp--preset--color--primary-soft); }
+.skill-pill.is-accent  { border-color: rgba(225,29,72,0.45); color: var(--wp--preset--color--accent-soft); }
 .skill-pill.is-hot     { border-color: rgba(244,63,94,0.45);  color: #fda4af; }
 .skill-pill.is-yellow  { border-color: rgba(250,204,21,0.45); color: #fde68a; }
 
@@ -141,14 +141,14 @@ a { text-underline-offset: 0.2em; }
     color: var(--wp--preset--color--foreground);
 }
 .skill-pill.is-primary:hover {
-    background-color: rgba(59, 130, 246, 0.14);
-    border-color: rgba(59, 130, 246, 0.85);
-    box-shadow: 0 0 18px -2px rgba(59, 130, 246, 0.55);
+    background-color: rgba(244, 63, 94, 0.14);
+    border-color: rgba(244, 63, 94, 0.85);
+    box-shadow: 0 0 18px -2px rgba(244, 63, 94, 0.55);
 }
 .skill-pill.is-accent:hover {
-    background-color: rgba(168, 85, 247, 0.14);
-    border-color: rgba(168, 85, 247, 0.85);
-    box-shadow: 0 0 18px -2px rgba(168, 85, 247, 0.55);
+    background-color: rgba(225, 29, 72, 0.14);
+    border-color: rgba(225, 29, 72, 0.85);
+    box-shadow: 0 0 18px -2px rgba(225, 29, 72, 0.55);
 }
 .skill-pill.is-hot:hover {
     background-color: rgba(244, 63, 94, 0.14);
@@ -181,7 +181,7 @@ a { text-underline-offset: 0.2em; }
 .dario-card:hover {
     border-color: var(--wp--preset--color--primary);
     transform: translateY(-3px);
-    box-shadow: 0 12px 40px -12px rgba(59,130,246,0.35);
+    box-shadow: 0 12px 40px -12px rgba(244,63,94,0.35);
 }
 
 /* Equalize card heights when laid out across columns:
@@ -214,13 +214,15 @@ a { text-underline-offset: 0.2em; }
     border-color: transparent;
 }
 
-/* --- Neon glow callout ----------------------------------------- */
+/* --- Warm glow callout ----------------------------------------- */
+/* Dragon-Pink ring with a Sticky-Yellow outer bloom, replacing the old
+   violet/blue neon that was a leftover from the pre-warm palette. */
 .has-neon-glow {
     position: relative;
     box-shadow:
-        0 0 0 1px rgba(168,85,247,0.45),
-        0 0 32px -4px rgba(168,85,247,0.55),
-        0 0 80px -20px rgba(59,130,246,0.5);
+        0 0 0 1px rgba(244,63,94,0.45),
+        0 0 32px -4px rgba(244,63,94,0.5),
+        0 0 90px -22px rgba(250,204,21,0.4);
 }
 
 /* --- Contact form (lives inside the neon-glow card) ------------ */
@@ -267,7 +269,7 @@ a { text-underline-offset: 0.2em; }
     outline: none;
     border-color: var(--wp--preset--color--accent);
     background: rgba(255, 255, 255, 0.06);
-    box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.25);
+    box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.25);
 }
 /* Honeypot: keep accessible to assistive tech but visually hidden. */
 .contact-form__hp {
@@ -391,7 +393,7 @@ a { text-underline-offset: 0.2em; }
 
 .site-nav-dropdown[open] > .site-nav-trigger {
     border-color: var(--wp--preset--color--accent);
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.18), rgba(168, 85, 247, 0.18));
+    background: linear-gradient(135deg, rgba(244, 63, 94, 0.18), rgba(225, 29, 72, 0.18));
     color: var(--wp--preset--color--foreground);
 }
 
@@ -439,7 +441,7 @@ a { text-underline-offset: 0.2em; }
 }
 .site-nav-menu a:hover,
 .site-nav-menu a:focus-visible {
-    background: rgba(168, 85, 247, 0.12);
+    background: rgba(244, 63, 94, 0.12);
     color: var(--wp--preset--color--accent-soft);
     text-decoration: none;
     outline: none;
@@ -493,8 +495,8 @@ a { text-underline-offset: 0.2em; }
 }
 .section--ambient {
     background:
-        radial-gradient(ellipse 60% 50% at 20% 10%, rgba(59,130,246,0.10), transparent 60%),
-        radial-gradient(ellipse 50% 40% at 80% 90%, rgba(168,85,247,0.10), transparent 60%);
+        radial-gradient(ellipse 60% 50% at 20% 10%, rgba(244,63,94,0.10), transparent 60%),
+        radial-gradient(ellipse 50% 40% at 80% 90%, rgba(225,29,72,0.10), transparent 60%);
 }
 
 /* ============================================================
@@ -546,21 +548,222 @@ a { text-underline-offset: 0.2em; }
     from { transform: translate(0, 0)         scale(1); }
     to   { transform: translate(-15vw, -10vh) scale(1.15); }
 }
-.hero-stage > *:not(.hero-mesh) { position: relative; z-index: 1; }
+.hero-stage > *:not(.hero-mesh):not(.hero-grid-texture) { position: relative; z-index: 1; }
 
-/* Hero headline: warm off-white monospace, replacing the old gradient-text H1.
-   Scoped to the hero so the rest of the site's headings are untouched for now. */
-.hero-stage h1 {
-    font-family: var(--wp--preset--font-family--mono);
-    font-size: var(--wp--preset--font-size--xx-large);
-    letter-spacing: -0.02em; /* monospace runs wide; pull it in a hair */
+/* Faint notebook / graph-paper texture — a game designer's sketchbook,
+   masked to fade out at the edges so it reads as atmosphere, not a hard grid. */
+.hero-grid-texture {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image:
+        linear-gradient(rgba(168, 159, 143, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(168, 159, 143, 0.06) 1px, transparent 1px);
+    background-size: 34px 34px;
+    -webkit-mask-image: radial-gradient(ellipse 78% 68% at 50% 38%, #000 38%, transparent 100%);
+            mask-image: radial-gradient(ellipse 78% 68% at 50% 38%, #000 38%, transparent 100%);
 }
 
-/* Hero banner image fills its figure edge-to-edge. */
-.hero-stage .wp-block-image img {
+/* ============================================================
+   Hero: asymmetric "title screen" layout
+   ============================================================ */
+/* The eyebrow is a direct child of the (constrained) hero-stage, like every
+   section's eyebrow, so as an inline-flex element it hangs in the left gutter
+   at the same x as the rest of the site — the "</> tag in the margin" motif. */
+.hero-eyebrow {
+    margin-top: var(--wp--preset--spacing--50);
+    margin-bottom: 0;
+}
+.hero-layout {
+    /* Match the site's content rhythm (contentSize, gutter = spacing-30) so the
+       headline's left edge lines up with the section headings below it. */
+    width: min(var(--wp--style--global--content-size), 100% - 2 * var(--wp--preset--spacing--30));
+    max-width: none !important;
+    margin-inline: auto !important;
+    padding-top: var(--wp--preset--spacing--20);
+    display: grid;
+    grid-template-columns: 1.05fr 0.95fr;
+    align-items: center;
+    gap: clamp(2rem, 5vw, 4.5rem);
+}
+
+.hero-copy {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--wp--preset--spacing--20);
+    min-width: 0;
+}
+
+/* Headline: system monospace pushed to a real display scale. */
+.hero-headline {
+    align-self: stretch;
+    font-family: var(--wp--preset--font-family--mono);
+    font-weight: 700;
+    font-size: clamp(2.1rem, 1.3rem + 2.6vw, 3.5rem);
+    line-height: 1.08;
+    letter-spacing: -0.03em;
+    margin: var(--wp--preset--spacing--10) 0;
+    color: var(--wp--preset--color--foreground);
+}
+
+/* Hand-drawn squiggle under the key phrase (draws in on load). */
+.hero-underline {
+    position: relative;
+    white-space: nowrap;
+}
+.hero-squiggle {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -0.2em;
+    width: 100%;
+    height: 0.36em;
+    overflow: visible;
+    color: var(--wp--preset--color--primary);
+}
+.hero-squiggle path {
+    stroke-dasharray: 340;
+    stroke-dashoffset: 340;
+    animation: hero-draw 700ms ease-out 760ms forwards;
+}
+@keyframes hero-draw { to { stroke-dashoffset: 0; } }
+
+.hero-lead {
+    align-self: stretch;
+    max-width: 48ch;
+    margin: 0;
+    font-size: var(--wp--preset--font-size--large);
+    line-height: 1.55;
+    color: var(--wp--preset--color--muted);
+}
+
+.hero-ctas {
+    align-self: stretch;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    margin-top: var(--wp--preset--spacing--20);
+}
+.hero-ctas .wp-block-button { margin: 0; }
+
+/* Hero photo: tilted card on an offset Sticky-Yellow sticker backing. */
+.hero-figure {
+    position: relative;
+    isolation: isolate;
+    /* Transform-only settle (no opacity) so the LCP image paints immediately. */
+    animation: hero-settle 700ms cubic-bezier(.2, .7, .2, 1) 200ms both;
+}
+@keyframes hero-settle {
+    from { transform: translateY(16px); }
+    to   { transform: translateY(0); }
+}
+.hero-figure-backing {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: 18px;
+    background: var(--wp--preset--color--highlight);
+    transform: rotate(2.5deg) translate(15px, 17px);
+    opacity: 0;
+    animation: hero-backing 600ms ease-out 540ms forwards;
+}
+@keyframes hero-backing {
+    from { opacity: 0; transform: rotate(2.5deg) translate(-4px, 6px); }
+    to   { opacity: 1; transform: rotate(2.5deg) translate(15px, 17px); }
+}
+.hero-photo {
+    position: relative;
+    z-index: 1;
+    margin: 0;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--wp--preset--color--subtle);
+    box-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.65);
+    transform: rotate(-2deg);
+}
+.hero-photo img {
     width: 100%;
     height: auto;
     display: block;
+}
+
+/* Dotted Ant Buster trail along the bottom — ground for the whole scene. */
+.hero-trail {
+    position: relative;
+    width: min(var(--wp--style--global--content-size), 100% - 2 * var(--wp--preset--spacing--30));
+    max-width: none !important;
+    margin: var(--wp--preset--spacing--50) auto 0 !important;
+    height: 22px;
+    overflow: hidden;
+}
+.hero-trail-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    border-top: 2px dotted rgba(244, 63, 94, 0.4);
+}
+.hero-ant {
+    position: absolute;
+    top: calc(50% - 4px);
+    width: 11px;
+    height: 7px;
+    background: #2a1f1c;
+    border-radius: 50%;
+    box-shadow: -4px 0 0 -1px #2a1f1c, 4px 0 0 -1px #2a1f1c;
+    animation: hero-march 9s linear infinite;
+}
+/* The `left` here is the static fallback for reduced motion; the keyframes
+   drive `left` during normal play. */
+.hero-ant:nth-child(2) { left: 20%; animation-delay: 0s; }
+.hero-ant:nth-child(3) { left: 50%; animation-delay: 3s; }
+.hero-ant:nth-child(4) { left: 80%; animation-delay: 6s; }
+@keyframes hero-march {
+    0%   { left: -4%; }
+    100% { left: 104%; }
+}
+
+/* Staggered load reveal for the copy column. */
+.hero-rise {
+    opacity: 0;
+    transform: translateY(10px);
+    animation: hero-rise 620ms cubic-bezier(.2, .7, .2, 1) var(--rise-delay, 0ms) both;
+}
+@keyframes hero-rise {
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 860px) {
+    .hero-layout {
+        grid-template-columns: 1fr;
+        gap: var(--wp--preset--spacing--40);
+        padding-top: var(--wp--preset--spacing--30);
+    }
+    /* Straighten the photo and simplify the sticker on small screens. */
+    .hero-photo { transform: none; }
+    .hero-figure-backing {
+        animation: none;
+        opacity: 1;
+        transform: rotate(0deg) translate(10px, 12px);
+    }
+}
+@media (max-width: 600px) {
+    .hero-trail { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hero-rise,
+    .hero-figure { animation: none !important; opacity: 1 !important; transform: none !important; }
+    .hero-figure-backing {
+        animation: none !important;
+        opacity: 1 !important;
+        transform: rotate(2.5deg) translate(15px, 17px) !important;
+    }
+    .hero-photo { transform: rotate(-2deg); }
+    .hero-squiggle path { animation: none !important; stroke-dashoffset: 0 !important; }
+    .hero-ant { animation: none !important; }
 }
 
 /* Inline name in the hero blurb pops back to foreground from the muted paragraph color. */
@@ -573,6 +776,7 @@ a { text-underline-offset: 0.2em; }
    (.hero-mesh, .code-rain) to contentSize and centers them, breaking the
    "fill the parent" behavior `inset:0` would otherwise give. Override. */
 .hero-mesh,
+.hero-grid-texture,
 .code-rain {
     max-width: none !important;
     margin-left: 0 !important;
@@ -874,7 +1078,11 @@ a { text-underline-offset: 0.2em; }
     pointer-events: none;
 }
 
-@media (min-width: 1180px) {
+/* Only show the rail once the viewport is wide enough that the centered
+   wide-size content (1320px) leaves a gutter clear of the rail's ~60px
+   footprint. Below ~1440px the fixed rail would otherwise sit on top of
+   the right edge of wide grids, so we hide it rather than overlap. */
+@media (min-width: 1460px) {
     .side-rail { display: block; }
 }
 
@@ -943,7 +1151,7 @@ a { text-underline-offset: 0.2em; }
 .side-rail a:focus-visible,
 .side-rail a.is-active {
     color: var(--wp--preset--color--accent-soft);
-    border-color: rgba(168, 85, 247, 0.45);
+    border-color: rgba(244, 63, 94, 0.5);
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
 }
 
@@ -1067,7 +1275,7 @@ a { text-underline-offset: 0.2em; }
 .project-card:hover {
     transform: translateY(-2px);
     border-color: var(--wp--preset--color--accent-soft);
-    box-shadow: 0 12px 32px -16px rgba(168, 85, 247, 0.45);
+    box-shadow: 0 12px 32px -16px rgba(244, 63, 94, 0.45);
 }
 .project-card-link {
     display: flex;
@@ -1941,6 +2149,149 @@ a { text-underline-offset: 0.2em; }
     50%      { translate: 0 -7px; }
 }
 
+/* --- Preview: ant-buster (cannon fires down at ants marching toward a crumb) --- */
+.demo-card-preview--ant-buster {
+    background: linear-gradient(180deg, #7bb661 0%, #538a3e 100%);
+    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+}
+.demo-card-preview--ant-buster::after { display: none; }
+.demo-card-preview--ant-buster .cp-ab-crumb {
+    position: absolute;
+    right: 13%;
+    top: 54%;
+    width: 18px;
+    height: 13px;
+    background: #e9c46a;
+    border-radius: 4px 4px 6px 6px;
+    box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.15);
+}
+.demo-card-preview--ant-buster .cp-ab-cannon {
+    position: absolute;
+    left: 50%;
+    top: 15%;
+    width: 26px;
+    height: 26px;
+    margin-left: -13px;
+    background: radial-gradient(circle at 35% 30%, #fef3c7 0%, #f43f5e 72%);
+    border-radius: 50%;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+.demo-card-preview--ant-buster .cp-ab-cannon::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -8px;
+    width: 7px;
+    height: 12px;
+    margin-left: -3.5px;
+    background: #3a2e2a;
+    border-radius: 2px;
+}
+.demo-card-preview--ant-buster .cp-ab-shot {
+    position: absolute;
+    left: 50%;
+    top: 30%;
+    width: 6px;
+    height: 6px;
+    margin-left: -3px;
+    background: #facc15;
+    border-radius: 50%;
+    box-shadow: 0 0 6px rgba(250, 204, 21, 0.8);
+    animation: cp-ab-fire 2.2s ease-in infinite;
+}
+@keyframes cp-ab-fire {
+    0%        { transform: translateY(0);    opacity: 0; }
+    10%       { opacity: 1; }
+    68%       { transform: translateY(42px); opacity: 1; }
+    74%, 100% { transform: translateY(42px); opacity: 0; }
+}
+.demo-card-preview--ant-buster .cp-ab-ant {
+    position: absolute;
+    top: 58%;
+    width: 11px;
+    height: 7px;
+    background: #2a1f1c;
+    border-radius: 50%;
+    /* Two extra body segments via box-shadow, so each ant reads at small size. */
+    box-shadow: -4px 0 0 -1px #2a1f1c, 4px 0 0 -1px #2a1f1c;
+    animation: cp-ab-march 4.5s linear infinite;
+}
+/* The `left` here is the static fallback used when the march animation is
+   off (reduced motion); the keyframes drive `left` during normal play. */
+.demo-card-preview--ant-buster .cp-ab-ant:nth-child(4) { top: 51%; left: 18%; animation-delay: 0s;    }
+.demo-card-preview--ant-buster .cp-ab-ant:nth-child(5) { top: 63%; left: 42%; animation-delay: 1.5s;  }
+.demo-card-preview--ant-buster .cp-ab-ant:nth-child(6) { top: 57%; left: 30%; animation-delay: 3s;    }
+@keyframes cp-ab-march {
+    0%   { left: -12%; }
+    100% { left: 82%; }
+}
+
+/* --- Preview: prompt-studio (a prompt types out, sparkles twinkle) --- */
+.demo-card-preview--prompt-studio {
+    background: linear-gradient(135deg, #2a1422 0%, #3a1a2e 100%);
+}
+.demo-card-preview--prompt-studio::after { display: none; }
+.demo-card-preview--prompt-studio .cp-ps-panel {
+    position: relative;
+    width: 62%;
+    height: 56%;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(244, 63, 94, 0.4);
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 9px;
+}
+.demo-card-preview--prompt-studio .cp-ps-line {
+    height: 6px;
+    border-radius: 3px;
+    transform-origin: left center;
+    animation: cp-ps-type 3.2s ease-in-out infinite;
+}
+.demo-card-preview--prompt-studio .cp-ps-line-1 {
+    width: 82%;
+    background: rgba(253, 164, 175, 0.65);
+}
+.demo-card-preview--prompt-studio .cp-ps-line-2 {
+    width: 56%;
+    background: rgba(250, 204, 21, 0.55);
+    animation-delay: 0.45s;
+}
+@keyframes cp-ps-type {
+    0%        { transform: scaleX(0); }
+    45%, 80%  { transform: scaleX(1); }
+    100%      { transform: scaleX(0); }
+}
+.demo-card-preview--prompt-studio .cp-ps-caret {
+    position: absolute;
+    right: 15%;
+    bottom: 20%;
+    width: 2px;
+    height: 14px;
+    background: #facc15;
+    animation: cp-ps-blink 1s steps(1) infinite;
+}
+@keyframes cp-ps-blink {
+    0%, 50%      { opacity: 1; }
+    50.01%, 100% { opacity: 0; }
+}
+.demo-card-preview--prompt-studio .cp-ps-spark {
+    position: absolute;
+    background: #facc15;
+    clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%);
+    opacity: 0;
+    animation: cp-ps-twinkle 2.4s ease-in-out infinite;
+}
+.demo-card-preview--prompt-studio .cp-ps-spark-1 { top: 20%; right: 13%; width: 9px;  height: 9px;  animation-delay: 0s;   }
+.demo-card-preview--prompt-studio .cp-ps-spark-2 { top: 62%; right: 22%; width: 6px;  height: 6px;  animation-delay: 0.8s; }
+.demo-card-preview--prompt-studio .cp-ps-spark-3 { top: 34%; right: 7%;  width: 11px; height: 11px; animation-delay: 1.5s; }
+@keyframes cp-ps-twinkle {
+    0%, 100% { opacity: 0; transform: scale(0.4) rotate(0deg); }
+    50%      { opacity: 1; transform: scale(1) rotate(45deg); }
+}
+
 /* --- Card body --- */
 .demo-card-body {
     padding: 1.4rem 1.5rem 1.5rem;
@@ -2065,6 +2416,11 @@ a { text-underline-offset: 0.2em; }
     .demo-card-preview--pokedex .cp-poke-sprite,
     .demo-card-preview--pokedex .cp-poke-led,
     .demo-card-preview--card-browser .cp-tcg-card,
+    .demo-card-preview--ant-buster .cp-ab-ant,
+    .demo-card-preview--ant-buster .cp-ab-shot,
+    .demo-card-preview--prompt-studio .cp-ps-line,
+    .demo-card-preview--prompt-studio .cp-ps-caret,
+    .demo-card-preview--prompt-studio .cp-ps-spark,
     .demo-card-arrow--bounce {
         animation: none !important;
     }
