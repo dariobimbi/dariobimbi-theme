@@ -97,12 +97,12 @@
                 "typography": { "textDecoration": "none" }
             },
             "button": {
-                "color":   { "background": "#e11d48", "text": "#ffffff" },
+                "color":   { "background": "var(--wp--preset--color--accent)", "text": "#ffffff" },
                 "border":  { "radius": "999px" },
                 "spacing": { "padding": { "top": "0.85rem", "bottom": "0.85rem", "left": "1.6rem", "right": "1.6rem" } },
                 "typography": { "fontWeight": "700", "fontSize": "var(--wp--preset--font-size--medium)" },
-                ":hover":  { "color": { "background": "#f43f5e" } },
-                ":focus":  { "color": { "background": "#f43f5e" } }
+                ":hover":  { "color": { "background": "var(--wp--preset--color--primary)" } },
+                ":focus":  { "color": { "background": "var(--wp--preset--color--primary)" } }
             }
         },
         "blocks": {
