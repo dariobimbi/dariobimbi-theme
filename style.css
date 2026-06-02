@@ -4,7 +4,7 @@ Theme URI: https://dariobimbi.com
 Author: Dario Bimbi
 Author URI: https://www.linkedin.com/in/dario-bimbi-7512a36b
 Description: Personal portfolio block theme for Dario Bimbi, Web Developer at Clicks Web Design Inc. Warm dark, Dragon-Pink-led, system-font typography, no external dependencies.
-Version: 0.31.0
+Version: 0.32.0
 Requires at least: 6.4
 Tested up to: 6.7
 Requires PHP: 7.4
@@ -322,9 +322,31 @@ a { text-underline-offset: 0.2em; }
     color: var(--wp--preset--color--background);
 }
 
-/* --- Header refinements ---------------------------------------- */
-.wp-block-site-logo img {
-    border-radius: 8px;
+/* --- Header brand lockup (dog mark + name) --------------------- */
+.site-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--wp--preset--spacing--20);
+    text-decoration: none;
+    color: var(--wp--preset--color--foreground);
+}
+
+.site-brand-mark {
+    display: block;
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+}
+
+.site-brand-name {
+    font-weight: 700;
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+.site-brand:hover .site-brand-name,
+.site-brand:focus-visible .site-brand-name {
+    color: var(--wp--preset--color--primary);
 }
 
 /* --- Site nav (Projects + Demos dropdowns) --------------------- */

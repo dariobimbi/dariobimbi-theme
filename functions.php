@@ -15,6 +15,11 @@ require_once __DIR__ . '/inc/contact.php';
 require_once __DIR__ . '/inc/project-banner.php';
 require_once __DIR__ . '/inc/justtcg-proxy.php';
 require_once __DIR__ . '/inc/security-headers.php';
+// Guarded: a partial deploy that omits this newer file should degrade (no
+// favicon tags) rather than fatal the whole site on a missing require.
+if ( file_exists( __DIR__ . '/inc/favicon.php' ) ) {
+    require_once __DIR__ . '/inc/favicon.php';
+}
 
 add_action( 'after_setup_theme', function () {
     add_theme_support( 'title-tag' );
