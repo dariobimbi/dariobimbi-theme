@@ -94,6 +94,14 @@
 
 <!-- wp:html -->
 <style>
+.demo-audio {
+    --av-bg: #12100c;
+    --av-surface: #1b1712;
+    --av-stage: #14110d;
+    --av-accent: #f43f5e;
+    --av-accent-2: #e11d48;
+}
+
 .demo-audio .av {
     margin-top: 1rem;
     background: var(--wp--preset--color--surface);
@@ -104,7 +112,7 @@
 
 .demo-audio .av-stage {
     position: relative;
-    background: #050813;
+    background: var(--av-stage);
     border: 1px solid var(--wp--preset--color--subtle);
     border-radius: 12px;
     overflow: hidden;
@@ -121,7 +129,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(5, 8, 19, 0.85);
+    background: color-mix(in srgb, var(--av-stage) 85%, transparent);
     -webkit-backdrop-filter: blur(2px);
     backdrop-filter: blur(2px);
     transition: opacity .3s ease;
@@ -159,7 +167,7 @@
     transition: filter .15s ease, border-color .15s ease;
 }
 .demo-audio .av-btn--primary {
-    background: linear-gradient(135deg, #3b82f6, #a855f7);
+    background: linear-gradient(135deg, var(--av-accent), var(--av-accent-2));
     border-color: transparent;
     color: #fff;
     min-width: 130px;
@@ -168,7 +176,7 @@
 
 .demo-audio .av-mode {
     display: inline-flex;
-    background: #0a0e1a;
+    background: var(--av-surface);
     border: 1px solid var(--wp--preset--color--subtle);
     border-radius: 999px;
     padding: 4px;
@@ -185,7 +193,7 @@
     transition: background-color .15s ease, color .15s ease;
 }
 .demo-audio .av-mode-btn.is-on {
-    background: linear-gradient(135deg, rgba(59,130,246,0.4), rgba(168,85,247,0.4));
+    background: linear-gradient(135deg, color-mix(in srgb, var(--av-accent) 40%, transparent), color-mix(in srgb, var(--av-accent-2) 40%, transparent));
     color: var(--wp--preset--color--foreground);
 }
 
@@ -220,7 +228,7 @@
 .demo-audio .av-knob label span { color: var(--wp--preset--color--accent-soft); }
 .demo-audio .av-knob select,
 .demo-audio .av-knob input[type="range"] {
-    background: #0a0e1a;
+    background: var(--av-surface);
     border: 1px solid var(--wp--preset--color--subtle);
     border-radius: 8px;
     color: var(--wp--preset--color--foreground);
@@ -358,6 +366,7 @@
     }
 
     /* --- Drawing routines, one per mode. All read from analyser fresh. --- */
+    /* brand-fidelity — visualizer spectrum, intentional */
     function drawBars() {
         analyser.getByteFrequencyData(freqData);
         var w = canvas.clientWidth, h = canvas.clientHeight;
