@@ -270,7 +270,7 @@
 
     function draw() {
         var w = canvas.clientWidth, h = canvas.clientHeight;
-        ctx.fillStyle = '#050813';
+        ctx.fillStyle = '#14110d';
         ctx.fillRect(0, 0, w, h);
         // Subtle grid lines when cells are big enough to see them.
         if (CELL >= 8) {
