@@ -32,8 +32,8 @@
 
 <style>
 .demo-ant-buster {
-  --ab-bg: #1a1c2c;
-  --ab-frame: #2a2f3e;
+  --ab-bg: #14110d; /* warm canvas backdrop */
+  --ab-frame: #2a241c; /* = subtle, warm frame */
 }
 
 body.has-ant-buster-page {
