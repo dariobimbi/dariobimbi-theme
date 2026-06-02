@@ -12,23 +12,23 @@
             "defaultPalette": false,
             "defaultGradients": false,
             "palette": [
-                { "slug": "background",     "color": "#0a0e1a", "name": "Background — Deep Navy" },
-                { "slug": "surface",        "color": "#11172a", "name": "Surface — Card" },
-                { "slug": "subtle",         "color": "#1a2138", "name": "Subtle Border" },
-                { "slug": "foreground",     "color": "#e8ecf6", "name": "Foreground" },
-                { "slug": "muted",          "color": "#94a3b8", "name": "Muted" },
-                { "slug": "primary",        "color": "#3b82f6", "name": "Electric Blue" },
-                { "slug": "primary-soft",   "color": "#60a5fa", "name": "Electric Blue — Soft" },
-                { "slug": "accent",         "color": "#a855f7", "name": "Violet" },
-                { "slug": "accent-soft",    "color": "#c084fc", "name": "Violet — Soft" },
+                { "slug": "background",     "color": "#12100c", "name": "Background — Warm Near-Black" },
+                { "slug": "surface",        "color": "#1b1712", "name": "Surface — Warm Slate" },
+                { "slug": "subtle",         "color": "#2a241c", "name": "Subtle Border — Warm" },
+                { "slug": "foreground",     "color": "#efe9df", "name": "Foreground — Warm Off-White" },
+                { "slug": "muted",          "color": "#a89f8f", "name": "Muted — Warm Gray" },
+                { "slug": "primary",        "color": "#f43f5e", "name": "Dragon Pink" },
+                { "slug": "primary-soft",   "color": "#fda4af", "name": "Dragon Pink — Soft" },
+                { "slug": "accent",         "color": "#e11d48", "name": "Deep Pink" },
+                { "slug": "accent-soft",    "color": "#fecdd3", "name": "Dragon Pink — Bright" },
                 { "slug": "hot",            "color": "#f43f5e", "name": "Dragon Pink" },
                 { "slug": "highlight",      "color": "#facc15", "name": "Sticky Yellow" }
             ],
             "gradients": [
-                { "slug": "brand",       "name": "Brand (Blue → Violet)", "gradient": "linear-gradient(135deg, #3b82f6 0%, #a855f7 100%)" },
-                { "slug": "brand-soft",  "name": "Brand Soft",            "gradient": "linear-gradient(135deg, #60a5fa 0%, #c084fc 100%)" },
+                { "slug": "brand",       "name": "Dragon Pink",           "gradient": "linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)" },
+                { "slug": "brand-soft",  "name": "Dragon Pink Soft",      "gradient": "linear-gradient(135deg, #fda4af 0%, #fecdd3 100%)" },
                 { "slug": "hot",         "name": "Hot (Violet → Pink)",   "gradient": "linear-gradient(135deg, #a855f7 0%, #f43f5e 100%)" },
-                { "slug": "surface-card","name": "Surface Card",          "gradient": "linear-gradient(180deg, #11172a 0%, #0d1326 100%)" }
+                { "slug": "surface-card","name": "Surface Card",          "gradient": "linear-gradient(180deg, #1b1712 0%, #14110d 100%)" }
             ]
         },
         "typography": {
@@ -97,12 +97,12 @@
                 "typography": { "textDecoration": "none" }
             },
             "button": {
-                "color":   { "background": "#2563eb", "text": "#ffffff" },
+                "color":   { "background": "#e11d48", "text": "#ffffff" },
                 "border":  { "radius": "999px" },
                 "spacing": { "padding": { "top": "0.85rem", "bottom": "0.85rem", "left": "1.6rem", "right": "1.6rem" } },
                 "typography": { "fontWeight": "700", "fontSize": "var(--wp--preset--font-size--medium)" },
-                ":hover":  { "color": { "background": "#7c3aed" } },
-                ":focus":  { "color": { "background": "#7c3aed" } }
+                ":hover":  { "color": { "background": "#f43f5e" } },
+                ":focus":  { "color": { "background": "#f43f5e" } }
             }
         },
         "blocks": {

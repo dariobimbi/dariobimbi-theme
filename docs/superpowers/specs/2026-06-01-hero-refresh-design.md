@@ -135,8 +135,50 @@ Keep the `<picture>` banner (LCP, `loading="eager"`, `fetchpriority="high"`), th
 4. Spot-check two demos (Ant Buster, Sort Race): `hot`/`highlight` unchanged, art intact.
 5. Confirm no empty `href`s (both `get_page_by_path` calls resolve).
 
+## Implementation notes (2026-06-01)
+
+Built on branch `feature/hero-warm-refresh`. Verified on localhost.
+
+- `surface-card` gradient was also warmed (`#1b1712 → #14110d`). The spec said leave it,
+  but it hardcoded the old cool navy and is used by Prompt Studio's preview card, which
+  would have stayed cool against the warm site.
+- The `hot` gradient (still violet → pink) was left alone — it is **unused** anywhere, so
+  its lurking violet has no visible effect.
+- Hero CTA guard is status-aware: it only links to a target that is actually `publish`ed,
+  so a draft can never ship a 404. `get_post_status()` check on both buttons.
+- The `dariobimbi.com` project page (ID 44) was a draft; **published** it (Dario approved)
+  so the "See how this site is built" CTA resolves to `/projects/dariobimbi-com/` (200).
+- Copy passed `copy-voice-check` (zero hits).
+
+## Follow-up: regenerate the banner-hero image (REQUIRED to finish)
+
+The LCP banner (`assets/banner-hero.{webp,jpg}` + `-800` derivatives) still has the
+blue → violet gradient baked into the "DB / Dario Bimbi" lettering and a "BUILD DESIGN
+SOLVE IMPROVE" neon. CSS can't touch it. Regenerate it warm, then update the `<img>` alt
+in `hero.php` to match (drop the retired tagline). Suggested image-gen prompt:
+
+> A warm, cozy illustrated banner for a web developer's portfolio, wide cinematic format
+> (~2.5:1, 3264×1312). A friendly man in his mid-30s with glasses and a short beard, brown
+> hair with noticeable flecks of gray at the temples and in the beard, wearing a hoodie,
+> sitting at a desk working on a laptop in a low-lit home office lit by warm lamplight. A
+> small black schnauzer sits close beside him in the foreground, on the floor leaning near
+> the desk (not on books), larger and nearer the viewer. A small potted plant on the desk;
+> soft warm bokeh and faint code on background monitors. No coffee mug. Left side: just the
+> name "Dario Bimbi" in a warm Dragon-Pink to deep-pink gradient (#f43f5e → #e11d48), sized
+> modestly, no "DB" monogram, with a smaller "< WEB DEVELOPER />" tag beneath in warm
+> off-white. A small pink neon sign reading "KEEP LEARNING" glows softly on the right wall.
+> A row of small tech icons along the bottom-left: WordPress, PHP, HTML5, CSS, JavaScript,
+> GitHub, search/SEO. Palette: warm near-black background (#12100c), warm off-white text,
+> Dragon-Pink accents. No blue, no violet, no purple anywhere. Warm, hand-made, inviting, a
+> lit room rather than a glowing screen.
+
+Export to `banner-hero.{webp,jpg}` (1600×639) and `banner-hero-800.{webp,jpg}` (800×320),
+keep them lean for LCP, then reword the alt to something like "Dario Bimbi, Web Developer,
+illustrated at his desk with his dog."
+
 ## Out of scope (later, if we want)
 
 - Direction 2's live interactive hero (playable demo embedded in the hero).
 - Global mono headings beyond the hero.
 - Any light-mode / editorial pivot.
+- The OG fallback `assets/banner.png` (separate image, separate task).

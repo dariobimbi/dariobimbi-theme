@@ -4,7 +4,7 @@ Theme URI: https://dariobimbi.com
 Author: Dario Bimbi
 Author URI: https://www.linkedin.com/in/dario-bimbi-7512a36b
 Description: Personal portfolio block theme for Dario Bimbi, Web Developer at Clicks Web Design Inc. Dark, gradient-forward, system-font typography, no external dependencies.
-Version: 0.30.0
+Version: 0.31.0
 Requires at least: 6.4
 Tested up to: 6.7
 Requires PHP: 7.4
@@ -501,7 +501,7 @@ a { text-underline-offset: 0.2em; }
     max-height: 700px;
     border-radius: 50%;
     filter: blur(90px);
-    opacity: 0.55;
+    opacity: 0.3; /* dialed down: warm ambient glow, not a marketing mesh */
     will-change: transform;
 }
 .hero-mesh::before {
@@ -525,6 +525,14 @@ a { text-underline-offset: 0.2em; }
     to   { transform: translate(-15vw, -10vh) scale(1.15); }
 }
 .hero-stage > *:not(.hero-mesh) { position: relative; z-index: 1; }
+
+/* Hero headline: warm off-white monospace, replacing the old gradient-text H1.
+   Scoped to the hero so the rest of the site's headings are untouched for now. */
+.hero-stage h1 {
+    font-family: var(--wp--preset--font-family--mono);
+    font-size: var(--wp--preset--font-size--xx-large);
+    letter-spacing: -0.02em; /* monospace runs wide; pull it in a hair */
+}
 
 /* Hero banner image fills its figure edge-to-edge. */
 .hero-stage .wp-block-image img {
