@@ -51,7 +51,7 @@ $assets = esc_url( get_stylesheet_directory_uri() . '/assets/games/pug-attack/' 
     padding: 1.5rem;
 }
 .demo-pug-attack .pa-stage {
-    background: #050813;
+    background: #14110d;
     border: 1px solid var(--wp--preset--color--subtle);
     border-radius: 12px;
     overflow: hidden;
