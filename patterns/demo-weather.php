@@ -79,6 +79,15 @@
 <style>
 /* All styles scoped to .demo-weather to avoid leaking into the rest of the site. */
 
+.demo-weather {
+    --wx-bg: #12100c;
+    --wx-surface: #1b1712;
+    --wx-code-bg: #14110d;
+    --wx-fg: #efe9df;
+    --wx-accent: #f43f5e;
+    --wx-accent-2: #e11d48;
+}
+
 .demo-weather .wx {
     margin-top: 1rem;
     background: var(--wp--preset--color--surface);
@@ -108,7 +117,7 @@
     color: var(--wp--preset--color--muted);
 }
 .demo-weather .wx-input {
-    background: #0a0e1a;
+    background: var(--wx-bg);
     border: 1px solid var(--wp--preset--color--subtle);
     border-radius: 10px;
     padding: 0.85rem 1rem;
@@ -127,7 +136,7 @@
     margin-top: 0.15rem;
 }
 .demo-weather .wx-hint code {
-    background: #050813;
+    background: var(--wx-code-bg);
     border: 1px solid var(--wp--preset--color--subtle);
     padding: 0 0.35rem;
     border-radius: 4px;
@@ -149,7 +158,7 @@
     transition: background-color .15s ease, border-color .15s ease;
 }
 .demo-weather .wx-btn--primary {
-    background: linear-gradient(135deg, #3b82f6, #a855f7);
+    background: linear-gradient(135deg, var(--wx-accent), var(--wx-accent-2));
     border-color: transparent;
     color: #fff;
 }
@@ -225,6 +234,7 @@
     padding: 1.25rem;
 }
 
+/* brand-fidelity — sky + JSON syntax colors, intentional */
 /* "Now" card — gradient background, hero-sized temp */
 .demo-weather .wx-now {
     background: linear-gradient(135deg, rgba(59,130,246,0.18), rgba(168,85,247,0.18));
@@ -293,7 +303,7 @@
     gap: 0.6rem;
 }
 .demo-weather .wx-day {
-    background: #0a0e1a;
+    background: var(--wx-surface);
     border: 1px solid var(--wp--preset--color--subtle);
     border-radius: 10px;
     padding: 0.85rem 0.5rem;
@@ -331,7 +341,7 @@
 /* --- Raw JSON pane --- */
 .demo-weather .wx-json {
     margin-top: 1.5rem;
-    background: #0a0e1a;
+    background: var(--wx-surface);
     border: 1px solid var(--wp--preset--color--subtle);
     border-radius: 12px;
     padding: 0.9rem 1rem;
@@ -362,17 +372,18 @@
 .demo-weather .wx-json-body {
     margin: 0.6rem 0 0;
     padding: 0.85rem 1rem;
-    background: #050813;
+    background: var(--wx-code-bg);
     border: 1px solid var(--wp--preset--color--subtle);
     border-radius: 8px;
     font-family: var(--wp--preset--font-family--mono);
     font-size: 0.78rem;
-    color: #e8ecf6;
+    color: var(--wx-fg);
     max-height: 320px;
     overflow: auto;
     white-space: pre-wrap;
     word-break: break-word;
 }
+/* brand-fidelity — sky + JSON syntax colors, intentional */
 .demo-weather .wx-json-body .jk { color: #61afef; }
 .demo-weather .wx-json-body .js { color: #98c379; }
 .demo-weather .wx-json-body .jn { color: #d19a66; }
