@@ -54,6 +54,11 @@
             <button type="button" class="wx-chip" data-suggest="Reykjavík, IS">Reykjavík, IS</button>
         </div>
 
+        <div class="wx-units" role="group" aria-label="Units">
+            <button type="button" class="wx-unit is-on" data-role="unit" data-unit="imperial" aria-pressed="true">°F</button>
+            <button type="button" class="wx-unit" data-role="unit" data-unit="metric" aria-pressed="false">°C</button>
+        </div>
+
         <div class="wx-result" data-role="result" aria-live="polite">
             <div class="wx-empty">
                 <div class="wx-empty-icon">⛅</div>
@@ -125,6 +130,7 @@
     font-family: var(--wp--preset--font-family--system);
     color: var(--wp--preset--color--foreground);
     transition: border-color .15s ease;
+    width: 100%;
 }
 .demo-weather .wx-input:focus {
     outline: none;
@@ -206,6 +212,29 @@
 .demo-weather .wx-chip:hover {
     border-color: var(--wp--preset--color--primary);
     color: var(--wp--preset--color--primary-soft);
+}
+.demo-weather .wx-units {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0.85rem;
+}
+.demo-weather .wx-unit {
+    cursor: pointer;
+    border: 1px solid var(--wp--preset--color--subtle);
+    background: var(--wp--preset--color--surface);
+    color: var(--wp--preset--color--muted);
+    padding: 0.35rem 0.9rem;
+    font-weight: 700;
+    font-size: 0.85rem;
+    font-family: var(--wp--preset--font-family--mono);
+    transition: background-color .15s ease, color .15s ease;
+}
+.demo-weather .wx-unit:first-child { border-radius: 999px 0 0 999px; }
+.demo-weather .wx-unit:last-child  { border-radius: 0 999px 999px 0; border-left: none; }
+.demo-weather .wx-unit.is-on {
+    background: linear-gradient(135deg, var(--wx-accent), var(--wx-accent-2));
+    border-color: transparent;
+    color: #fff;
 }
 
 /* --- Result area --- */
@@ -409,6 +438,13 @@
     var jsonUrl = root.querySelector('[data-role="json-url"]');
     var jsonBody= root.querySelector('[data-role="json-body"]');
 
+    var imperial = true;            // default Imperial (°F, mph)
+    var lastPlace = null, lastForecast = null;
+
+    function convTemp(c) { return imperial ? Math.round(c * 9 / 5 + 32) : Math.round(c); }
+    function tempUnit() { return imperial ? 'F' : 'C'; }
+    function convWind(kmh) { return imperial ? (Math.round(kmh * 0.621371) + ' mph') : (Math.round(kmh) + ' km/h'); }
+
     /* WMO weather code → emoji + short text. From the Open-Meteo docs. */
     var WMO = {
         0:  ['☀️','Clear sky'],
@@ -550,6 +586,7 @@
     }
 
     function render(place, fc) {
+        lastPlace = place; lastForecast = fc;
         var c = fc.current;
         var cur = wmo(c.weather_code);
         var html = '<div class="wx-now">'
@@ -557,11 +594,11 @@
             + '<div class="wx-now-body">'
                 + '<h3 class="wx-now-city">' + escapeHtml(place.name) + '</h3>'
                 + '<p class="wx-now-region">' + escapeHtml([place.admin1, place.country].filter(Boolean).join(', ')) + '</p>'
-                + '<div class="wx-now-temp">' + Math.round(c.temperature_2m) + '°<small>C</small></div>'
+                + '<div class="wx-now-temp">' + convTemp(c.temperature_2m) + '°<small>' + tempUnit() + '</small></div>'
                 + '<p class="wx-now-summary">' + cur[1] + '</p>'
                 + '<div class="wx-now-meta">'
-                    + '<span>Feels like<strong>' + Math.round(c.apparent_temperature) + '°</strong></span>'
-                    + '<span>Wind<strong>' + Math.round(c.wind_speed_10m) + ' km/h</strong></span>'
+                    + '<span>Feels like<strong>' + convTemp(c.apparent_temperature) + '°</strong></span>'
+                    + '<span>Wind<strong>' + convWind(c.wind_speed_10m) + '</strong></span>'
                     + '<span>Humidity<strong>' + Math.round(c.relative_humidity_2m) + '%</strong></span>'
                 + '</div>'
             + '</div>'
@@ -575,8 +612,8 @@
                 + '<p class="wx-day-name">' + (i === 0 ? 'Today' : fmtDay(d.time[i])) + '</p>'
                 + '<div class="wx-day-icon">' + dw[0] + '</div>'
                 + '<div class="wx-day-temps">'
-                    + '<span class="hi">' + Math.round(d.temperature_2m_max[i]) + '°</span>'
-                    + '<span class="lo">' + Math.round(d.temperature_2m_min[i]) + '°</span>'
+                    + '<span class="hi">' + convTemp(d.temperature_2m_max[i]) + '°</span>'
+                    + '<span class="lo">' + convTemp(d.temperature_2m_min[i]) + '°</span>'
                 + '</div>'
             + '</div>';
         }
@@ -625,6 +662,21 @@
             setLoading(false);
         }
     }
+
+    var unitBtns = root.querySelectorAll('[data-role="unit"]');
+    Array.prototype.forEach.call(unitBtns, function (b) {
+        b.addEventListener('click', function () {
+            var next = this.getAttribute('data-unit') === 'imperial';
+            if (next === imperial) { return; }
+            imperial = next;
+            Array.prototype.forEach.call(unitBtns, function (x) {
+                var on = x.getAttribute('data-unit') === (imperial ? 'imperial' : 'metric');
+                x.classList.toggle('is-on', on);
+                x.setAttribute('aria-pressed', on ? 'true' : 'false');
+            });
+            if (lastForecast) { render(lastPlace, lastForecast); }
+        });
+    });
 
     form.addEventListener('submit', function (e) {
         e.preventDefault();
