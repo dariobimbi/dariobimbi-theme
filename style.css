@@ -1128,7 +1128,7 @@ a { text-underline-offset: 0.2em; }
     border-radius: 999px;
     /* Solid-ish fallback for browsers without backdrop-filter — this
        alone is opaque enough to keep the dot legible. */
-    background: rgba(10, 14, 26, 0.85);
+    background: color-mix(in srgb, var(--wp--preset--color--background) 85%, transparent);
     border: 1px solid rgba(255, 255, 255, 0.06);
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
     transition: color 200ms ease,
@@ -1139,7 +1139,7 @@ a { text-underline-offset: 0.2em; }
 
 @supports ((backdrop-filter: blur(8px)) or (-webkit-backdrop-filter: blur(8px))) {
     .side-rail a {
-        background: rgba(10, 14, 26, 0.55);
+        background: color-mix(in srgb, var(--wp--preset--color--background) 55%, transparent);
         -webkit-backdrop-filter: blur(10px) saturate(1.4);
                 backdrop-filter: blur(10px) saturate(1.4);
     }
@@ -1161,7 +1161,7 @@ a { text-underline-offset: 0.2em; }
 .side-rail a:focus-visible,
 .side-rail a.is-active {
     color: var(--wp--preset--color--accent-soft);
-    border-color: rgba(244, 63, 94, 0.5);
+    border-color: color-mix(in srgb, var(--wp--preset--color--primary) 50%, transparent);
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
 }
 
@@ -1285,7 +1285,7 @@ a { text-underline-offset: 0.2em; }
 .project-card:hover {
     transform: translateY(-2px);
     border-color: var(--wp--preset--color--accent-soft);
-    box-shadow: 0 12px 32px -16px rgba(244, 63, 94, 0.45);
+    box-shadow: 0 12px 32px -16px color-mix(in srgb, var(--wp--preset--color--primary) 45%, transparent);
 }
 .project-card-link {
     display: flex;
