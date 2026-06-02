@@ -36,7 +36,7 @@ $banner_jpg_lg  = esc_url( $assets . '/banner-hero.jpg' );
     <!-- /wp:paragraph -->
 
     <!-- wp:heading {"textAlign":"center","level":1,"style":{"spacing":{"margin":{"top":"var:preset|spacing|20","bottom":"var:preset|spacing|30"}}}} -->
-    <h1 class="wp-block-heading has-text-align-center" style="margin-top:var(--wp--preset--spacing--20);margin-bottom:var(--wp--preset--spacing--30)">I build things for the web that actually work.</h1>
+    <h1 class="wp-block-heading has-text-align-center" style="margin-top:var(--wp--preset--spacing--20);margin-bottom:var(--wp--preset--spacing--30)">I build websites I'd want to use myself.</h1>
     <!-- /wp:heading -->
 
     <!-- wp:paragraph {"align":"center","fontSize":"large","textColor":"muted","style":{"typography":{"lineHeight":"1.5"}}} -->
