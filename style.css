@@ -403,7 +403,7 @@ a { text-underline-offset: 0.2em; }
 
 .site-nav-dropdown[open] > .site-nav-trigger {
     border-color: var(--wp--preset--color--accent);
-    background: linear-gradient(135deg, rgba(244, 63, 94, 0.18), rgba(225, 29, 72, 0.18));
+    background: linear-gradient(135deg, color-mix(in srgb, var(--wp--preset--color--primary) 18%, transparent), color-mix(in srgb, var(--wp--preset--color--accent) 18%, transparent));
     color: var(--wp--preset--color--foreground);
 }
 
@@ -451,7 +451,7 @@ a { text-underline-offset: 0.2em; }
 }
 .site-nav-menu a:hover,
 .site-nav-menu a:focus-visible {
-    background: rgba(244, 63, 94, 0.12);
+    background: color-mix(in srgb, var(--wp--preset--color--primary) 12%, transparent);
     color: var(--wp--preset--color--accent-soft);
     text-decoration: none;
     outline: none;
@@ -505,8 +505,8 @@ a { text-underline-offset: 0.2em; }
 }
 .section--ambient {
     background:
-        radial-gradient(ellipse 60% 50% at 20% 10%, rgba(244,63,94,0.10), transparent 60%),
-        radial-gradient(ellipse 50% 40% at 80% 90%, rgba(225,29,72,0.10), transparent 60%);
+        radial-gradient(ellipse 60% 50% at 20% 10%, color-mix(in srgb, var(--wp--preset--color--primary) 10%, transparent), transparent 60%),
+        radial-gradient(ellipse 50% 40% at 80% 90%, color-mix(in srgb, var(--wp--preset--color--accent) 10%, transparent), transparent 60%);
 }
 
 /* ============================================================
@@ -568,8 +568,8 @@ a { text-underline-offset: 0.2em; }
     z-index: 0;
     pointer-events: none;
     background-image:
-        linear-gradient(rgba(168, 159, 143, 0.06) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(168, 159, 143, 0.06) 1px, transparent 1px);
+        linear-gradient(color-mix(in srgb, var(--wp--preset--color--muted) 6%, transparent) 1px, transparent 1px),
+        linear-gradient(90deg, color-mix(in srgb, var(--wp--preset--color--muted) 6%, transparent) 1px, transparent 1px);
     background-size: 34px 34px;
     -webkit-mask-image: radial-gradient(ellipse 78% 68% at 50% 38%, #000 38%, transparent 100%);
             mask-image: radial-gradient(ellipse 78% 68% at 50% 38%, #000 38%, transparent 100%);
@@ -713,16 +713,16 @@ a { text-underline-offset: 0.2em; }
     left: 0;
     right: 0;
     top: 50%;
-    border-top: 2px dotted rgba(244, 63, 94, 0.4);
+    border-top: 2px dotted color-mix(in srgb, var(--wp--preset--color--primary) 40%, transparent);
 }
 .hero-ant {
     position: absolute;
     top: calc(50% - 4px);
     width: 11px;
     height: 7px;
-    background: #2a1f1c;
+    background: var(--wp--preset--color--subtle);
     border-radius: 50%;
-    box-shadow: -4px 0 0 -1px #2a1f1c, 4px 0 0 -1px #2a1f1c;
+    box-shadow: -4px 0 0 -1px var(--wp--preset--color--subtle), 4px 0 0 -1px var(--wp--preset--color--subtle);
     animation: hero-march 9s linear infinite;
 }
 /* The `left` here is the static fallback for reduced motion; the keyframes
