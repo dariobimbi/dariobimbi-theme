@@ -252,6 +252,7 @@
         border: 1px solid var(--wp--preset--color--subtle);
         color: var(--wp--preset--color--muted);
     }
+    /* brand-fidelity — WCAG pass/fail semantics, intentional */
     .demo-contrast .cc-grade.is-aaa { color: #4ade80; border-color: #4ade8055; }
     .demo-contrast .cc-grade.is-aa  { color: var(--wp--preset--color--highlight); border-color: #facc1555; }
     .demo-contrast .cc-grade.is-fail{ color: var(--wp--preset--color--hot); border-color: #f43f5e55; }
