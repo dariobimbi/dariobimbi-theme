@@ -112,6 +112,7 @@
     --sr-panel: #14110d;
     --sr-accent: #f43f5e;
     --sr-accent-2: #e11d48;
+    --sr-running: #facc15;
 }
 
 .demo-sort .sr {
@@ -195,7 +196,7 @@
     transform: translateY(-1px);
 }
 .demo-sort .sr-btn--go[data-state="running"] {
-    background: linear-gradient(135deg, var(--sr-accent), var(--sr-accent-2));
+    background: linear-gradient(135deg, var(--sr-accent), var(--sr-running));
     background-size: 200% 200%;
     background-position: 0% 50%;
     box-shadow: 0 8px 22px -10px color-mix(in srgb, var(--sr-accent) 55%, transparent);
