@@ -1524,6 +1524,8 @@ a { text-underline-offset: 0.2em; }
 }
 
 /* --- Preview: contrast (two stripes that swap fg/bg) --- */
+/* brand-fidelity — contrast-checker mini-scene: the dark/blue (#0a0e1a, #60a5fa)
+   pairing IS the depiction (a fg/bg swap being measured), intentional, do not tokenize */
 .demo-card-preview--contrast {
     background: #0a0e1a;
     box-shadow: inset 0 -1px 0 rgba(255,255,255,0.04);
@@ -1556,6 +1558,7 @@ a { text-underline-offset: 0.2em; }
     50%, 95%  { filter: hue-rotate(140deg); }
     100%      { filter: hue-rotate(0deg); }
 }
+/* end brand-fidelity */
 
 /* --- Preview: default (three pulsing bars) --- */
 .demo-card-preview--default .cp-default {
@@ -1574,6 +1577,9 @@ a { text-underline-offset: 0.2em; }
 }
 
 /* --- Preview: weather (sun + drifting cloud + falling raindrops) --- */
+/* brand-fidelity — weather mini-scene: the blue sky gradient (#1e3a8a, #3b82f6),
+   sun yellow, and cloud whites depict the weather demo; the cool tones are the
+   SKY, intentional, do not tokenize */
 .demo-card-preview--weather {
     background: linear-gradient(180deg, #1e3a8a 0%, #3b82f6 100%);
 }
@@ -1618,8 +1624,12 @@ a { text-underline-offset: 0.2em; }
     20%  { opacity: 1; }
     100% { transform: translateY(40px); opacity: 0; }
 }
+/* end brand-fidelity */
 
 /* --- Preview: audio (equalizer bars at varied heights) --- */
+/* brand-fidelity — audio mini-scene: the night-purple backdrop (#1f0a3e, #050813)
+   and the blue→violet→pink EQ-bar gradient depict the audio visualizer,
+   intentional, do not tokenize */
 .demo-card-preview--audio {
     background: linear-gradient(135deg, #1f0a3e 0%, #050813 100%);
     align-items: flex-end;
@@ -1650,8 +1660,12 @@ a { text-underline-offset: 0.2em; }
     0%, 100% { transform: scaleY(0.4); }
     50%      { transform: scaleY(2.4); }
 }
+/* end brand-fidelity */
 
 /* --- Preview: sort (bars sliding into order, then resetting) --- */
+/* brand-fidelity — sort mini-scene: the blue-night backdrop (#0a1f3a, #050813)
+   and blue→violet sort-bar gradient depict the sorting visualizer,
+   intentional, do not tokenize */
 .demo-card-preview--sort {
     background: linear-gradient(135deg, #0a1f3a 0%, #050813 100%);
     align-items: flex-end;
@@ -1684,12 +1698,16 @@ a { text-underline-offset: 0.2em; }
 @keyframes cp-sort-6 { 0%,15% { height: 35%; } 60%,100% { height: 65%; } }
 @keyframes cp-sort-7 { 0%,15% { height: 50%; } 60%,100% { height: 75%; } }
 @keyframes cp-sort-8 { 0%,15% { height: 90%; } 60%,100% { height: 90%; } }
+/* end brand-fidelity */
 
 /* --- Preview: life (real glider walking diagonally across a 6x6 grid) ---
    Four stacked phase frames hold the glider's 4 rotation states. Each frame
    fades in for one quarter of the animation, so cells visibly flip on/off the
    way Life cells do. The whole glider container steps (1,1) per period across
    a 6x6 cell grid, so by the end of the loop it has crossed the preview. */
+/* brand-fidelity — Game of Life mini-scene: the dark grid backdrop (#0a0e1a,
+   #050813) and the violet live-cell glow (#c084fc / rgba 168,85,247) depict the
+   cellular-automaton demo, intentional, do not tokenize */
 .demo-card-preview--life {
     background:
         linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px) 0 0 / 100% 16.6667%,
@@ -1738,11 +1756,17 @@ a { text-underline-offset: 0.2em; }
 @keyframes cp-life-frame-1 { 0%   { opacity: 0; } 25%  { opacity: 1; } 50%  { opacity: 0; } 100% { opacity: 0; } }
 @keyframes cp-life-frame-2 { 0%   { opacity: 0; } 50%  { opacity: 1; } 75%  { opacity: 0; } 100% { opacity: 0; } }
 @keyframes cp-life-frame-3 { 0%   { opacity: 0; } 75%  { opacity: 1; } 100% { opacity: 0; } }
+/* end brand-fidelity */
 
 /* --- Preview: live-editor (mock CSS lines + a card that morphs in sync) ---
    Left pane shows 4 lines of syntax-highlighted CSS with a blinking caret on
    the closing brace. Right pane holds a small card whose border-radius and
    background cycle in sync with the highlighted property values. */
+/* brand-fidelity — live-editor mini-scene: the one-dark code-editor backdrop
+   (#0f1530, #050813), the render-pane (#0a0e1a), and the syntax-highlight token
+   colors (#f43f5e selector, #60a5fa property, #facc15 number, #a855f7 hex,
+   #cdd5e6 brace/caret, #5e6a85 punct, #8b9bbd base) depict the CSS playground,
+   intentional, do not tokenize */
 .demo-card-preview--live-editor {
     background: linear-gradient(135deg, #0f1530 0%, #050813 100%);
     padding: 0;
@@ -1806,9 +1830,13 @@ a { text-underline-offset: 0.2em; }
     0%, 100% { border-radius: 4px;  filter: hue-rotate(0deg); }
     50%      { border-radius: 18px; filter: hue-rotate(60deg); }
 }
+/* end brand-fidelity */
 
 /* --- Preview: microgame / Maze Craze (green walls, red player tracing a path
    to an orange goal) --- */
+/* brand-fidelity — Maze Craze mini-scene: the near-black field (#050a07), neon
+   green walls (#2dff5a), orange goal (#ff8c1a), and red player (#ff4848) depict
+   the microgame, intentional, do not tokenize */
 .demo-card-preview--microgame {
     background: #050a07;
     position: relative;
@@ -1864,8 +1892,12 @@ a { text-underline-offset: 0.2em; }
     92%            { left: 84%; top: 82%; opacity: 1; }
     100%           { left: 84%; top: 82%; opacity: 0; }
 }
+/* end brand-fidelity */
 
 /* --- Preview: pug-attack (sky scene, pug paces, bullet drops, cat scrolls) --- */
+/* brand-fidelity — pug-attack mini-scene: the blue sky→green grass gradient
+   (#6fb6e8, #8fbb55, #5d8838), tan pug (#d2b48c, #8b6f4e), and dark cat/ant
+   (#1a1a1a, #1f1f1f, #2a1f1c) depict the game, intentional, do not tokenize */
 .demo-card-preview--pug-attack {
     background: linear-gradient(180deg, #6fb6e8 0%, #b9d8ee 65%, #9ec96f 80%, #6e9d3f 100%);
     position: relative;
@@ -1964,6 +1996,7 @@ a { text-underline-offset: 0.2em; }
     from { left: -22px; }
     to   { left: 100%; }
 }
+/* end brand-fidelity */
 
 /* --- Preview: lab (dotted slow pulse) --- */
 .demo-card-preview--lab {
@@ -1995,6 +2028,9 @@ a { text-underline-offset: 0.2em; }
 }
 
 /* --- Preview: pokedex (Game Boy LCD with cycling Gen 1 sprites) --- */
+/* brand-fidelity — Game Boy LCD mini-scene: the classic LCD greens (#9bbc0f,
+   #8bac0f, #0f380f), the red shell/LED (#b91c2b, #7f1018, #ef4444), and the
+   beige body (#d6d6c2) depict the pokedex demo, intentional, do not tokenize */
 .demo-card-preview--pokedex {
     background: linear-gradient(180deg, #b91c2b 0%, #7f1018 100%);
 }
@@ -2084,8 +2120,13 @@ a { text-underline-offset: 0.2em; }
     0%, 100% { opacity: 1;   box-shadow: 0 0 6px rgba(239, 68, 68, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.55); }
     50%      { opacity: 0.6; box-shadow: 0 0 2px rgba(239, 68, 68, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.55); }
 }
+/* end brand-fidelity */
 
 /* --- Preview: card-browser (three Pokémon-style mini cards fanned out) --- */
+/* brand-fidelity — TCG mini-scene: the red→yellow Poké backdrop (#ee1c25,
+   #ffcb05), white cards with black outline (#ffffff, #1d1d1f), and per-card
+   energy colors (#1976d2, #ee1c25, #f59e0b) depict the card-browser,
+   intentional, do not tokenize */
 .demo-card-preview--card-browser {
     background: linear-gradient(180deg, #ee1c25 0%, #ffcb05 100%);
     overflow: hidden;
@@ -2151,8 +2192,13 @@ a { text-underline-offset: 0.2em; }
     0%, 100% { translate: 0 0; }
     50%      { translate: 0 -7px; }
 }
+/* end brand-fidelity */
 
 /* --- Preview: ant-buster (cannon fires down at ants marching toward a crumb) --- */
+/* brand-fidelity — Ant Buster mini-scene: the green picnic-lawn gradient
+   (#7bb661, #538a3e), tan crumb (#e9c46a), pink cannon + yellow shot
+   (#f43f5e, #facc15), brown barrel (#3a2e2a), and dark ants (#2a1f1c) depict
+   the tower-defense game, intentional, do not tokenize */
 .demo-card-preview--ant-buster {
     background: linear-gradient(180deg, #7bb661 0%, #538a3e 100%);
     box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.25);
@@ -2228,8 +2274,12 @@ a { text-underline-offset: 0.2em; }
     0%   { left: -12%; }
     100% { left: 82%; }
 }
+/* end brand-fidelity */
 
 /* --- Preview: prompt-studio (a prompt types out, sparkles twinkle) --- */
+/* brand-fidelity — prompt-studio mini-scene: the warm plum panel backdrop
+   (#2a1422, #3a1a2e), pink/yellow typing lines, and yellow caret + sparkles
+   (#facc15) depict the prompt demo, intentional, do not tokenize */
 .demo-card-preview--prompt-studio {
     background: linear-gradient(135deg, #2a1422 0%, #3a1a2e 100%);
 }
@@ -2294,6 +2344,7 @@ a { text-underline-offset: 0.2em; }
     0%, 100% { opacity: 0; transform: scale(0.4) rotate(0deg); }
     50%      { opacity: 1; transform: scale(1) rotate(45deg); }
 }
+/* end brand-fidelity */
 
 /* --- Card body --- */
 .demo-card-body {
