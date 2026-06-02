@@ -20,7 +20,7 @@ Palette tokens (theme.json): `background #12100c`, `surface #1b1712`, `subtle #2
 ## Layered treatment
 
 ### Layer 1 — `theme.json`
-- Core button element (`styles.elements.button`) currently hardcodes `#e11d48` (bg), `#ffffff` (text), `#f43f5e` (hover/focus). Route to `var(--wp--preset--color--accent)`, `var(--wp--preset--color--foreground)` (or `#fff` → foreground), and `var(--wp--preset--color--primary)` respectively.
+- Core button element (`styles.elements.button`) currently hardcodes `#e11d48` (bg), `#ffffff` (text), `#f43f5e` (hover/focus). Route bg → `var(--wp--preset--color--accent)` and hover/focus → `var(--wp--preset--color--primary)`. **Button text stays pure `#ffffff`** (decided: keep crisp white on the pink button, do not warm it to `foreground`).
 - Palette and gradients otherwise unchanged. (The unused `hot` violet→pink gradient and the duplicate `hot`=`primary` color slug are pre-existing and out of scope — note but don't touch.)
 
 ### Layer 2 — Site chrome in `style.css`
@@ -44,7 +44,7 @@ Respect the single-file-demo convention (CLAUDE.md): demos must stay copy-paste 
 
 - Each demo gets a **scoped local-token block at the top of its own `<style>`** — the `--dcb-*` model `demo-card-browser.php` already uses. The demo's internal *chrome* (backgrounds, surfaces, text, borders, its own accent) routes to those locals; single-source within the file.
 - **Canvas/sprite/game-art and brand palettes stay literal**, marked brand-fidelity. (Ant Buster's thousands of canvas hex values, Pokédex sprite tints, etc. are not tokenized.)
-- **Stale old-navy chrome** (e.g. demo-contrast/weather/audio defaults using `#0a0e1a`, `#050813`, `#3b82f6`) gets a warm local-token default so it stops reading as disconnected — unless the cool look is intentional to that demo's subject, in which case it stays and is commented.
+- **Stale old-navy chrome** (e.g. demo-contrast/weather/audio defaults using `#0a0e1a`, `#050813`, `#3b82f6`) gets a warm local-token default so it stops reading as disconnected (decided: warm these). The distinction still holds between *chrome* (page/panel backgrounds, surfaces, neutral text → warm) and *subject art* (e.g. the weather demo's literal sky blue → stays literal, brand-fidelity).
 - `demo-card-browser.php` is already correct (Pokémon Center palette via `--dcb-*`); leave as the reference example.
 
 ## Verification
