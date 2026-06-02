@@ -167,10 +167,10 @@ $demos_url = ( $demos_hub && 'publish' === get_post_status( $demos_hub ) ) ? get
     <!-- /wp:html -->
 
     <?php if ( $demos_url ) : ?>
-    <!-- wp:buttons {"style":{"spacing":{"margin":{"top":"var:preset|spacing|40"}}}} -->
-    <div class="wp-block-buttons" style="margin-top:var(--wp--preset--spacing--40)">
-        <!-- wp:button {"className":"is-style-outline"} -->
-        <div class="wp-block-button is-style-outline"><a class="wp-block-button__link wp-element-button" href="<?php echo esc_url( $demos_url ); ?>">See all the demos</a></div>
+    <!-- wp:buttons {"className":"demos-see-all-row","style":{"spacing":{"margin":{"top":"var:preset|spacing|40"}}}} -->
+    <div class="wp-block-buttons demos-see-all-row" style="margin-top:var(--wp--preset--spacing--40)">
+        <!-- wp:button {"className":"is-style-outline demos-see-all"} -->
+        <div class="wp-block-button is-style-outline demos-see-all"><a class="wp-block-button__link wp-element-button" href="<?php echo esc_url( $demos_url ); ?>">See all the demos</a></div>
         <!-- /wp:button -->
     </div>
     <!-- /wp:buttons -->

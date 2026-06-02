@@ -2620,3 +2620,6 @@ a { text-underline-offset: 0.2em; }
     color: var(--wp--preset--color--primary);
 }
 
+/* Homepage "see all the demos" CTA: center the row, give the pill more room. */
+.demos-see-all-row { display: flex; justify-content: center; }
+.demos-see-all .wp-block-button__link { padding-left: 2.4rem; padding-right: 2.4rem; }
