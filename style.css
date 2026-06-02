@@ -1457,20 +1457,13 @@ a { text-underline-offset: 0.2em; }
     margin: 0;
     padding: 0;
     position: relative;
-    /* Per-card accent — defaulted to blue, overridden by modifier classes. */
+    /* Per-card accent — sourced from palette tokens. */
     --demo-accent: var(--wp--preset--color--primary);
     --demo-accent-soft: var(--wp--preset--color--primary-soft);
-    --demo-accent-rgb: 59, 130, 246;
-    --demo-gradient: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+    --demo-gradient: var(--wp--preset--gradient--brand);
 }
-.demo-card--blue   { --demo-accent: #3b82f6; --demo-accent-soft: #60a5fa; --demo-accent-rgb: 59, 130, 246;
-                     --demo-gradient: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); }
-.demo-card--purple { --demo-accent: #a855f7; --demo-accent-soft: #c084fc; --demo-accent-rgb: 168, 85, 247;
-                     --demo-gradient: linear-gradient(135deg, #a855f7 0%, #c084fc 100%); }
-.demo-card--pink   { --demo-accent: #f43f5e; --demo-accent-soft: #fb7185; --demo-accent-rgb: 244, 63, 94;
-                     --demo-gradient: linear-gradient(135deg, #f43f5e 0%, #fb7185 100%); }
-.demo-card--yellow { --demo-accent: #facc15; --demo-accent-soft: #fde68a; --demo-accent-rgb: 250, 204, 21;
-                     --demo-gradient: linear-gradient(135deg, #facc15 0%, #fde68a 100%); }
+.demo-card--pink   { --demo-accent: var(--wp--preset--color--primary); --demo-accent-soft: var(--wp--preset--color--primary-soft); --demo-gradient: var(--wp--preset--gradient--brand); }
+.demo-card--yellow { --demo-accent: var(--wp--preset--color--highlight); --demo-accent-soft: color-mix(in srgb, var(--wp--preset--color--highlight) 55%, white); --demo-gradient: linear-gradient(135deg, var(--wp--preset--color--highlight) 0%, color-mix(in srgb, var(--wp--preset--color--highlight) 55%, white) 100%); }
 
 .demo-card-link {
     display: flex;
@@ -1491,7 +1484,7 @@ a { text-underline-offset: 0.2em; }
 .demo-card-link:focus-visible {
     border-color: var(--demo-accent);
     transform: translateY(-4px);
-    box-shadow: 0 16px 44px -14px rgba(var(--demo-accent-rgb), 0.45);
+    box-shadow: 0 16px 44px -14px color-mix(in srgb, var(--demo-accent) 45%, transparent);
     text-decoration: none;
     outline: none;
 }
@@ -2325,7 +2318,7 @@ a { text-underline-offset: 0.2em; }
     letter-spacing: 0.08em;
     color: var(--demo-accent-soft);
     padding: 0.25rem 0.55rem;
-    border: 1px solid rgba(var(--demo-accent-rgb), 0.45);
+    border: 1px solid color-mix(in srgb, var(--demo-accent) 45%, transparent);
     border-radius: 999px;
     line-height: 1;
 }
@@ -2360,7 +2353,7 @@ a { text-underline-offset: 0.2em; }
 .demo-card-blurb a {
     color: var(--demo-accent-soft);
     text-decoration: underline;
-    text-decoration-color: rgba(var(--demo-accent-rgb), 0.4);
+    text-decoration-color: color-mix(in srgb, var(--demo-accent) 40%, transparent);
 }
 
 .demo-card-tech {
