@@ -21,8 +21,8 @@ $self_url  = ( $self_page && 'publish' === get_post_status( $self_page ) ) ? get
 <div class="wp-block-group alignfull section hero-stage" style="padding-top:0;padding-bottom:var(--wp--preset--spacing--60)">
 
     <!-- wp:html -->
-    <div class="hero-grid-texture" aria-hidden="true"></div>
-    <div class="hero-mesh" aria-hidden="true"></div>
+    <div class="hero-grid-texture" aria-hidden="true" role="presentation"></div>
+    <div class="hero-mesh" aria-hidden="true" role="presentation"></div>
     <!-- /wp:html -->
 
     <!-- wp:html -->
@@ -57,7 +57,7 @@ $self_url  = ( $self_page && 'publish' === get_post_status( $self_page ) ) ? get
 
     </div>
 
-    <div class="hero-trail" aria-hidden="true">
+    <div class="hero-trail" aria-hidden="true" role="presentation">
         <span class="hero-trail-line"></span>
         <span class="hero-ant"></span>
         <span class="hero-ant"></span>

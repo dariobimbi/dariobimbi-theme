@@ -28,7 +28,7 @@ $assets = esc_url( get_stylesheet_directory_uri() . '/assets/projects/dariobimbi
 
     <!-- wp:html -->
     <figure class="project-hero">
-        <img src="<?php echo $assets; ?>home.jpeg" alt="The dariobimbi.com homepage hero, an illustrated portrait of Dario at his desk with his dog, beside the headline I build websites I'd want to use myself" loading="lazy">
+        <img src="<?php echo $assets; ?>home.jpeg" alt="The dariobimbi.com homepage hero, an illustrated portrait of Dario at his desk with his dog, beside the headline I build websites I'd want to use myself" width="1440" height="900" loading="lazy" decoding="async">
         <figcaption>The homepage of this site, rendered by the same theme.</figcaption>
     </figure>
     <!-- /wp:html -->
