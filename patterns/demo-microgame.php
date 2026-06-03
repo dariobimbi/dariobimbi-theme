@@ -55,7 +55,7 @@ $assets = esc_url( get_stylesheet_directory_uri() . '/assets/games/microgame/' )
     box-shadow: 0 0 0 3px var(--wp--preset--color--primary-soft);
 }
 .demo-microgame .mg-stage {
-    background: #050813;
+    background: #14110d;
     border: 1px solid var(--wp--preset--color--subtle);
     border-radius: 12px;
     overflow: hidden;

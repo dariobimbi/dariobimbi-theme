@@ -43,10 +43,10 @@
                     <textarea id="codepen-input-css" class="codepen-input" spellcheck="false" autocorrect="off" autocapitalize="off" wrap="off" aria-describedby="codepen-input-help" data-input>/* Live preview, edit anything! */
 
 :root {
-  --bg:      #11172a;
-  --border:  #1e2742;
-  --primary: #3b82f6;
-  --accent:  #a855f7;
+  --bg:      #1b1712;
+  --border:  #2a241c;
+  --primary: #f43f5e;
+  --accent:  #e11d48;
   --hot:     #f43f5e;
   --radius:  14px;
   --pad:     28px;
@@ -57,7 +57,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: var(--pad);
-  color: #e8ecf6;
+  color: #efe9df;
   font-family: ui-sans-serif, system-ui, sans-serif;
   transition: all 220ms ease;
 }
@@ -85,7 +85,7 @@
 }
 
 .demo p {
-  color: #94a3b8;
+  color: #a89f8f;
   margin: 14px 0 0;
   line-height: 1.55;
 }</textarea>

@@ -81,7 +81,7 @@
 }
 
 .demo-life .gl-stage {
-    background: #050813;
+    background: #14110d;
     border: 1px solid var(--wp--preset--color--subtle);
     border-radius: 12px;
     overflow: hidden;
@@ -118,7 +118,7 @@
     transition: filter .15s ease, border-color .15s ease;
 }
 .demo-life .gl-btn--primary {
-    background: linear-gradient(135deg, #3b82f6, #a855f7);
+    background: linear-gradient(135deg, #f43f5e, #e11d48);
     border-color: transparent;
     color: #fff;
     min-width: 120px;
@@ -270,7 +270,7 @@
 
     function draw() {
         var w = canvas.clientWidth, h = canvas.clientHeight;
-        ctx.fillStyle = '#050813';
+        ctx.fillStyle = '#14110d';
         ctx.fillRect(0, 0, w, h);
         // Subtle grid lines when cells are big enough to see them.
         if (CELL >= 8) {

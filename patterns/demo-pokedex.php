@@ -229,7 +229,7 @@ body:has(.demo-pokedex) {
 .demo-pokedex .pdex-modal-backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(10, 14, 26, 0.85);
+    background: color-mix(in srgb, var(--wp--preset--color--background) 85%, transparent);
     backdrop-filter: blur(4px);
 }
 
@@ -329,7 +329,7 @@ body:has(.demo-pokedex) {
 .demo-pokedex .pdex-tile:hover {
     transform: translateY(-3px);
     border-color: var(--pdex-primary);
-    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15);
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--wp--preset--color--primary) 15%, transparent);
 }
 
 .demo-pokedex .pdex-tile-sprite {
@@ -420,10 +420,11 @@ body:has(.demo-pokedex) {
     font-size: 0.85rem;
     font-weight: 700;
     text-transform: capitalize;
-    color: #0a0e1a;
+    color: var(--wp--preset--color--background);
     background: #888;
 }
 
+/* brand-fidelity — Pokémon type colors, intentional */
 .demo-pokedex .pdex-type-badge[data-type="normal"]   { background: #a8a878; color: #fff; }
 .demo-pokedex .pdex-type-badge[data-type="fire"]     { background: #f08030; color: #fff; }
 .demo-pokedex .pdex-type-badge[data-type="water"]    { background: #6890f0; color: #fff; }
@@ -491,7 +492,7 @@ body:has(.demo-pokedex) {
 
 .demo-pokedex .pdex-card:hover {
     transform: translateY(-3px);
-    box-shadow: 0 12px 32px rgba(168, 85, 247, 0.18);
+    box-shadow: 0 12px 32px color-mix(in srgb, var(--wp--preset--color--primary) 18%, transparent);
 }
 
 .demo-pokedex .pdex-card-image {
@@ -829,7 +830,7 @@ body:has(.demo-pokedex) {
     padding: 0.55rem 1rem;
     border-radius: 999px;
     background: var(--type-accent, var(--pdex-primary));
-    color: #0a0e1a;
+    color: var(--wp--preset--color--background);
     font-weight: 700;
     font-size: 0.85rem;
     letter-spacing: 0.02em;

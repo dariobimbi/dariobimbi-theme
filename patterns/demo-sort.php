@@ -107,6 +107,14 @@
 
 <!-- wp:html -->
 <style>
+.demo-sort {
+    --sr-bg: #12100c;
+    --sr-panel: #14110d;
+    --sr-accent: #f43f5e;
+    --sr-accent-2: #e11d48;
+    --sr-running: #facc15;
+}
+
 .demo-sort .sr {
     margin-top: 1rem;
     background: var(--wp--preset--color--surface);
@@ -138,7 +146,7 @@
 .demo-sort .sr-knob label span { color: var(--wp--preset--color--accent-soft); }
 .demo-sort .sr-knob input[type="range"] {
     accent-color: var(--wp--preset--color--accent);
-    background: #0a0e1a;
+    background: var(--sr-bg);
     border-radius: 8px;
 }
 
@@ -177,25 +185,25 @@
     gap: 0.5rem;
     border-color: transparent;
     color: #fff;
-    background: linear-gradient(135deg, #3b82f6, #a855f7);
+    background: linear-gradient(135deg, var(--sr-accent), var(--sr-accent-2));
     background-size: 200% 200%;
     background-position: 0% 50%;
-    box-shadow: 0 8px 22px -10px rgba(168,85,247,0.55);
+    box-shadow: 0 8px 22px -10px color-mix(in srgb, var(--sr-accent-2) 55%, transparent);
 }
 .demo-sort .sr-btn--go:hover {
     background-position: 100% 50%;
-    box-shadow: 0 12px 28px -8px rgba(168,85,247,0.7);
+    box-shadow: 0 12px 28px -8px color-mix(in srgb, var(--sr-accent-2) 70%, transparent);
     transform: translateY(-1px);
 }
 .demo-sort .sr-btn--go[data-state="running"] {
-    background: linear-gradient(135deg, #f43f5e, #a855f7);
+    background: linear-gradient(135deg, var(--sr-accent), var(--sr-running));
     background-size: 200% 200%;
     background-position: 0% 50%;
-    box-shadow: 0 8px 22px -10px rgba(244,63,94,0.55);
+    box-shadow: 0 8px 22px -10px color-mix(in srgb, var(--sr-accent) 55%, transparent);
 }
 .demo-sort .sr-btn--go[data-state="running"]:hover {
     background-position: 100% 50%;
-    box-shadow: 0 12px 28px -8px rgba(244,63,94,0.7);
+    box-shadow: 0 12px 28px -8px color-mix(in srgb, var(--sr-accent) 70%, transparent);
 }
 .demo-sort .sr-btn--go .sr-btn-icon {
     display: inline-block;
@@ -224,7 +232,7 @@
     gap: 1rem;
 }
 .demo-sort .sr-panel {
-    background: #050813;
+    background: var(--sr-panel);
     border: 1px solid var(--wp--preset--color--subtle);
     border-radius: 12px;
     overflow: hidden;
@@ -233,6 +241,7 @@
 .demo-sort .sr-panel.is-running { border-color: var(--wp--preset--color--primary); }
 .demo-sort .sr-panel.is-done    { border-color: var(--wp--preset--color--accent); }
 /* Placement glows — gold / silver / bronze / neutral. */
+/* brand-fidelity — podium medals, intentional */
 .demo-sort .sr-panel.is-place-1 {
     border-color: #facc15;
     box-shadow: 0 0 0 2px rgba(250,204,21,0.35), 0 16px 40px -12px rgba(250,204,21,0.4);
@@ -272,7 +281,7 @@
     display: block;
     width: 100%;
     height: 200px;
-    background: #050813;
+    background: var(--sr-panel);
 }
 .demo-sort .sr-panel footer {
     padding: 0.55rem 1rem;

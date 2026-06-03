@@ -4,7 +4,7 @@ Theme URI: https://dariobimbi.com
 Author: Dario Bimbi
 Author URI: https://www.linkedin.com/in/dario-bimbi-7512a36b
 Description: Personal portfolio block theme for Dario Bimbi, Web Developer at Clicks Web Design Inc. Warm dark, Dragon-Pink-led, system-font typography, no external dependencies.
-Version: 0.33.0
+Version: 0.34.0
 Requires at least: 6.4
 Tested up to: 6.7
 Requires PHP: 7.4
@@ -18,6 +18,16 @@ Tags: block-theme, full-site-editing, portfolio, dark-mode, custom-colors, custo
    Most styling lives in theme.json. This file holds utilities
    and refinements that are awkward to express there.
    ============================================================ */
+
+/* ============================================================
+   Functional (non-brand) tokens. Brand colors live in theme.json;
+   these are semantic states that intentionally do NOT recolor with
+   the brand. Translucent brand tints are produced inline with
+   color-mix() against the theme.json preset vars — no rgba triplets.
+   ============================================================ */
+:root {
+    --color-success: #22c55e;
+}
 
 html { background: var(--wp--preset--color--background); }
 
@@ -48,7 +58,7 @@ html { background: var(--wp--preset--color--background); }
 
 a { text-underline-offset: 0.2em; }
 
-::selection { background: var(--wp--preset--color--accent); color: #fff; }
+::selection { background: var(--wp--preset--color--accent); color: var(--wp--preset--color--foreground); }
 
 /* --- Gradient text utility ------------------------------------ */
 /* `background-clip: text` clips glyphs at the line-box edge, which is tight
@@ -105,8 +115,8 @@ a { text-underline-offset: 0.2em; }
     width: 0.55em;
     height: 0.55em;
     border-radius: 50%;
-    background: #22c55e;
-    box-shadow: 0 0 0 4px rgba(34,197,94,0.18);
+    background: var(--color-success);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-success) 18%, transparent);
 }
 
 /* --- Skill pill (used inside the skills pattern) --------------- */
@@ -130,10 +140,10 @@ a { text-underline-offset: 0.2em; }
         color 220ms ease,
         box-shadow 220ms ease;
 }
-.skill-pill.is-primary { border-color: rgba(244,63,94,0.45); color: var(--wp--preset--color--primary-soft); }
-.skill-pill.is-accent  { border-color: rgba(225,29,72,0.45); color: var(--wp--preset--color--accent-soft); }
-.skill-pill.is-hot     { border-color: rgba(244,63,94,0.45);  color: #fda4af; }
-.skill-pill.is-yellow  { border-color: rgba(250,204,21,0.45); color: #fde68a; }
+.skill-pill.is-primary { border-color: color-mix(in srgb, var(--wp--preset--color--primary) 45%, transparent); color: var(--wp--preset--color--primary-soft); }
+.skill-pill.is-accent  { border-color: color-mix(in srgb, var(--wp--preset--color--accent) 45%, transparent); color: var(--wp--preset--color--accent-soft); }
+.skill-pill.is-hot     { border-color: color-mix(in srgb, var(--wp--preset--color--hot) 45%, transparent);  color: var(--wp--preset--color--primary-soft); }
+.skill-pill.is-yellow  { border-color: color-mix(in srgb, var(--wp--preset--color--highlight) 45%, transparent); color: color-mix(in srgb, var(--wp--preset--color--highlight) 55%, white); }
 
 /* Hover: lift, brighten text, tint background, neon halo in the pill's own tone. */
 .skill-pill:hover {
@@ -141,24 +151,24 @@ a { text-underline-offset: 0.2em; }
     color: var(--wp--preset--color--foreground);
 }
 .skill-pill.is-primary:hover {
-    background-color: rgba(244, 63, 94, 0.14);
-    border-color: rgba(244, 63, 94, 0.85);
-    box-shadow: 0 0 18px -2px rgba(244, 63, 94, 0.55);
+    background-color: color-mix(in srgb, var(--wp--preset--color--primary) 14%, transparent);
+    border-color: color-mix(in srgb, var(--wp--preset--color--primary) 85%, transparent);
+    box-shadow: 0 0 18px -2px color-mix(in srgb, var(--wp--preset--color--primary) 55%, transparent);
 }
 .skill-pill.is-accent:hover {
-    background-color: rgba(225, 29, 72, 0.14);
-    border-color: rgba(225, 29, 72, 0.85);
-    box-shadow: 0 0 18px -2px rgba(225, 29, 72, 0.55);
+    background-color: color-mix(in srgb, var(--wp--preset--color--accent) 14%, transparent);
+    border-color: color-mix(in srgb, var(--wp--preset--color--accent) 85%, transparent);
+    box-shadow: 0 0 18px -2px color-mix(in srgb, var(--wp--preset--color--accent) 55%, transparent);
 }
 .skill-pill.is-hot:hover {
-    background-color: rgba(244, 63, 94, 0.14);
-    border-color: rgba(244, 63, 94, 0.85);
-    box-shadow: 0 0 18px -2px rgba(244, 63, 94, 0.55);
+    background-color: color-mix(in srgb, var(--wp--preset--color--hot) 14%, transparent);
+    border-color: color-mix(in srgb, var(--wp--preset--color--hot) 85%, transparent);
+    box-shadow: 0 0 18px -2px color-mix(in srgb, var(--wp--preset--color--hot) 55%, transparent);
 }
 .skill-pill.is-yellow:hover {
-    background-color: rgba(250, 204, 21, 0.14);
-    border-color: rgba(250, 204, 21, 0.85);
-    box-shadow: 0 0 16px -2px rgba(250, 204, 21, 0.5);
+    background-color: color-mix(in srgb, var(--wp--preset--color--highlight) 14%, transparent);
+    border-color: color-mix(in srgb, var(--wp--preset--color--highlight) 85%, transparent);
+    box-shadow: 0 0 16px -2px color-mix(in srgb, var(--wp--preset--color--highlight) 50%, transparent);
 }
 @media (prefers-reduced-motion: reduce) {
     .skill-pill { transition: none; }
@@ -181,7 +191,7 @@ a { text-underline-offset: 0.2em; }
 .dario-card:hover {
     border-color: var(--wp--preset--color--primary);
     transform: translateY(-3px);
-    box-shadow: 0 12px 40px -12px rgba(244,63,94,0.35);
+    box-shadow: 0 12px 40px -12px color-mix(in srgb, var(--wp--preset--color--primary) 35%, transparent);
 }
 
 /* Equalize card heights when laid out across columns:
@@ -220,9 +230,9 @@ a { text-underline-offset: 0.2em; }
 .has-neon-glow {
     position: relative;
     box-shadow:
-        0 0 0 1px rgba(244,63,94,0.45),
-        0 0 32px -4px rgba(244,63,94,0.5),
-        0 0 90px -22px rgba(250,204,21,0.4);
+        0 0 0 1px color-mix(in srgb, var(--wp--preset--color--primary) 45%, transparent),
+        0 0 32px -4px color-mix(in srgb, var(--wp--preset--color--primary) 50%, transparent),
+        0 0 90px -22px color-mix(in srgb, var(--wp--preset--color--highlight) 40%, transparent);
 }
 
 /* --- Contact form (lives inside the neon-glow card) ------------ */
@@ -269,7 +279,7 @@ a { text-underline-offset: 0.2em; }
     outline: none;
     border-color: var(--wp--preset--color--accent);
     background: rgba(255, 255, 255, 0.06);
-    box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.25);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--wp--preset--color--primary) 25%, transparent);
 }
 /* Honeypot: keep accessible to assistive tech but visually hidden. */
 .contact-form__hp {
@@ -297,14 +307,14 @@ a { text-underline-offset: 0.2em; }
     text-align: left;
 }
 .contact-form__notice--ok {
-    background: rgba(34, 197, 94, 0.12);
-    border: 1px solid rgba(34, 197, 94, 0.45);
-    color: #bbf7d0;
+    background: color-mix(in srgb, var(--color-success) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-success) 45%, transparent);
+    color: color-mix(in srgb, var(--color-success) 45%, white);
 }
 .contact-form__notice--err {
-    background: rgba(244, 63, 94, 0.12);
-    border: 1px solid rgba(244, 63, 94, 0.45);
-    color: #fecaca;
+    background: color-mix(in srgb, var(--wp--preset--color--primary) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--wp--preset--color--primary) 45%, transparent);
+    color: var(--wp--preset--color--accent-soft);
 }
 .contact-form__notice a {
     color: inherit;
@@ -393,7 +403,7 @@ a { text-underline-offset: 0.2em; }
 
 .site-nav-dropdown[open] > .site-nav-trigger {
     border-color: var(--wp--preset--color--accent);
-    background: linear-gradient(135deg, rgba(244, 63, 94, 0.18), rgba(225, 29, 72, 0.18));
+    background: linear-gradient(135deg, color-mix(in srgb, var(--wp--preset--color--primary) 18%, transparent), color-mix(in srgb, var(--wp--preset--color--accent) 18%, transparent));
     color: var(--wp--preset--color--foreground);
 }
 
@@ -441,7 +451,7 @@ a { text-underline-offset: 0.2em; }
 }
 .site-nav-menu a:hover,
 .site-nav-menu a:focus-visible {
-    background: rgba(244, 63, 94, 0.12);
+    background: color-mix(in srgb, var(--wp--preset--color--primary) 12%, transparent);
     color: var(--wp--preset--color--accent-soft);
     text-decoration: none;
     outline: none;
@@ -495,8 +505,8 @@ a { text-underline-offset: 0.2em; }
 }
 .section--ambient {
     background:
-        radial-gradient(ellipse 60% 50% at 20% 10%, rgba(244,63,94,0.10), transparent 60%),
-        radial-gradient(ellipse 50% 40% at 80% 90%, rgba(225,29,72,0.10), transparent 60%);
+        radial-gradient(ellipse 60% 50% at 20% 10%, color-mix(in srgb, var(--wp--preset--color--primary) 10%, transparent), transparent 60%),
+        radial-gradient(ellipse 50% 40% at 80% 90%, color-mix(in srgb, var(--wp--preset--color--accent) 10%, transparent), transparent 60%);
 }
 
 /* ============================================================
@@ -558,8 +568,8 @@ a { text-underline-offset: 0.2em; }
     z-index: 0;
     pointer-events: none;
     background-image:
-        linear-gradient(rgba(168, 159, 143, 0.06) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(168, 159, 143, 0.06) 1px, transparent 1px);
+        linear-gradient(color-mix(in srgb, var(--wp--preset--color--muted) 6%, transparent) 1px, transparent 1px),
+        linear-gradient(90deg, color-mix(in srgb, var(--wp--preset--color--muted) 6%, transparent) 1px, transparent 1px);
     background-size: 34px 34px;
     -webkit-mask-image: radial-gradient(ellipse 78% 68% at 50% 38%, #000 38%, transparent 100%);
             mask-image: radial-gradient(ellipse 78% 68% at 50% 38%, #000 38%, transparent 100%);
@@ -703,16 +713,16 @@ a { text-underline-offset: 0.2em; }
     left: 0;
     right: 0;
     top: 50%;
-    border-top: 2px dotted rgba(244, 63, 94, 0.4);
+    border-top: 2px dotted color-mix(in srgb, var(--wp--preset--color--primary) 40%, transparent);
 }
 .hero-ant {
     position: absolute;
     top: calc(50% - 4px);
     width: 11px;
     height: 7px;
-    background: #2a1f1c;
+    background: var(--wp--preset--color--subtle);
     border-radius: 50%;
-    box-shadow: -4px 0 0 -1px #2a1f1c, 4px 0 0 -1px #2a1f1c;
+    box-shadow: -4px 0 0 -1px var(--wp--preset--color--subtle), 4px 0 0 -1px var(--wp--preset--color--subtle);
     animation: hero-march 9s linear infinite;
 }
 /* The `left` here is the static fallback for reduced motion; the keyframes
@@ -1118,7 +1128,7 @@ a { text-underline-offset: 0.2em; }
     border-radius: 999px;
     /* Solid-ish fallback for browsers without backdrop-filter — this
        alone is opaque enough to keep the dot legible. */
-    background: rgba(10, 14, 26, 0.85);
+    background: color-mix(in srgb, var(--wp--preset--color--background) 85%, transparent);
     border: 1px solid rgba(255, 255, 255, 0.06);
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
     transition: color 200ms ease,
@@ -1129,7 +1139,7 @@ a { text-underline-offset: 0.2em; }
 
 @supports ((backdrop-filter: blur(8px)) or (-webkit-backdrop-filter: blur(8px))) {
     .side-rail a {
-        background: rgba(10, 14, 26, 0.55);
+        background: color-mix(in srgb, var(--wp--preset--color--background) 55%, transparent);
         -webkit-backdrop-filter: blur(10px) saturate(1.4);
                 backdrop-filter: blur(10px) saturate(1.4);
     }
@@ -1151,7 +1161,7 @@ a { text-underline-offset: 0.2em; }
 .side-rail a:focus-visible,
 .side-rail a.is-active {
     color: var(--wp--preset--color--accent-soft);
-    border-color: rgba(244, 63, 94, 0.5);
+    border-color: color-mix(in srgb, var(--wp--preset--color--primary) 50%, transparent);
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
 }
 
@@ -1275,7 +1285,7 @@ a { text-underline-offset: 0.2em; }
 .project-card:hover {
     transform: translateY(-2px);
     border-color: var(--wp--preset--color--accent-soft);
-    box-shadow: 0 12px 32px -16px rgba(244, 63, 94, 0.45);
+    box-shadow: 0 12px 32px -16px color-mix(in srgb, var(--wp--preset--color--primary) 45%, transparent);
 }
 .project-card-link {
     display: flex;
@@ -1447,20 +1457,13 @@ a { text-underline-offset: 0.2em; }
     margin: 0;
     padding: 0;
     position: relative;
-    /* Per-card accent — defaulted to blue, overridden by modifier classes. */
+    /* Per-card accent — sourced from palette tokens. */
     --demo-accent: var(--wp--preset--color--primary);
     --demo-accent-soft: var(--wp--preset--color--primary-soft);
-    --demo-accent-rgb: 59, 130, 246;
-    --demo-gradient: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+    --demo-gradient: var(--wp--preset--gradient--brand);
 }
-.demo-card--blue   { --demo-accent: #3b82f6; --demo-accent-soft: #60a5fa; --demo-accent-rgb: 59, 130, 246;
-                     --demo-gradient: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); }
-.demo-card--purple { --demo-accent: #a855f7; --demo-accent-soft: #c084fc; --demo-accent-rgb: 168, 85, 247;
-                     --demo-gradient: linear-gradient(135deg, #a855f7 0%, #c084fc 100%); }
-.demo-card--pink   { --demo-accent: #f43f5e; --demo-accent-soft: #fb7185; --demo-accent-rgb: 244, 63, 94;
-                     --demo-gradient: linear-gradient(135deg, #f43f5e 0%, #fb7185 100%); }
-.demo-card--yellow { --demo-accent: #facc15; --demo-accent-soft: #fde68a; --demo-accent-rgb: 250, 204, 21;
-                     --demo-gradient: linear-gradient(135deg, #facc15 0%, #fde68a 100%); }
+.demo-card--pink   { --demo-accent: var(--wp--preset--color--primary); --demo-accent-soft: var(--wp--preset--color--primary-soft); --demo-gradient: var(--wp--preset--gradient--brand); }
+.demo-card--yellow { --demo-accent: var(--wp--preset--color--highlight); --demo-accent-soft: color-mix(in srgb, var(--wp--preset--color--highlight) 55%, white); --demo-gradient: linear-gradient(135deg, var(--wp--preset--color--highlight) 0%, color-mix(in srgb, var(--wp--preset--color--highlight) 55%, white) 100%); }
 
 .demo-card-link {
     display: flex;
@@ -1481,7 +1484,7 @@ a { text-underline-offset: 0.2em; }
 .demo-card-link:focus-visible {
     border-color: var(--demo-accent);
     transform: translateY(-4px);
-    box-shadow: 0 16px 44px -14px rgba(var(--demo-accent-rgb), 0.45);
+    box-shadow: 0 16px 44px -14px color-mix(in srgb, var(--demo-accent) 45%, transparent);
     text-decoration: none;
     outline: none;
 }
@@ -1521,6 +1524,8 @@ a { text-underline-offset: 0.2em; }
 }
 
 /* --- Preview: contrast (two stripes that swap fg/bg) --- */
+/* brand-fidelity — contrast-checker mini-scene: the dark/blue (#0a0e1a, #60a5fa)
+   pairing IS the depiction (a fg/bg swap being measured), intentional, do not tokenize */
 .demo-card-preview--contrast {
     background: #0a0e1a;
     box-shadow: inset 0 -1px 0 rgba(255,255,255,0.04);
@@ -1553,6 +1558,7 @@ a { text-underline-offset: 0.2em; }
     50%, 95%  { filter: hue-rotate(140deg); }
     100%      { filter: hue-rotate(0deg); }
 }
+/* end brand-fidelity */
 
 /* --- Preview: default (three pulsing bars) --- */
 .demo-card-preview--default .cp-default {
@@ -1571,6 +1577,9 @@ a { text-underline-offset: 0.2em; }
 }
 
 /* --- Preview: weather (sun + drifting cloud + falling raindrops) --- */
+/* brand-fidelity — weather mini-scene: the blue sky gradient (#1e3a8a, #3b82f6),
+   sun yellow, and cloud whites depict the weather demo; the cool tones are the
+   SKY, intentional, do not tokenize */
 .demo-card-preview--weather {
     background: linear-gradient(180deg, #1e3a8a 0%, #3b82f6 100%);
 }
@@ -1615,8 +1624,12 @@ a { text-underline-offset: 0.2em; }
     20%  { opacity: 1; }
     100% { transform: translateY(40px); opacity: 0; }
 }
+/* end brand-fidelity */
 
 /* --- Preview: audio (equalizer bars at varied heights) --- */
+/* brand-fidelity — audio mini-scene: the night-purple backdrop (#1f0a3e, #050813)
+   and the blue→violet→pink EQ-bar gradient depict the audio visualizer,
+   intentional, do not tokenize */
 .demo-card-preview--audio {
     background: linear-gradient(135deg, #1f0a3e 0%, #050813 100%);
     align-items: flex-end;
@@ -1647,8 +1660,12 @@ a { text-underline-offset: 0.2em; }
     0%, 100% { transform: scaleY(0.4); }
     50%      { transform: scaleY(2.4); }
 }
+/* end brand-fidelity */
 
 /* --- Preview: sort (bars sliding into order, then resetting) --- */
+/* brand-fidelity — sort mini-scene: the blue-night backdrop (#0a1f3a, #050813)
+   and blue→violet sort-bar gradient depict the sorting visualizer,
+   intentional, do not tokenize */
 .demo-card-preview--sort {
     background: linear-gradient(135deg, #0a1f3a 0%, #050813 100%);
     align-items: flex-end;
@@ -1681,12 +1698,16 @@ a { text-underline-offset: 0.2em; }
 @keyframes cp-sort-6 { 0%,15% { height: 35%; } 60%,100% { height: 65%; } }
 @keyframes cp-sort-7 { 0%,15% { height: 50%; } 60%,100% { height: 75%; } }
 @keyframes cp-sort-8 { 0%,15% { height: 90%; } 60%,100% { height: 90%; } }
+/* end brand-fidelity */
 
 /* --- Preview: life (real glider walking diagonally across a 6x6 grid) ---
    Four stacked phase frames hold the glider's 4 rotation states. Each frame
    fades in for one quarter of the animation, so cells visibly flip on/off the
    way Life cells do. The whole glider container steps (1,1) per period across
    a 6x6 cell grid, so by the end of the loop it has crossed the preview. */
+/* brand-fidelity — Game of Life mini-scene: the dark grid backdrop (#0a0e1a,
+   #050813) and the violet live-cell glow (#c084fc / rgba 168,85,247) depict the
+   cellular-automaton demo, intentional, do not tokenize */
 .demo-card-preview--life {
     background:
         linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px) 0 0 / 100% 16.6667%,
@@ -1735,11 +1756,17 @@ a { text-underline-offset: 0.2em; }
 @keyframes cp-life-frame-1 { 0%   { opacity: 0; } 25%  { opacity: 1; } 50%  { opacity: 0; } 100% { opacity: 0; } }
 @keyframes cp-life-frame-2 { 0%   { opacity: 0; } 50%  { opacity: 1; } 75%  { opacity: 0; } 100% { opacity: 0; } }
 @keyframes cp-life-frame-3 { 0%   { opacity: 0; } 75%  { opacity: 1; } 100% { opacity: 0; } }
+/* end brand-fidelity */
 
 /* --- Preview: live-editor (mock CSS lines + a card that morphs in sync) ---
    Left pane shows 4 lines of syntax-highlighted CSS with a blinking caret on
    the closing brace. Right pane holds a small card whose border-radius and
    background cycle in sync with the highlighted property values. */
+/* brand-fidelity — live-editor mini-scene: the one-dark code-editor backdrop
+   (#0f1530, #050813), the render-pane (#0a0e1a), and the syntax-highlight token
+   colors (#f43f5e selector, #60a5fa property, #facc15 number, #a855f7 hex,
+   #cdd5e6 brace/caret, #5e6a85 punct, #8b9bbd base) depict the CSS playground,
+   intentional, do not tokenize */
 .demo-card-preview--live-editor {
     background: linear-gradient(135deg, #0f1530 0%, #050813 100%);
     padding: 0;
@@ -1803,9 +1830,13 @@ a { text-underline-offset: 0.2em; }
     0%, 100% { border-radius: 4px;  filter: hue-rotate(0deg); }
     50%      { border-radius: 18px; filter: hue-rotate(60deg); }
 }
+/* end brand-fidelity */
 
 /* --- Preview: microgame / Maze Craze (green walls, red player tracing a path
    to an orange goal) --- */
+/* brand-fidelity — Maze Craze mini-scene: the near-black field (#050a07), neon
+   green walls (#2dff5a), orange goal (#ff8c1a), and red player (#ff4848) depict
+   the microgame, intentional, do not tokenize */
 .demo-card-preview--microgame {
     background: #050a07;
     position: relative;
@@ -1861,8 +1892,12 @@ a { text-underline-offset: 0.2em; }
     92%            { left: 84%; top: 82%; opacity: 1; }
     100%           { left: 84%; top: 82%; opacity: 0; }
 }
+/* end brand-fidelity */
 
 /* --- Preview: pug-attack (sky scene, pug paces, bullet drops, cat scrolls) --- */
+/* brand-fidelity — pug-attack mini-scene: the blue sky→green grass gradient
+   (#6fb6e8, #8fbb55, #5d8838), tan pug (#d2b48c, #8b6f4e), and dark cat/ant
+   (#1a1a1a, #1f1f1f, #2a1f1c) depict the game, intentional, do not tokenize */
 .demo-card-preview--pug-attack {
     background: linear-gradient(180deg, #6fb6e8 0%, #b9d8ee 65%, #9ec96f 80%, #6e9d3f 100%);
     position: relative;
@@ -1961,6 +1996,7 @@ a { text-underline-offset: 0.2em; }
     from { left: -22px; }
     to   { left: 100%; }
 }
+/* end brand-fidelity */
 
 /* --- Preview: lab (dotted slow pulse) --- */
 .demo-card-preview--lab {
@@ -1992,6 +2028,9 @@ a { text-underline-offset: 0.2em; }
 }
 
 /* --- Preview: pokedex (Game Boy LCD with cycling Gen 1 sprites) --- */
+/* brand-fidelity — Game Boy LCD mini-scene: the classic LCD greens (#9bbc0f,
+   #8bac0f, #0f380f), the red shell/LED (#b91c2b, #7f1018, #ef4444), and the
+   beige body (#d6d6c2) depict the pokedex demo, intentional, do not tokenize */
 .demo-card-preview--pokedex {
     background: linear-gradient(180deg, #b91c2b 0%, #7f1018 100%);
 }
@@ -2081,8 +2120,13 @@ a { text-underline-offset: 0.2em; }
     0%, 100% { opacity: 1;   box-shadow: 0 0 6px rgba(239, 68, 68, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.55); }
     50%      { opacity: 0.6; box-shadow: 0 0 2px rgba(239, 68, 68, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.55); }
 }
+/* end brand-fidelity */
 
 /* --- Preview: card-browser (three Pokémon-style mini cards fanned out) --- */
+/* brand-fidelity — TCG mini-scene: the red→yellow Poké backdrop (#ee1c25,
+   #ffcb05), white cards with black outline (#ffffff, #1d1d1f), and per-card
+   energy colors (#1976d2, #ee1c25, #f59e0b) depict the card-browser,
+   intentional, do not tokenize */
 .demo-card-preview--card-browser {
     background: linear-gradient(180deg, #ee1c25 0%, #ffcb05 100%);
     overflow: hidden;
@@ -2148,8 +2192,13 @@ a { text-underline-offset: 0.2em; }
     0%, 100% { translate: 0 0; }
     50%      { translate: 0 -7px; }
 }
+/* end brand-fidelity */
 
 /* --- Preview: ant-buster (cannon fires down at ants marching toward a crumb) --- */
+/* brand-fidelity — Ant Buster mini-scene: the green picnic-lawn gradient
+   (#7bb661, #538a3e), tan crumb (#e9c46a), pink cannon + yellow shot
+   (#f43f5e, #facc15), brown barrel (#3a2e2a), and dark ants (#2a1f1c) depict
+   the tower-defense game, intentional, do not tokenize */
 .demo-card-preview--ant-buster {
     background: linear-gradient(180deg, #7bb661 0%, #538a3e 100%);
     box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.25);
@@ -2225,8 +2274,12 @@ a { text-underline-offset: 0.2em; }
     0%   { left: -12%; }
     100% { left: 82%; }
 }
+/* end brand-fidelity */
 
 /* --- Preview: prompt-studio (a prompt types out, sparkles twinkle) --- */
+/* brand-fidelity — prompt-studio mini-scene: the warm plum panel backdrop
+   (#2a1422, #3a1a2e), pink/yellow typing lines, and yellow caret + sparkles
+   (#facc15) depict the prompt demo, intentional, do not tokenize */
 .demo-card-preview--prompt-studio {
     background: linear-gradient(135deg, #2a1422 0%, #3a1a2e 100%);
 }
@@ -2291,6 +2344,7 @@ a { text-underline-offset: 0.2em; }
     0%, 100% { opacity: 0; transform: scale(0.4) rotate(0deg); }
     50%      { opacity: 1; transform: scale(1) rotate(45deg); }
 }
+/* end brand-fidelity */
 
 /* --- Card body --- */
 .demo-card-body {
@@ -2315,7 +2369,7 @@ a { text-underline-offset: 0.2em; }
     letter-spacing: 0.08em;
     color: var(--demo-accent-soft);
     padding: 0.25rem 0.55rem;
-    border: 1px solid rgba(var(--demo-accent-rgb), 0.45);
+    border: 1px solid color-mix(in srgb, var(--demo-accent) 45%, transparent);
     border-radius: 999px;
     line-height: 1;
 }
@@ -2350,7 +2404,7 @@ a { text-underline-offset: 0.2em; }
 .demo-card-blurb a {
     color: var(--demo-accent-soft);
     text-decoration: underline;
-    text-decoration-color: rgba(var(--demo-accent-rgb), 0.4);
+    text-decoration-color: color-mix(in srgb, var(--demo-accent) 40%, transparent);
 }
 
 .demo-card-tech {
@@ -2566,3 +2620,6 @@ a { text-underline-offset: 0.2em; }
     color: var(--wp--preset--color--primary);
 }
 
+/* Homepage "see all the demos" CTA: center the row, give the pill more room. */
+.demos-see-all-row { display: flex; justify-content: center; }
+.demos-see-all .wp-block-button__link { padding-left: 2.4rem; padding-right: 2.4rem; }

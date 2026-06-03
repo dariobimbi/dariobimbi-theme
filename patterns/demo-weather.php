@@ -33,15 +33,15 @@
     <!-- wp:html -->
     <div class="wx" data-default-query="Saint Charles, IL, US">
         <form class="wx-form" data-role="form" autocomplete="off">
-            <label class="wx-search">
-                <span class="wx-label">Search city, state, country</span>
-                <input type="text" class="wx-input" data-role="input" placeholder="Saint Charles, IL, US" value="Saint Charles, IL, US" spellcheck="false" required>
-                <span class="wx-hint">Use commas to narrow it down, e.g. <code>Springfield, MO, US</code>. State and country are optional.</span>
-            </label>
-            <button type="submit" class="wx-btn wx-btn--primary">
-                <span data-role="btn-label">Search</span>
-                <span class="wx-spin" data-role="spin" aria-hidden="true"></span>
-            </button>
+            <span class="wx-label">Search city, state, country</span>
+            <div class="wx-row">
+                <input type="text" class="wx-input" data-role="input" placeholder="Saint Charles, IL, US" value="Saint Charles, IL, US" spellcheck="false" required aria-label="Search city, state, country">
+                <button type="submit" class="wx-btn wx-btn--primary">
+                    <span data-role="btn-label">Search</span>
+                    <span class="wx-spin" data-role="spin" aria-hidden="true"></span>
+                </button>
+            </div>
+            <p class="wx-hint">Use commas to narrow it down, e.g. <code>Springfield, MO, US</code>. State and country are optional.</p>
         </form>
 
         <div class="wx-suggest">
@@ -52,6 +52,11 @@
             <button type="button" class="wx-chip" data-suggest="London, ON, CA">London, ON</button>
             <button type="button" class="wx-chip" data-suggest="Tokyo, JP">Tokyo, JP</button>
             <button type="button" class="wx-chip" data-suggest="Reykjavík, IS">Reykjavík, IS</button>
+        </div>
+
+        <div class="wx-units" role="group" aria-label="Units">
+            <button type="button" class="wx-unit is-on" data-role="unit" data-unit="imperial" aria-pressed="true">°F</button>
+            <button type="button" class="wx-unit" data-role="unit" data-unit="metric" aria-pressed="false">°C</button>
         </div>
 
         <div class="wx-result" data-role="result" aria-live="polite">
@@ -79,6 +84,15 @@
 <style>
 /* All styles scoped to .demo-weather to avoid leaking into the rest of the site. */
 
+.demo-weather {
+    --wx-bg: #12100c;
+    --wx-surface: #1b1712;
+    --wx-code-bg: #14110d;
+    --wx-fg: #efe9df;
+    --wx-accent: #f43f5e;
+    --wx-accent-2: #e11d48;
+}
+
 .demo-weather .wx {
     margin-top: 1rem;
     background: var(--wp--preset--color--surface);
@@ -90,15 +104,14 @@
 /* --- Search form --- */
 .demo-weather .wx-form {
     display: flex;
-    gap: 0.75rem;
-    align-items: flex-end;
-    flex-wrap: wrap;
-}
-.demo-weather .wx-search {
-    display: flex;
     flex-direction: column;
-    gap: 0.4rem;
-    flex: 1 1 280px;
+    gap: 0.5rem;
+}
+.demo-weather .wx-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: stretch; /* input + button share one row at equal height */
+    flex-wrap: wrap;
 }
 .demo-weather .wx-label {
     font-family: var(--wp--preset--font-family--mono);
@@ -108,7 +121,7 @@
     color: var(--wp--preset--color--muted);
 }
 .demo-weather .wx-input {
-    background: #0a0e1a;
+    background: var(--wx-bg);
     border: 1px solid var(--wp--preset--color--subtle);
     border-radius: 10px;
     padding: 0.85rem 1rem;
@@ -116,6 +129,9 @@
     font-family: var(--wp--preset--font-family--system);
     color: var(--wp--preset--color--foreground);
     transition: border-color .15s ease;
+    flex: 1 1 220px; /* grow to fill the row; shrink before wrapping the button */
+    min-width: 0;
+    box-sizing: border-box;
 }
 .demo-weather .wx-input:focus {
     outline: none;
@@ -127,7 +143,7 @@
     margin-top: 0.15rem;
 }
 .demo-weather .wx-hint code {
-    background: #050813;
+    background: var(--wx-code-bg);
     border: 1px solid var(--wp--preset--color--subtle);
     padding: 0 0.35rem;
     border-radius: 4px;
@@ -145,11 +161,14 @@
     font-size: 0.95rem;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.55rem;
+    flex: 0 0 auto; /* keep natural width beside the growing input */
+    white-space: nowrap;
     transition: background-color .15s ease, border-color .15s ease;
 }
 .demo-weather .wx-btn--primary {
-    background: linear-gradient(135deg, #3b82f6, #a855f7);
+    background: linear-gradient(135deg, var(--wx-accent), var(--wx-accent-2));
     border-color: transparent;
     color: #fff;
 }
@@ -198,6 +217,29 @@
     border-color: var(--wp--preset--color--primary);
     color: var(--wp--preset--color--primary-soft);
 }
+.demo-weather .wx-units {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0.85rem;
+}
+.demo-weather .wx-unit {
+    cursor: pointer;
+    border: 1px solid var(--wp--preset--color--subtle);
+    background: var(--wp--preset--color--surface);
+    color: var(--wp--preset--color--muted);
+    padding: 0.35rem 0.9rem;
+    font-weight: 700;
+    font-size: 0.85rem;
+    font-family: var(--wp--preset--font-family--mono);
+    transition: background-color .15s ease, color .15s ease;
+}
+.demo-weather .wx-unit:first-child { border-radius: 999px 0 0 999px; }
+.demo-weather .wx-unit:last-child  { border-radius: 0 999px 999px 0; border-left: none; }
+.demo-weather .wx-unit.is-on {
+    background: linear-gradient(135deg, var(--wx-accent), var(--wx-accent-2));
+    border-color: transparent;
+    color: #fff;
+}
 
 /* --- Result area --- */
 .demo-weather .wx-result {
@@ -225,6 +267,7 @@
     padding: 1.25rem;
 }
 
+/* brand-fidelity — sky + JSON syntax colors, intentional */
 /* "Now" card — gradient background, hero-sized temp */
 .demo-weather .wx-now {
     background: linear-gradient(135deg, rgba(59,130,246,0.18), rgba(168,85,247,0.18));
@@ -293,7 +336,7 @@
     gap: 0.6rem;
 }
 .demo-weather .wx-day {
-    background: #0a0e1a;
+    background: var(--wx-surface);
     border: 1px solid var(--wp--preset--color--subtle);
     border-radius: 10px;
     padding: 0.85rem 0.5rem;
@@ -331,7 +374,7 @@
 /* --- Raw JSON pane --- */
 .demo-weather .wx-json {
     margin-top: 1.5rem;
-    background: #0a0e1a;
+    background: var(--wx-surface);
     border: 1px solid var(--wp--preset--color--subtle);
     border-radius: 12px;
     padding: 0.9rem 1rem;
@@ -362,17 +405,18 @@
 .demo-weather .wx-json-body {
     margin: 0.6rem 0 0;
     padding: 0.85rem 1rem;
-    background: #050813;
+    background: var(--wx-code-bg);
     border: 1px solid var(--wp--preset--color--subtle);
     border-radius: 8px;
     font-family: var(--wp--preset--font-family--mono);
     font-size: 0.78rem;
-    color: #e8ecf6;
+    color: var(--wx-fg);
     max-height: 320px;
     overflow: auto;
     white-space: pre-wrap;
     word-break: break-word;
 }
+/* brand-fidelity — sky + JSON syntax colors, intentional */
 .demo-weather .wx-json-body .jk { color: #61afef; }
 .demo-weather .wx-json-body .js { color: #98c379; }
 .demo-weather .wx-json-body .jn { color: #d19a66; }
@@ -397,6 +441,13 @@
     var result  = root.querySelector('[data-role="result"]');
     var jsonUrl = root.querySelector('[data-role="json-url"]');
     var jsonBody= root.querySelector('[data-role="json-body"]');
+
+    var imperial = true;            // default Imperial (°F, mph)
+    var lastPlace = null, lastForecast = null;
+
+    function convTemp(c) { return imperial ? Math.round(c * 9 / 5 + 32) : Math.round(c); }
+    function tempUnit() { return imperial ? 'F' : 'C'; }
+    function convWind(kmh) { return imperial ? (Math.round(kmh * 0.621371) + ' mph') : (Math.round(kmh) + ' km/h'); }
 
     /* WMO weather code → emoji + short text. From the Open-Meteo docs. */
     var WMO = {
@@ -539,6 +590,7 @@
     }
 
     function render(place, fc) {
+        lastPlace = place; lastForecast = fc;
         var c = fc.current;
         var cur = wmo(c.weather_code);
         var html = '<div class="wx-now">'
@@ -546,11 +598,11 @@
             + '<div class="wx-now-body">'
                 + '<h3 class="wx-now-city">' + escapeHtml(place.name) + '</h3>'
                 + '<p class="wx-now-region">' + escapeHtml([place.admin1, place.country].filter(Boolean).join(', ')) + '</p>'
-                + '<div class="wx-now-temp">' + Math.round(c.temperature_2m) + '°<small>C</small></div>'
+                + '<div class="wx-now-temp">' + convTemp(c.temperature_2m) + '°<small>' + tempUnit() + '</small></div>'
                 + '<p class="wx-now-summary">' + cur[1] + '</p>'
                 + '<div class="wx-now-meta">'
-                    + '<span>Feels like<strong>' + Math.round(c.apparent_temperature) + '°</strong></span>'
-                    + '<span>Wind<strong>' + Math.round(c.wind_speed_10m) + ' km/h</strong></span>'
+                    + '<span>Feels like<strong>' + convTemp(c.apparent_temperature) + '°</strong></span>'
+                    + '<span>Wind<strong>' + convWind(c.wind_speed_10m) + '</strong></span>'
                     + '<span>Humidity<strong>' + Math.round(c.relative_humidity_2m) + '%</strong></span>'
                 + '</div>'
             + '</div>'
@@ -564,8 +616,8 @@
                 + '<p class="wx-day-name">' + (i === 0 ? 'Today' : fmtDay(d.time[i])) + '</p>'
                 + '<div class="wx-day-icon">' + dw[0] + '</div>'
                 + '<div class="wx-day-temps">'
-                    + '<span class="hi">' + Math.round(d.temperature_2m_max[i]) + '°</span>'
-                    + '<span class="lo">' + Math.round(d.temperature_2m_min[i]) + '°</span>'
+                    + '<span class="hi">' + convTemp(d.temperature_2m_max[i]) + '°</span>'
+                    + '<span class="lo">' + convTemp(d.temperature_2m_min[i]) + '°</span>'
                 + '</div>'
             + '</div>';
         }
@@ -614,6 +666,21 @@
             setLoading(false);
         }
     }
+
+    var unitBtns = root.querySelectorAll('[data-role="unit"]');
+    Array.prototype.forEach.call(unitBtns, function (b) {
+        b.addEventListener('click', function () {
+            var next = this.getAttribute('data-unit') === 'imperial';
+            if (next === imperial) { return; }
+            imperial = next;
+            Array.prototype.forEach.call(unitBtns, function (x) {
+                var on = x.getAttribute('data-unit') === (imperial ? 'imperial' : 'metric');
+                x.classList.toggle('is-on', on);
+                x.setAttribute('aria-pressed', on ? 'true' : 'false');
+            });
+            if (lastForecast) { render(lastPlace, lastForecast); }
+        });
+    });
 
     form.addEventListener('submit', function (e) {
         e.preventDefault();

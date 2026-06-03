@@ -273,6 +273,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
 .prompt-studio .ps-lint-result-head { display: flex; align-items: center; gap: var(--wp--preset--spacing--30); }
 .prompt-studio .ps-score-wrap { position: relative; width: 100px; height: 100px; display: grid; place-items: center; }
 .prompt-studio .ps-score-ring { position: absolute; inset: 0; width: 100%; height: 100%; }
+/* brand-fidelity — score semantics, intentional */
 .prompt-studio .ps-score-green { color: #16a34a; }
 .prompt-studio .ps-score-amber { color: #d97706; }
 .prompt-studio .ps-score-red   { color: #dc2626; }
