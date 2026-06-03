@@ -33,15 +33,15 @@
     <!-- wp:html -->
     <div class="wx" data-default-query="Saint Charles, IL, US">
         <form class="wx-form" data-role="form" autocomplete="off">
-            <label class="wx-search">
-                <span class="wx-label">Search city, state, country</span>
-                <input type="text" class="wx-input" data-role="input" placeholder="Saint Charles, IL, US" value="Saint Charles, IL, US" spellcheck="false" required>
-                <span class="wx-hint">Use commas to narrow it down, e.g. <code>Springfield, MO, US</code>. State and country are optional.</span>
-            </label>
-            <button type="submit" class="wx-btn wx-btn--primary">
-                <span data-role="btn-label">Search</span>
-                <span class="wx-spin" data-role="spin" aria-hidden="true"></span>
-            </button>
+            <span class="wx-label">Search city, state, country</span>
+            <div class="wx-row">
+                <input type="text" class="wx-input" data-role="input" placeholder="Saint Charles, IL, US" value="Saint Charles, IL, US" spellcheck="false" required aria-label="Search city, state, country">
+                <button type="submit" class="wx-btn wx-btn--primary">
+                    <span data-role="btn-label">Search</span>
+                    <span class="wx-spin" data-role="spin" aria-hidden="true"></span>
+                </button>
+            </div>
+            <p class="wx-hint">Use commas to narrow it down, e.g. <code>Springfield, MO, US</code>. State and country are optional.</p>
         </form>
 
         <div class="wx-suggest">
@@ -104,15 +104,14 @@
 /* --- Search form --- */
 .demo-weather .wx-form {
     display: flex;
-    gap: 0.75rem;
-    align-items: flex-end;
-    flex-wrap: wrap;
-}
-.demo-weather .wx-search {
-    display: flex;
     flex-direction: column;
-    gap: 0.4rem;
-    flex: 1 1 280px;
+    gap: 0.5rem;
+}
+.demo-weather .wx-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: stretch; /* input + button share one row at equal height */
+    flex-wrap: wrap;
 }
 .demo-weather .wx-label {
     font-family: var(--wp--preset--font-family--mono);
@@ -130,7 +129,9 @@
     font-family: var(--wp--preset--font-family--system);
     color: var(--wp--preset--color--foreground);
     transition: border-color .15s ease;
-    width: 100%;
+    flex: 1 1 220px; /* grow to fill the row; shrink before wrapping the button */
+    min-width: 0;
+    box-sizing: border-box;
 }
 .demo-weather .wx-input:focus {
     outline: none;
@@ -160,7 +161,10 @@
     font-size: 0.95rem;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.55rem;
+    flex: 0 0 auto; /* keep natural width beside the growing input */
+    white-space: nowrap;
     transition: background-color .15s ease, border-color .15s ease;
 }
 .demo-weather .wx-btn--primary {
