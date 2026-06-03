@@ -15,6 +15,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 const DARIOBIMBI_CONTACT_ACTION    = 'dariobimbi_contact';
 const DARIOBIMBI_CONTACT_RECIPIENT = 'dariobimbi@gmail.com';
 
+/* Abuse limits. A WordPress nonce is valid for ~24h and reusable by anonymous
+   visitors, so a bot that scrapes one nonce could otherwise POST in a loop.
+   wp_mail() can only reach the fixed recipient above (no relay), so this caps
+   inbox-flood volume, not spam relaying. */
+const DARIOBIMBI_CONTACT_RATE_MAX    = 3;    // successful sends per window, per IP
+const DARIOBIMBI_CONTACT_RATE_WINDOW = 600;  // window length, in seconds (10 minutes)
+const DARIOBIMBI_CONTACT_MAX_NAME    = 100;  // characters
+const DARIOBIMBI_CONTACT_MAX_EMAIL   = 254;  // RFC 5321 practical maximum
+const DARIOBIMBI_CONTACT_MAX_MESSAGE = 5000; // characters (~800 words)
+
 /**
  * Render the contact form. Called from patterns/contact.php inside a wp:html block.
  */
@@ -30,6 +40,10 @@ function dariobimbi_contact_form(): string {
     <?php elseif ( $status === 'error' ) : ?>
         <p class="contact-form__notice contact-form__notice--err" role="alert">
             That did not go through. Please double-check your email address and message, then try again.
+        </p>
+    <?php elseif ( $status === 'throttled' ) : ?>
+        <p class="contact-form__notice contact-form__notice--err" role="alert">
+            You have sent a few messages in a row. Please give it a few minutes before sending another.
         </p>
     <?php endif; ?>
 
@@ -101,6 +115,23 @@ function dariobimbi_contact_handle(): void {
         $redirect( 'error' );
     }
 
+    // Length caps: bound the payload so one submission can't carry a huge body.
+    if ( mb_strlen( $name ) > DARIOBIMBI_CONTACT_MAX_NAME
+         || mb_strlen( $email ) > DARIOBIMBI_CONTACT_MAX_EMAIL
+         || mb_strlen( $message ) > DARIOBIMBI_CONTACT_MAX_MESSAGE ) {
+        $redirect( 'error' );
+    }
+
+    // Per-IP rate limit. Checked only now that the message is well-formed, so a
+    // fumbled submission (typo'd email) doesn't burn the quota. REMOTE_ADDR is
+    // used deliberately over forwarded-for headers, which a client can spoof.
+    $ip      = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+    $rl_key  = 'dariobimbi_contact_rl_' . md5( $ip );
+    $tries   = (int) get_transient( $rl_key );
+    if ( $tries >= DARIOBIMBI_CONTACT_RATE_MAX ) {
+        $redirect( 'throttled' );
+    }
+
     $subject = sprintf( '[dariobimbi.com] New message from %s', $name );
     $body    = sprintf(
         "Name: %s\nEmail: %s\n\nMessage:\n%s\n",
@@ -111,6 +142,14 @@ function dariobimbi_contact_handle(): void {
     $headers = [ 'Reply-To: ' . sprintf( '%s <%s>', $name, $email ) ];
 
     $sent = wp_mail( DARIOBIMBI_CONTACT_RECIPIENT, $subject, $body, $headers );
+
+    // Only a delivered message counts toward the limit — a failed send (e.g. no
+    // SMTP locally) shouldn't lock anyone out. set_transient refreshes the TTL,
+    // so a persistent sender stays blocked for the full window from their last
+    // successful send, while a legitimate one ages out naturally.
+    if ( $sent ) {
+        set_transient( $rl_key, $tries + 1, DARIOBIMBI_CONTACT_RATE_WINDOW );
+    }
 
     $redirect( $sent ? 'sent' : 'error' );
 }
