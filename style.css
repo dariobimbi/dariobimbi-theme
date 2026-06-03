@@ -4,7 +4,7 @@ Theme URI: https://dariobimbi.com
 Author: Dario Bimbi
 Author URI: https://www.linkedin.com/in/dario-bimbi-7512a36b
 Description: Personal portfolio block theme for Dario Bimbi, Web Developer at Clicks Web Design Inc. Warm dark, Dragon-Pink-led, system-font typography, no external dependencies.
-Version: 0.34.0
+Version: 0.35.0
 Requires at least: 6.4
 Tested up to: 6.7
 Requires PHP: 7.4
@@ -332,6 +332,33 @@ a { text-underline-offset: 0.2em; }
 .wp-block-button.is-style-outline > .wp-block-button__link:hover {
     background: var(--wp--preset--color--foreground);
     color: var(--wp--preset--color--background);
+}
+
+/* --- Sticky site header ---------------------------------------- */
+/* Header stays pinned on scroll. A translucent warm backdrop (the
+   background token, not a raw rgba) plus blur keeps page content from
+   bleeding through as it slides underneath. */
+/* Targets the template-part wrapper (header.wp-block-template-part is the
+   site header; the footer part renders as footer.wp-block-template-part, so
+   this stays header-only) and the .site-header class on the part file. */
+header.wp-block-template-part,
+.site-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: color-mix(in srgb, var(--wp--preset--color--background) 85%, transparent);
+    backdrop-filter: saturate(140%) blur(10px);
+    -webkit-backdrop-filter: saturate(140%) blur(10px);
+    border-bottom: 1px solid color-mix(in srgb, var(--wp--preset--color--subtle) 60%, transparent);
+}
+
+/* The WP admin bar is fixed at the top for logged-in users; tuck the
+   sticky header beneath it so they don't overlap. */
+.admin-bar header.wp-block-template-part,
+.admin-bar .site-header { top: 32px; }
+@media screen and (max-width: 782px) {
+    .admin-bar header.wp-block-template-part,
+    .admin-bar .site-header { top: 46px; }
 }
 
 /* --- Header brand lockup (dog mark + name) --------------------- */

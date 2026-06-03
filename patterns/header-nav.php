@@ -33,18 +33,18 @@ $demo_children  = $demos
     ] )
     : [];
 
-/* Slugs that represent ported old games. Anything not in this list is a web
-   demo. Keep this in sync with the 'category' values in
-   patterns/demos-hub.php so the dropdown groupings match the hub layout. */
-$game_slugs = [ 'pug-attack', 'microgame' ];
-
-/* Bucket demo children into web/game so the dropdown can show two sub-headings. */
-$nav_buckets = [ 'web' => [], 'game' => [] ];
+/* Bucket demo children by shared category (web / game / ported) so the
+   dropdown groupings always match the /demos/ hub. The categorization and the
+   section titles both live in inc/demos.php — see dariobimbi_demo_category(). */
+$nav_sections = dariobimbi_demo_nav_sections();
+$nav_buckets  = array_fill_keys( array_keys( $nav_sections ), [] );
 foreach ( $demo_children as $child ) {
-    $cat = in_array( $child->post_name, $game_slugs, true ) ? 'game' : 'web';
+    $cat = dariobimbi_demo_category( $child->post_name );
+    if ( ! isset( $nav_buckets[ $cat ] ) ) {
+        $nav_buckets[ $cat ] = [];
+    }
     $nav_buckets[ $cat ][] = $child;
 }
-$nav_section_titles = [ 'web' => 'Web demos', 'game' => 'Old games' ];
 ?>
 <!-- wp:html -->
 <nav class="site-nav" aria-label="Primary">
@@ -82,7 +82,7 @@ $nav_section_titles = [ 'web' => 'Web demos', 'game' => 'Old games' ];
                 <li role="none">
                     <a href="<?php echo esc_url( $demos_url ); ?>" role="menuitem" class="site-nav-menu-overview">All demos →</a>
                 </li>
-                <?php foreach ( $nav_section_titles as $cat => $section_title ) : ?>
+                <?php foreach ( $nav_sections as $cat => $section_title ) : ?>
                     <?php if ( empty( $nav_buckets[ $cat ] ) ) continue; ?>
                     <li role="none" class="site-nav-menu-heading"><?php echo esc_html( $section_title ); ?></li>
                     <?php foreach ( $nav_buckets[ $cat ] as $child ) : ?>

@@ -19,13 +19,16 @@ $children   = $demos_page
     : [];
 
 /**
- * Per-demo metadata, keyed by child page slug. Anything missing falls back to
- * sensible defaults (preview "default", neutral tag/tech/blurb). Add a new
- * entry whenever you publish a new demo to give it bespoke styling.
+ * Per-demo presentation metadata, keyed by child page slug. Anything missing
+ * falls back to sensible defaults (preview "default", neutral tag/tech/blurb).
+ * Add a new entry whenever you publish a new demo to give it bespoke styling.
+ *
+ * Note: a demo's section (web / game / ported) is NOT set here — it comes from
+ * dariobimbi_demo_category() in inc/demos.php, the single source the header nav
+ * shares so the two never drift.
  */
 $meta = [
     'contrast' => [
-        'category' => 'web',
         'tag'      => 'Accessibility',
         'preview'  => 'contrast',
         'blurb'    => 'Pick any two colors and watch the WCAG ratio update live. Pass/fail tiles call out AA, AAA, and UI-component thresholds, and the URL updates so you can share a palette.',
@@ -33,7 +36,6 @@ $meta = [
         'badge'    => '',
     ],
     'weather' => [
-        'category' => 'web',
         'tag'      => 'Live API',
         'preview'  => 'weather',
         'blurb'    => 'Two-step fetch chain against the Open-Meteo API: geocode the city, then pull a 7-day forecast. Pretty-printed JSON pane underneath shows the actual response. No key, no library, no proxy.',
@@ -41,7 +43,6 @@ $meta = [
         'badge'    => '',
     ],
     'audio' => [
-        'category' => 'web',
         'tag'      => 'Web Audio',
         'preview'  => 'audio',
         'blurb'    => 'AudioContext → AnalyserNode → Canvas. Pick an oscillator or pipe in your microphone, then switch between bars, waveform, and circular spectrum visualizations. Headphones recommended.',
@@ -49,7 +50,6 @@ $meta = [
         'badge'    => '',
     ],
     'sort' => [
-        'category' => 'web',
         'tag'      => 'Algorithms',
         'preview'  => 'sort',
         'blurb'    => 'Four sorts (bubble, insertion, merge, quick) race the same shuffled array. Each is a step-generator yielding control between operations so the canvas can render. Watch O(n²) lose, badly.',
@@ -57,7 +57,6 @@ $meta = [
         'badge'    => '',
     ],
     'life' => [
-        'category' => 'web',
         'tag'      => 'Cellular Automata',
         'preview'  => 'life',
         'blurb'    => "Conway's Game of Life on a toroidal grid. Click or drag to toggle cells, drop in classic patterns (glider, pulsar, Gosper's gun), and watch a few rules turn into a surprising amount of structure.",
@@ -65,7 +64,6 @@ $meta = [
         'badge'    => '',
     ],
     'live-editor' => [
-        'category' => 'web',
         'tag'      => 'Front-end',
         'preview'  => 'live-editor',
         'blurb'    => 'A two-pane mini code editor that re-renders a sandboxed CSS preview on every keystroke. The preview lives inside a Shadow DOM, the syntax highlighter is hand-rolled, and the whole thing runs without a build step.',
@@ -73,7 +71,6 @@ $meta = [
         'badge'    => '',
     ],
     'pug-attack' => [
-        'category' => 'ported',
         'tag'      => 'Old game, ported',
         'preview'  => 'pug-attack',
         'blurb'    => 'A small Processing sketch from a DePaul level design class, hand-ported to vanilla JavaScript and Canvas so it plays in the browser. The pug paces along the top, the cannon tracks the mouse, and clicking fires a shot at the cat scrolling along the bottom.',
@@ -81,7 +78,6 @@ $meta = [
         'badge'    => '',
     ],
     'microgame' => [
-        'category' => 'ported',
         'tag'      => 'Old game, ported',
         'preview'  => 'microgame',
         'blurb'    => 'A maze game from a DePaul intro class, ported from Processing to vanilla JavaScript and Canvas. Press Play, then Enter, and move with WASD to reach the orange goal at the bottom right before the ten-second timer runs out.',
@@ -89,7 +85,6 @@ $meta = [
         'badge'    => '',
     ],
     'pokedex' => [
-        'category' => 'web',
         'tag'      => 'Two APIs',
         'preview'  => 'pokedex',
         'blurb'    => 'Browse all 1025 Pokémon by generation, then pick one and see every Trading Card Game card it has appeared on. Sort by release date or rarity, filter by set, and open any card for full details and current pricing from TCGPlayer and Cardmarket.',
@@ -97,7 +92,6 @@ $meta = [
         'badge'    => '',
     ],
     'card-browser' => [
-        'category' => 'web',
         'tag'      => 'Live API + Proxy',
         'preview'  => 'card-browser',
         'blurb'    => 'Browse Pokémon TCG cards and sealed products by set, in English or Japanese, with filters for rarity, condition, printing, and price. Live prices come from JustTCG through a WordPress REST proxy that keeps the API key server-side and caches against the free-tier rate limit.',
@@ -105,7 +99,6 @@ $meta = [
         'badge'    => '',
     ],
     'ant-buster' => [
-        'category' => 'game',
         'tag'      => 'Tower defense',
         'preview'  => 'ant-buster',
         'blurb'    => 'A full tower-defense game about keeping ants off the picnic. Place and upgrade your cannons, survive the waves, and try not to let the ants carry the food away. It is the biggest thing I have built just for the fun of it.',
@@ -113,7 +106,6 @@ $meta = [
         'badge'    => 'Playable',
     ],
     'prompt-studio' => [
-        'category' => 'web',
         'tag'      => 'AI · Tooling',
         'preview'  => 'prompt-studio',
         'blurb'    => 'A little studio for writing and scoring AI prompts. Pick a task, draft a prompt, and it grades how the result came out so you can see what is actually working.',
@@ -122,9 +114,6 @@ $meta = [
     ],
 ];
 
-/* Default category for any child page without a $meta entry. */
-$default_category = 'web';
-
 /* Rotating accent palette — each card picks one based on its position so a
    row alternates a warm pink / yellow rhythm without any per-card config.
    (The cool blue/purple accents were retired with the warm repalette.) */
@@ -132,7 +121,6 @@ $accents = [ 'pink', 'yellow' ];
 
 /* Default fallback for any child page without an entry in $meta. */
 $default_meta = [
-    'category' => $default_category,
     'tag'      => 'Demo',
     'preview'  => 'default',
     'blurb'    => '',
@@ -141,11 +129,11 @@ $default_meta = [
 ];
 
 /* Bucket children by category so we can render the sections in order
-   (web demos, games I built, old games ported). */
+   (web demos, games I built, old games ported). Category comes from the
+   shared dariobimbi_demo_category() so the nav dropdown matches exactly. */
 $buckets = [ 'web' => [], 'game' => [], 'ported' => [] ];
 foreach ( $children as $child ) {
-    $cslug = $child->post_name;
-    $cat   = isset( $meta[ $cslug ]['category'] ) ? $meta[ $cslug ]['category'] : $default_category;
+    $cat = dariobimbi_demo_category( $child->post_name );
     if ( ! isset( $buckets[ $cat ] ) ) $buckets[ $cat ] = [];
     $buckets[ $cat ][] = $child;
 }
