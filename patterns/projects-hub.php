@@ -48,6 +48,12 @@ $meta = [
         'blurb'  => 'The website for a performance auto shop in Loves Park, Illinois. WordPress and Joomla, plus a custom HTML pipeline for their eBay vehicle listings.',
         'status' => 'Live at nickeyperformance.com',
     ],
+    'davis-pto' => [
+        'tag'    => 'Web · Squarespace · Volunteer',
+        'tone'   => 'primary-soft',
+        'blurb'  => 'The website for my kid\'s elementary school PTO in St. Charles. Third school year as the volunteer webmaster, working a real design into what Squarespace allows so any board member can still edit it.',
+        'status' => 'Live at daviselementarypto.com',
+    ],
     'dariobimbi-com' => [
         'tag'    => 'Web · WordPress',
         'tone'   => 'primary-soft',

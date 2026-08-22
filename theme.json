@@ -137,6 +137,7 @@
         { "name": "page-project-lost-probe",        "title": "Project — The Lost Probe",    "postTypes": [ "page" ] },
         { "name": "page-project-one-robot-army",    "title": "Project — One Robot Army",    "postTypes": [ "page" ] },
         { "name": "page-project-nickey-performance","title": "Project — NicKey Performance","postTypes": [ "page" ] },
-        { "name": "page-project-dariobimbi-com",    "title": "Project — dariobimbi.com",    "postTypes": [ "page" ] }
+        { "name": "page-project-dariobimbi-com",    "title": "Project — dariobimbi.com",    "postTypes": [ "page" ] },
+        { "name": "page-project-davis-pto",         "title": "Project — Davis Elementary PTO", "postTypes": [ "page" ] }
     ]
 }

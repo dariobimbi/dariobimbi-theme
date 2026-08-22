@@ -3,7 +3,7 @@
  * Title: Projects
  * Slug: dariobimbi/projects
  * Categories: dariobimbi
- * Description: Five-card grid for highlighted projects, on the elevated surface tone. Two rows: a 3-card row of game work on top, a 2-card row of web work below.
+ * Description: Four-card grid for highlighted projects, on the elevated surface tone. Two rows: game work on top, web work below.
  */
 ?>
 <!-- wp:group {"align":"full","className":"section section--surface","style":{"spacing":{"padding":{"top":"var:preset|spacing|60","bottom":"var:preset|spacing|60","left":"var:preset|spacing|30","right":"var:preset|spacing|30"},"blockGap":"var:preset|spacing|40"}},"layout":{"type":"constrained"}} -->
@@ -74,6 +74,24 @@
                 <!-- /wp:heading -->
                 <!-- wp:paragraph {"textColor":"muted"} -->
                 <p class="has-muted-color has-text-color">The website for a performance auto shop in Loves Park, Illinois. I built and maintained it across both WordPress and Joomla, and wrote the custom HTML pipeline they used to list vehicles for sale on eBay. Live at <a href="https://nickeyperformance.com/" target="_blank" rel="noopener">nickeyperformance.com</a>.</p>
+                <!-- /wp:paragraph -->
+            </div>
+            <!-- /wp:group -->
+        </div>
+        <!-- /wp:column -->
+
+        <!-- wp:column -->
+        <div class="wp-block-column">
+            <!-- wp:group {"className":"dario-card","style":{"spacing":{"padding":{"top":"var:preset|spacing|40","right":"var:preset|spacing|40","bottom":"var:preset|spacing|40","left":"var:preset|spacing|40"},"blockGap":"var:preset|spacing|20"}},"layout":{"type":"constrained"}} -->
+            <div class="wp-block-group dario-card" style="padding:var(--wp--preset--spacing--40)">
+                <!-- wp:paragraph {"fontSize":"small","textColor":"primary-soft","style":{"typography":{"fontFamily":"var:preset|font-family|mono","letterSpacing":"0.06em","textTransform":"uppercase"}}} -->
+                <p class="has-primary-soft-color has-text-color has-small-font-size" style="font-family:var(--wp--preset--font-family--mono);letter-spacing:0.06em;text-transform:uppercase">Web · Squarespace</p>
+                <!-- /wp:paragraph -->
+                <!-- wp:heading {"level":3} -->
+                <h3 class="wp-block-heading"><a href="<?php echo esc_url( home_url( '/projects/davis-pto/' ) ); ?>">Davis Elementary PTO</a></h3>
+                <!-- /wp:heading -->
+                <!-- wp:paragraph {"textColor":"muted"} -->
+                <p class="has-muted-color has-text-color">The website for my kid's elementary school PTO in St. Charles, where I have been the volunteer webmaster for three school years. The platform was the board's call, so the work was getting a real design and a working events board out of what Squarespace allows. Live at <a href="https://www.daviselementarypto.com/" target="_blank" rel="noopener">daviselementarypto.com</a>.</p>
                 <!-- /wp:paragraph -->
             </div>
             <!-- /wp:group -->

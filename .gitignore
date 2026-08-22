@@ -22,9 +22,7 @@ desktop.ini
 
 # Loose screenshots dropped at the theme root by debug runs. Real image
 # assets live under assets/ and are not affected by these patterns.
-/screenshot.png
-/ab-*.png
-/ant-buster-*.png
+/*.png
 
 # Composer (dev-only IDE stubs, regenerable via `composer install`)
 vendor/

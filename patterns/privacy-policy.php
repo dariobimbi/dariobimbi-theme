@@ -9,7 +9,7 @@
  * the page-privacy-policy.html template, which renders this pattern). The Page
  * itself can be empty.
  */
-$updated = 'April 30, 2026';
+$updated = 'June 27, 2026';
 $contact = esc_url( home_url( '/#contact' ) );
 ?>
 <!-- wp:group {"align":"full","className":"content-page","style":{"spacing":{"padding":{"top":"var:preset|spacing|70","bottom":"var:preset|spacing|70","left":"var:preset|spacing|30","right":"var:preset|spacing|30"}}},"layout":{"type":"constrained"}} -->
@@ -71,6 +71,27 @@ $contact = esc_url( home_url( '/#contact' ) );
 
     <!-- wp:paragraph {"style":{"typography":{"lineHeight":"1.65"}}} -->
     <p style="line-height:1.65">If you live somewhere with privacy laws like the GDPR or CCPA, you have the right to know what data is held about you, to ask for it to be corrected or deleted, and to file a complaint with a regulator. Because this site does not really hold anything tied to you specifically, those requests are usually a quick reply from me confirming there is nothing to delete. You are still welcome to ask if you want to be sure.</p>
+    <!-- /wp:paragraph -->
+
+    <!-- wp:heading {"level":2,"style":{"spacing":{"margin":{"top":"var:preset|spacing|50","bottom":"var:preset|spacing|20"}}}} -->
+    <h2 class="wp-block-heading" style="margin-top:var(--wp--preset--spacing--50);margin-bottom:var(--wp--preset--spacing--20)">Drophound browser extension</h2>
+    <!-- /wp:heading -->
+
+    <!-- wp:paragraph {"style":{"typography":{"lineHeight":"1.65"}}} -->
+    <p style="line-height:1.65">Drophound is a Chrome extension I make that watches for stock drops and waiting-room queues on any site and alerts you the moment you're admitted or an item is back in stock. The same principle applies: it collects as little as possible, and effectively everything stays on your own machine.</p>
+    <!-- /wp:paragraph -->
+
+    <!-- wp:list {"style":{"typography":{"lineHeight":"1.65"}}} -->
+    <ul style="line-height:1.65">
+        <!-- wp:list-item --><li><strong>It runs on the pages you visit.</strong> To detect queues and stock, the extension reads the data responses the sites you visit already load. This reading happens locally, inside your browser. None of that page content is sent to me or to any server.</li><!-- /wp:list-item -->
+        <!-- wp:list-item --><li><strong>What it stores stays in your browser.</strong> Your saved watches, settings, detected states, and activity log live in Chrome's own extension storage on your device. There is no Drophound account, no login, and no server collecting any of it.</li><!-- /wp:list-item -->
+        <!-- wp:list-item --><li><strong>No analytics or tracking.</strong> The extension contains no analytics, telemetry, ad networks, or third-party trackers.</li><!-- /wp:list-item -->
+        <!-- wp:list-item --><li><strong>The one time data leaves your browser.</strong> If you choose to turn on the optional webhook and paste in a URL (for example a Discord webhook so you get a phone push), the extension posts a small JSON payload — just a label and a short alert message — to that URL when an alert fires. This only happens if you set it up, it goes only to the address you supply, and that destination's own privacy policy then applies.</li><!-- /wp:list-item -->
+    </ul>
+    <!-- /wp:list -->
+
+    <!-- wp:paragraph {"style":{"typography":{"lineHeight":"1.65"}}} -->
+    <p style="line-height:1.65">To clear everything the extension has stored, remove the extension from Chrome, or use its settings to clear your watches and activity.</p>
     <!-- /wp:paragraph -->
 
     <!-- wp:heading {"level":2,"style":{"spacing":{"margin":{"top":"var:preset|spacing|50","bottom":"var:preset|spacing|20"}}}} -->
