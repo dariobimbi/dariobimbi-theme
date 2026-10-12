@@ -12,6 +12,9 @@ desktop.ini
 # Logs
 *.log
 
+# Per-machine Claude Code settings (deploy-key permission rules, local paths)
+.claude/settings.local.json
+
 # Playwright MCP debug artifacts (page snapshots, console logs, screenshots).
 # Generated when an agent uses the Playwright MCP tools to verify a demo in
 # the browser. Useful in-session, never useful in history.
