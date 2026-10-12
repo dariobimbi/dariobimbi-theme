@@ -48,9 +48,20 @@ const DARIOBIMBI_COUNTRY       = 'US';
    to CreativeWork. Add slugs here as new game projects ship. */
 const DARIOBIMBI_GAME_PROJECTS = [ 'space-dwarves', 'lost-probe', 'one-robot-army' ];
 
+/* Certifications. Feeds both the card row in patterns/skills.php and the
+   Person node's hasCredential. Badges live in assets/certs/ at 192px. */
+const DARIOBIMBI_CERTS = [
+    [ 'name' => 'Google Analytics Certification', 'issuer' => 'Skillshop', 'issued' => '2026-10-10', 'expires' => '2027-10-10', 'badge' => 'google-analytics.png', 'url' => 'https://www.credential.net/e90b19b7-1b64-484a-9ce8-9bcee6edd24c' ],
+];
+
 /* ------------------------------------------------------------------
  * Helpers
  * ------------------------------------------------------------------ */
+
+/** Certs still in date. A lapsed one drops off rather than sitting there looking current. */
+function dariobimbi_certifications(): array {
+    return array_values( array_filter( DARIOBIMBI_CERTS, fn( $c ) => empty( $c['expires'] ) || strtotime( $c['expires'] ) > time() ) );
+}
 
 /** Best-effort description for the current view, capped near the SERP cutoff. */
 function dariobimbi_seo_description(): string {
@@ -282,6 +293,18 @@ add_action( 'wp_head', function () {
             'WooCommerce', 'MySQL',
         ],
     ];
+    $certs = dariobimbi_certifications();
+    if ( $certs ) {
+        $person['hasCredential'] = array_map( fn( $c ) => [
+            '@type'              => 'EducationalOccupationalCredential',
+            'name'               => $c['name'],
+            'credentialCategory' => 'certificate',
+            'url'                => $c['url'],
+            'dateCreated'        => $c['issued'],
+            'expires'            => $c['expires'],
+            'recognizedBy'       => [ '@type' => 'Organization', 'name' => $c['issuer'] ],
+        ], $certs );
+    }
 
     $website = [
         '@context'        => 'https://schema.org',
