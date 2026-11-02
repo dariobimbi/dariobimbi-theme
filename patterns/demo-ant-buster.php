@@ -18,7 +18,7 @@
   <!-- /wp:heading -->
 
   <!-- wp:paragraph -->
-  <p>Defend the cake from the ants. Drag a cannon onto the picnic blanket and try to keep the swarm from reaching the cake.</p>
+  <p>The ants are after the cake. Put a few cannons down on the picnic blanket and try to keep them from carrying all eight slices back to the anthill. A full run is 25 waves, and it saves after every wave, so you can pick it back up later with a mouse or a finger.</p>
   <!-- /wp:paragraph -->
 
   <!-- wp:html -->
@@ -172,8 +172,8 @@ body.has-ant-buster-page {
   // every frame. Each: { x, y, size, rot } in canvas coords. size: 0=small,
   // 1=medium, 2=big. rot in radians.
   var IDLE_ANT_LAYOUT = [
-    { x:  40, y:  18, size: 2, rot:  0.6 },
-    { x: 540, y:  30, size: 1, rot: -0.35 },
+    { x:  40, y:  40, size: 2, rot:  0.6 },
+    { x: 540, y:  40, size: 1, rot: -0.35 },
     { x: 110, y:  60, size: 0, rot:  1.92 },
     { x: 590, y:  70, size: 1, rot:  1.31 },
     { x:  20, y: 110, size: 1, rot: -0.87 },
@@ -183,19 +183,17 @@ body.has-ant-buster-page {
     { x:  90, y: 275, size: 1, rot: -1.22 },
     { x: 380, y: 310, size: 2, rot:  0.7 },
     { x:  40, y: 330, size: 0, rot: -0.44 },
-    { x: 320, y:  14, size: 1, rot:  1.05 },
+    { x: 600, y: 300, size: 1, rot:  1.05 },
     { x: 410, y:  56, size: 0, rot: -1.48 },
     { x: 240, y: 100, size: 1, rot: -0.52 },
     { x: 320, y: 320, size: 1, rot:  2.09 }
   ];
 
-  // Portrait variant: 15 ants distributed across a 480x540 canvas. Roughly
-  // 4 in the HUD area (y < 24, decorative -- they're behind the HUD plaque
-  // but visible in idle splash before the plaque renders solid), 7 across
-  // the playfield (y 24..360), 4 in the strip area (y 360..540).
+  // Portrait variant: 15 ants distributed across a 480x540 canvas, all below
+  // the HUD (an ant at y 10 used to sit right on the gold readout).
   var IDLE_ANT_LAYOUT_PORTRAIT = [
-    { x:  30, y:  10, size: 2, rot:  0.6 },
-    { x: 360, y:  14, size: 1, rot: -0.35 },
+    { x:  30, y:  44, size: 2, rot:  0.6 },
+    { x: 360, y:  40, size: 1, rot: -0.35 },
     { x: 110, y:  60, size: 0, rot:  1.92 },
     { x: 420, y:  90, size: 1, rot:  1.31 },
     { x:  50, y: 130, size: 1, rot: -0.87 },
@@ -212,33 +210,37 @@ body.has-ant-buster-page {
   ];
 
   // Static layout for win-splash confetti. Each: { x, color }. y is animated.
+  // x stays inside the 480-wide playfield; drawWinOverlay clips to it too.
   var WIN_CONFETTI_LAYOUT = [
-    { x:  60, color: '#fee761' },
-    { x: 130, color: '#ff77a8' },
-    { x: 220, color: '#c8f5a8' },
-    { x: 300, color: '#fee761' },
-    { x: 380, color: '#ff77a8' },
-    { x: 450, color: '#c8f5a8' },
-    { x: 530, color: '#fee761' },
-    { x: 590, color: '#ff77a8' }
+    { x:  30, color: '#fee761' },
+    { x:  90, color: '#ff77a8' },
+    { x: 150, color: '#c8f5a8' },
+    { x: 210, color: '#fee761' },
+    { x: 270, color: '#ff77a8' },
+    { x: 330, color: '#c8f5a8' },
+    { x: 390, color: '#fee761' },
+    { x: 450, color: '#ff77a8' }
   ];
 
   // Static layout for lose-splash ants. Six items, all medium or big sizes,
-  // positioned around (not directly behind) the sign.
+  // positioned around (not behind) the sign and inside the playfield, so
+  // none of them land on the HUD or the shop. Works for both orientations
+  // because the playfield is 480x336 in each.
   var LOSE_ANT_LAYOUT = [
-    { x:  60, y:  60, size: 2, rot:  0.7 },
-    { x: 580, y:  80, size: 1, rot: -0.5 },
-    { x:  40, y: 280, size: 1, rot:  2.6 },
-    { x: 600, y: 290, size: 2, rot: -1.8 },
-    { x: 320, y:  20, size: 1, rot:  1.2 },
-    { x: 340, y: 330, size: 2, rot: -0.3 }
+    { x:  50, y:  60, size: 2, rot:  0.7 },
+    { x: 430, y:  70, size: 1, rot: -0.5 },
+    { x:  40, y: 290, size: 1, rot:  2.6 },
+    { x: 440, y: 300, size: 2, rot: -1.8 },
+    { x: 240, y:  48, size: 1, rot:  1.2 },
+    { x: 250, y: 320, size: 2, rot: -0.3 }
   ];
 
-  // Family-color strip lookup for shop cards.
+  // Family colors: the shop card strip, the ring on every cannon base, and
+  // the field-guide family line all read from here.
   var FAMILY_STRIP_COLOR = {
-    heavy:  '#888',
+    heavy:  '#b4a890',
     quick:  '#b0d04a',
-    status: '#8a5ac8',
+    status: '#5ab4d8',
     rubber: '#ff77a8'
   };
 
@@ -251,6 +253,11 @@ body.has-ant-buster-page {
   var game = {
     state: 'idle',            // 'idle' | 'playing'
     time: 0,                  // simulated seconds since game start; the speed button runs update() extra times per tick, so this advances with it
+    // Wall-clock seconds the game has been unpaused. Every cosmetic timer
+    // (muzzle flash, rings, splats, popups, banners) runs on this instead of
+    // game.time, so effects last the same on screen at 1x, 2x and 3x and keep
+    // playing out under the win and lose signs. Never reset.
+    fxTime: 0,
     simTime: 0,               // kept in step with time; used for slice timeout
     accumulator: 0,           // for fixed-timestep
     cake: { x: 352, y: 80, slices: 8, lost: 0 },
@@ -269,7 +276,14 @@ body.has-ant-buster-page {
     waveState: 'prep',        // 'prep' | 'wave' | 'won' | 'lost'
     prepRemaining: 30,        // seconds remaining in current prep window
     spawner: { groupIndex: 0, spawnedInGroup: 0, nextSpawnAt: 0, queueDone: false },
-    banner: { active: false, text: '', startedAt: 0, duration: 2.5, isBoss: false, isFinal: false },
+    banner: { active: false, text: '', sub: '', style: 'wood', startedAt: 0, duration: 2.5 },
+    bannerQueue: [],          // banners waiting their turn; see showBanner
+    popups: [],               // floating "+N" gold and short callouts; see addPopup
+    seenKinds: {},            // ant kinds already introduced this run
+    sliceLostFx: -10,         // fxTime of the last delivered slice (HUD tag pulse)
+    cakeDipFx: -10,           // fxTime of the last slice grabbed off the cake (plate dip)
+    endedFx: 0,               // fxTime the run ended; the result sign fades in from here
+    kills: 0,                 // ants killed this run, for the win sign
     screenshake: { magnitude: 0, decay: 0 },
     paused: false,
     speed: 1,
@@ -299,20 +313,27 @@ body.has-ant-buster-page {
     return true;
   }
 
-  // Show a wave-intro banner. Duration scales up for bosses, longer still
-  // for the final wave (Plan 3 Task 32) so the FINAL WAVE: THE KING text
-  // gets enough screen time to register before the King strolls onto the field.
-  function showBanner(text, isBoss, isFinal) {
-    game.banner.active = true;
-    game.banner.text = text;
-    game.banner.startedAt = game.time;
-    if (isFinal) {
-      game.banner.duration = 4;
-    } else {
-      game.banner.duration = isBoss ? 3 : 2.5;
-    }
-    game.banner.isBoss = isBoss;
-    game.banner.isFinal = !!isFinal;
+  // Queue a banner. Wave intros, new-ant cards, wave-clear tags and the
+  // god-tier unlock all go through here and wait their turn, so none of them
+  // overwrites another. style: 'wood' | 'boss' | 'final' | 'gold'. sub is an
+  // optional second, smaller line. Durations run on fxTime, so a 3x game
+  // still leaves time to read them.
+  function showBanner(text, style, sub) {
+    var duration = 2.5;
+    if (style === 'boss') { duration = 3; }
+    if (style === 'final') { duration = 4; }
+    if (style === 'gold') { duration = 4; }
+    if (sub) { duration = duration + 0.5; }
+    // ponytail: a long queue only builds if something fires banners in a loop; cap it.
+    if (game.bannerQueue.length >= 4) { game.bannerQueue.shift(); }
+    game.bannerQueue.push({ text: text, sub: sub || '', style: style || 'wood', duration: duration });
+  }
+
+  // Floating text over the board: "+N" gold on a kill, SHATTER, SLICE LOST.
+  // Capped so a wave-20 swarm can't bury the blanket in numbers.
+  function addPopup(x, y, text, color) {
+    if (game.popups.length >= 12) { game.popups.shift(); }
+    game.popups.push({ x: x, y: y, text: text, color: color, born: game.fxTime });
   }
 
   // === CANVAS SETUP ===
@@ -370,39 +391,60 @@ body.has-ant-buster-page {
     return c;
   }
 
+  // Ant ink is the wooden chrome's warm near-black (#2a1810 family) rather
+  // than the cool navy the board started with, so the ants, splats, bases
+  // and cake plate belong to the same picnic as the signs around them.
+  // Each threat class gets one readable mark at 16 px: Carrier a cream
+  // bundle, Soldier a brass helmet, Royal Guard a wine cape, Tank a pale shell.
   function makeWorkerSprite() {
     var c = makeCanvas(16, 16);
     var x = c.getContext('2d');
-    x.fillStyle = '#3a4466';
+    x.fillStyle = '#3b2a20';
     x.beginPath();
     x.ellipse(8, 8, 5, 4, 0, 0, Math.PI * 2);   // body
     x.fill();
-    x.fillStyle = '#262b44';
+    x.fillStyle = '#5a4030';
+    x.fillRect(6, 6, 2, 1);                     // warm highlight
+    x.fillStyle = '#2a1810';
     x.fillRect(7, 3, 2, 2);                     // head
-    x.fillStyle = '#181425';
+    x.fillStyle = '#1f1712';
     x.fillRect(7, 1, 1, 2);                     // antenna L
     x.fillRect(8, 1, 1, 2);                     // antenna R
+    return c;
+  }
+
+  function makeCarrierSprite() {
+    var c = makeWorkerSprite();
+    var x = c.getContext('2d');
+    x.fillStyle = '#2a1810';
+    x.fillRect(5, 8, 6, 5);                     // bundle outline
+    x.fillStyle = '#e8d4a8';
+    x.fillRect(6, 9, 4, 3);                     // cream bundle on its back
+    x.fillStyle = '#c84244';
+    x.fillRect(6, 10, 4, 1);                    // red strap
     return c;
   }
 
   function makeRoyalGuardSprite() {
     var c = makeCanvas(16, 16);
     var x = c.getContext('2d');
-    x.fillStyle = '#3a4466';
+    x.fillStyle = '#3b2a20';
     x.beginPath();
-    x.ellipse(8, 8, 5, 4, 0, 0, Math.PI * 2);   // body — same as worker
+    x.ellipse(8, 8, 5, 4, 0, 0, Math.PI * 2);   // body, same as worker
     x.fill();
-    x.fillStyle = '#2c3a8c';
-    x.fillRect(6, 7, 2, 2);                     // royal-blue accent (left shoulder)
-    x.fillRect(9, 7, 2, 2);                     // royal-blue accent (right shoulder)
-    x.fillStyle = '#262b44';
+    x.fillStyle = '#8a2a3a';
+    x.fillRect(4, 7, 8, 5);                     // wine cape over the back
+    x.fillRect(5, 12, 6, 1);                    // cape hem
+    x.fillStyle = '#b84a5a';
+    x.fillRect(4, 7, 8, 1);                     // cape collar
+    x.fillStyle = '#2a1810';
     x.fillRect(7, 3, 2, 2);                     // head
     x.fillStyle = '#fee761';
     x.fillRect(6, 1, 4, 1);                     // crown base, forward of head
     x.fillRect(6, 0, 1, 1);                     // crown spike L
     x.fillRect(8, 0, 1, 1);                     // crown spike center
     x.fillRect(9, 0, 1, 1);                     // crown spike R (intentional 3-spike pattern)
-    x.fillStyle = '#181425';
+    x.fillStyle = '#1f1712';
     x.fillRect(7, 1, 1, 1);                     // antenna L (shorter, crown takes the upper space)
     x.fillRect(8, 1, 1, 1);                     // antenna R
     return c;
@@ -411,17 +453,20 @@ body.has-ant-buster-page {
   function makeSoldierSprite() {
     var c = makeCanvas(16, 16);
     var x = c.getContext('2d');
-    x.fillStyle = '#2a2d42';                    // darker base than worker
+    x.fillStyle = '#2e221c';
     x.beginPath();
     x.ellipse(8, 9, 6, 5, 0, 0, Math.PI * 2);   // chunkier body
     x.fill();
-    x.fillStyle = '#1a1d32';                    // very dark head
-    x.fillRect(6, 4, 4, 3);                     // blocky head / helmet
-    x.fillStyle = '#3a4466';                    // helmet highlight
-    x.fillRect(7, 3, 2, 1);                     // small helmet peak on top
-    x.fillStyle = '#181425';
-    x.fillRect(5, 2, 1, 1);                     // antenna L
-    x.fillRect(10, 2, 1, 1);                    // antenna R
+    x.fillStyle = '#4a3428';
+    x.fillRect(5, 9, 2, 1);                     // highlight
+    x.fillStyle = '#b08a3a';
+    x.fillRect(5, 3, 6, 3);                     // brass helmet, wider than the head
+    x.fillStyle = '#e0b860';
+    x.fillRect(6, 3, 2, 1);                     // helmet glint
+    x.fillStyle = '#1f1712';
+    x.fillRect(6, 6, 4, 1);                     // face under the brim
+    x.fillRect(5, 1, 1, 2);                     // antenna L
+    x.fillRect(10, 1, 1, 2);                    // antenna R
     return c;
   }
 
@@ -430,7 +475,7 @@ body.has-ant-buster-page {
     var x = c.getContext('2d');
     x.fillStyle = '#f4b41b';
     x.fillRect(3, 3, 6, 6);                     // body
-    x.fillStyle = '#222034';
+    x.fillStyle = '#2a1810';
     x.fillRect(5, 1, 2, 2);                     // head / eyes
     x.fillRect(2, 4, 1, 2);                     // left leg
     x.fillRect(9, 4, 1, 2);                     // right leg
@@ -442,17 +487,22 @@ body.has-ant-buster-page {
   function makeTank() {
     var c = makeCanvas(24, 24);
     var x = c.getContext('2d');
-    // Heavy armored body, dark grey; blocky treads visual
-    x.fillStyle = '#3a4053';
+    // Heavy armored body in a pale warm grey, so it reads as a shell next to
+    // the dark ants; blocky treads visual
+    x.fillStyle = '#2a1810';
+    x.beginPath();
+    x.ellipse(12, 12, 9, 7, 0, 0, Math.PI * 2);   // outline
+    x.fill();
+    x.fillStyle = '#8a7e70';
     x.beginPath();
     x.ellipse(12, 12, 8, 6, 0, 0, Math.PI * 2);   // main body, broader than worker
     x.fill();
-    x.fillStyle = '#2a2f42';                       // darker accent
+    x.fillStyle = '#5a5048';                       // darker accent
     x.fillRect(5, 10, 14, 2);                      // bottom plate / tread line
-    x.fillStyle = '#4a5063';                       // lighter accent for armor plating
+    x.fillStyle = '#aca090';                       // lighter accent for armor plating
     x.fillRect(4, 8, 3, 8);                        // left armor plate
     x.fillRect(16, 8, 3, 8);                       // right armor plate
-    x.fillStyle = '#1a1c2c';                       // very dark head
+    x.fillStyle = '#2a1810';                       // very dark head
     x.fillRect(10, 5, 4, 3);                       // head
     return c;
   }
@@ -469,12 +519,12 @@ body.has-ant-buster-page {
     x.beginPath();
     x.ellipse(11, 8, 4, 4, 0, 0, Math.PI * 2);  // right half body
     x.fill();
-    x.fillStyle = '#262b44';
+    x.fillStyle = '#2a1810';
     x.fillRect(7, 7, 2, 4);                     // fissure line down middle
-    x.fillStyle = '#3a4466';
+    x.fillStyle = '#4a3428';
     x.fillRect(4, 3, 2, 2);                     // left head bump
     x.fillRect(10, 3, 2, 2);                    // right head bump
-    x.fillStyle = '#181425';
+    x.fillStyle = '#1f1712';
     x.fillRect(4, 1, 1, 2);                     // antenna L
     x.fillRect(11, 1, 1, 2);                    // antenna R
     return c;
@@ -488,9 +538,9 @@ body.has-ant-buster-page {
     x.fillRect(1, 2, 3, 4);                     // left half
     x.fillStyle = '#4a8c6d';
     x.fillRect(4, 2, 3, 4);                     // right half
-    x.fillStyle = '#262b44';
+    x.fillStyle = '#2a1810';
     x.fillRect(3, 2, 2, 4);                     // fissure
-    x.fillStyle = '#181425';
+    x.fillStyle = '#1f1712';
     x.fillRect(1, 0, 1, 1);                     // antenna L
     x.fillRect(6, 0, 1, 1);                     // antenna R
     return c;
@@ -509,11 +559,11 @@ body.has-ant-buster-page {
     x.fillRect(5, 9, 6, 1);                     // belly stripe
     x.fillStyle = '#f57b3f';                    // orange head
     x.fillRect(7, 4, 3, 3);                     // head
-    x.fillStyle = '#222034';
+    x.fillStyle = '#2a1810';
     x.fillRect(8, 2, 1, 2);                     // dark fuse-like spot on top
     x.fillStyle = '#fee761';
     x.fillRect(8, 1, 1, 1);                     // tiny spark on the fuse tip
-    x.fillStyle = '#181425';
+    x.fillStyle = '#1f1712';
     x.fillRect(6, 3, 1, 1);                     // antenna L
     x.fillRect(10, 3, 1, 1);                    // antenna R
     return c;
@@ -533,7 +583,7 @@ body.has-ant-buster-page {
     x.fillRect(9, 6, 2, 2);                       // crown left peak
     x.fillRect(13, 6, 2, 2);                      // crown right peak
     x.fillRect(11, 5, 2, 2);                      // crown center peak
-    x.fillStyle = '#181425';
+    x.fillStyle = '#1f1712';
     x.fillRect(8, 4, 1, 1);                       // antenna L
     x.fillRect(15, 4, 1, 1);                      // antenna R
     return c;
@@ -543,15 +593,15 @@ body.has-ant-buster-page {
     var c = makeCanvas(16, 16);
     var x = c.getContext('2d');
     // Ghostly translucent purple body with thin outline.
-    x.fillStyle = '#7d4a8c';
+    x.fillStyle = '#7a4a6a';
     x.fillRect(4, 3, 8, 10);                    // body
     x.fillRect(3, 5, 2, 6);                     // left segment
     x.fillRect(11, 5, 2, 6);                    // right segment
-    x.fillStyle = '#5a3a6c';
-    x.strokeStyle = '#3d2a5c';
+    x.fillStyle = '#5a3a4a';
+    x.strokeStyle = '#4a2a3a';
     x.lineWidth = 1;
     x.strokeRect(4, 3, 8, 10);                  // outline
-    x.fillStyle = '#181425';
+    x.fillStyle = '#1f1712';
     x.fillRect(6, 1, 1, 1);                     // antenna L
     x.fillRect(9, 1, 1, 1);                     // antenna R
     return c;
@@ -560,7 +610,7 @@ body.has-ant-buster-page {
   function makeAntSplat() {
     var c = makeCanvas(16, 16);
     var x = c.getContext('2d');
-    x.fillStyle = '#262b44';
+    x.fillStyle = '#4a2a1c';
     x.fillRect(4, 7, 8, 3);
     x.fillRect(5, 6, 6, 1);
     x.fillRect(5, 10, 6, 1);
@@ -570,33 +620,66 @@ body.has-ant-buster-page {
   function makeRoyalGuardSplat() {
     var c = makeCanvas(16, 16);
     var x = c.getContext('2d');
-    x.fillStyle = '#2c3a8c';
+    x.fillStyle = '#6a2030';
     x.fillRect(4, 7, 8, 3);
     x.fillRect(5, 6, 6, 1);
     x.fillRect(5, 10, 6, 1);
     return c;
   }
 
-  function makeCannonBase() {
+  // Cannon base: a warm pewter plate whose rim shows the tier (walnut base,
+  // brass mid, riveted iron final, gold god) and whose inner ring shows the
+  // family color, so upgrades read on the board without clicking each one.
+  // The gold rim replaces the old pulsing yellow halo disc under god tier.
+  var TIER_RIM = { base: '#6a4e38', mid: '#b08a3a', final: '#55504a', god: '#e8b830' };
+  function makeCannonBase(tier, family) {
     var c = makeCanvas(32, 32);
     var x = c.getContext('2d');
-    x.fillStyle = '#5a6988';
-    x.beginPath();
-    x.arc(16, 16, 12, 0, Math.PI * 2);
-    x.fill();
-    x.fillStyle = '#8b9bb4';
-    x.beginPath();
-    x.arc(16, 16, 10, 0, Math.PI * 2);
-    x.fill();
+    function disc(r, color) {
+      x.fillStyle = color;
+      x.beginPath();
+      x.arc(16, 16, r, 0, Math.PI * 2);
+      x.fill();
+    }
+    disc(13, '#2a1810');                        // outline, so it reads on red and cream
+    disc(12, TIER_RIM[tier] || TIER_RIM.base);
+    disc(10.5, FAMILY_STRIP_COLOR[family] || '#b4a890');
+    disc(9.5, '#8c8378');                       // pewter plate
+    x.fillStyle = '#a89e90';
+    x.fillRect(10, 9, 5, 2);                    // plate highlight
+    if (tier === 'final') {
+      x.fillStyle = '#c8c0b0';                  // four rivets
+      x.fillRect(15, 4, 2, 2);
+      x.fillRect(15, 26, 2, 2);
+      x.fillRect(4, 15, 2, 2);
+      x.fillRect(26, 15, 2, 2);
+    }
+    if (tier === 'god') {
+      x.fillStyle = '#fee761';                  // gold glints on the rim
+      x.fillRect(9, 6, 3, 1);
+      x.fillRect(22, 24, 2, 1);
+      x.fillRect(5, 18, 1, 2);
+    }
     return c;
+  }
+
+  // One base per tier and family, made once.
+  var baseCache = {};
+  function cannonBaseFor(kind) {
+    var def = CANNON_KINDS[kind];
+    var key = def.tier + ':' + def.family;
+    if (!baseCache[key]) { baseCache[key] = makeCannonBase(def.tier, def.family); }
+    return baseCache[key];
   }
 
   function makeCannonTurret() {
     var c = makeCanvas(20, 20);
     var x = c.getContext('2d');
-    x.fillStyle = '#262b44';
-    x.fillRect(8, 4, 4, 12);                    // barrel pointing up (rotated at draw time)
-    x.fillStyle = '#181425';
+    x.fillStyle = '#4a4440';
+    x.fillRect(8, 4, 4, 12);                    // iron barrel pointing up (rotated at draw time)
+    x.fillStyle = '#6a625a';
+    x.fillRect(8, 5, 1, 10);                    // barrel highlight
+    x.fillStyle = '#2a1810';
     x.fillRect(7, 2, 6, 3);                     // barrel tip
     return c;
   }
@@ -1091,7 +1174,7 @@ body.has-ant-buster-page {
     x.fillRect(9, 6, 10, 6);                    // wide breech
     x.fillStyle = '#ff1493';
     x.fillRect(10, 0, 8, 8);                    // bright-pink wrecking-ball muzzle
-    x.fillStyle = '#181425';
+    x.fillStyle = '#2a1810';
     x.fillRect(13, 8, 2, 1);                    // chain link 1 (dark)
     x.fillRect(13, 11, 2, 1);                   // chain link 2
     x.fillRect(13, 14, 2, 1);                   // chain link 3
@@ -1100,10 +1183,9 @@ body.has-ant-buster-page {
     return c;
   }
 
-  // === Plan 8a — God-tier turret factories (vertical slice, 9 of 18) ===
-  // Stubs delegate to makeCannonTurret() until each cannon's body is filled
-  // in by its own task. All 9 register in the turrets table below; the live
-  // demo will show howitzer fallback until each task lands.
+  // === God-tier turret factories (all 18) ===
+  // Each one extends its parent's look (palette and silhouette) and adds a
+  // brass or gold detail, so the capstone of a line reads as that line.
 
   function makeCannonTurretParticleCannon() {
     var c = makeCanvas(20, 20);
@@ -1420,6 +1502,186 @@ body.has-ant-buster-page {
     x.fillRect(9, 7, 2, 2);
     return c;
   }
+  // Saturation (from Hellfire): three fat mortar tubes with ember mouths.
+  function makeCannonTurretSaturation() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    x.fillStyle = '#5a1a0a';
+    x.fillRect(2, 13, 16, 5);                   // charred breech
+    x.fillStyle = '#d04020';
+    x.fillRect(2, 5, 5, 9);                     // left tube
+    x.fillRect(7, 2, 6, 12);                    // center tube
+    x.fillRect(13, 5, 5, 9);                    // right tube
+    x.fillStyle = '#8a2a10';
+    x.fillRect(2, 5, 5, 1);                     // tube lips
+    x.fillRect(7, 2, 6, 1);
+    x.fillRect(13, 5, 5, 1);
+    x.fillStyle = '#ffcc20';
+    x.fillRect(4, 6, 1, 1);                     // embers
+    x.fillRect(9, 3, 2, 1);
+    x.fillRect(15, 6, 1, 1);
+    x.fillStyle = '#aa7822';
+    x.fillRect(2, 10, 16, 1);                   // brass band
+    return c;
+  }
+  // Cluster Strike (from Patriot): a missile pod with three warheads.
+  function makeCannonTurretClusterStrike() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    x.fillStyle = '#2a3048';
+    x.fillRect(4, 14, 12, 4);                   // breech
+    x.fillStyle = '#4a5a7a';
+    x.fillRect(7, 4, 6, 11);                    // missile body
+    x.fillStyle = '#c84244';
+    x.fillRect(5, 11, 2, 4);                    // fins
+    x.fillRect(13, 11, 2, 4);
+    x.fillStyle = '#fee761';
+    x.fillRect(6, 1, 2, 3);                     // three warheads
+    x.fillRect(9, 0, 2, 4);
+    x.fillRect(12, 1, 2, 3);
+    x.fillStyle = '#aa7822';
+    x.fillRect(7, 8, 6, 1);                     // brass band
+    return c;
+  }
+  // Vortex (from Ricochet): a swirl launcher around a central hub.
+  function makeCannonTurretVortex() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    x.fillStyle = '#cc6a4a';
+    x.fillRect(3, 4, 6, 2);                     // swirl arm, upper left
+    x.fillRect(3, 6, 2, 4);
+    x.fillRect(11, 14, 6, 2);                   // swirl arm, lower right
+    x.fillRect(15, 10, 2, 4);
+    x.fillStyle = '#9b3a1a';
+    x.fillRect(7, 7, 6, 6);                     // hub
+    x.fillStyle = '#e8a070';
+    x.fillRect(8, 1, 4, 3);                     // two disc slots up front
+    x.fillRect(8, 16, 4, 2);
+    x.fillStyle = '#aa7822';
+    x.fillRect(9, 9, 2, 2);                     // brass axle
+    return c;
+  }
+  // Hailstorm (from Vulcan): a wider four-barrel rotary with hail-white tips.
+  function makeCannonTurretHailstorm() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    x.fillStyle = '#3a8c8c';
+    x.fillRect(3, 3, 2, 12);                    // four barrels
+    x.fillRect(7, 2, 2, 13);
+    x.fillRect(11, 2, 2, 13);
+    x.fillRect(15, 3, 2, 12);
+    x.fillStyle = '#e8f8ff';
+    x.fillRect(3, 1, 2, 2);                     // hail-white tips
+    x.fillRect(7, 0, 2, 2);
+    x.fillRect(11, 0, 2, 2);
+    x.fillRect(15, 1, 2, 2);
+    x.fillStyle = '#5aacac';
+    x.fillRect(2, 12, 16, 5);                   // housing
+    x.fillStyle = '#aa7822';
+    x.fillRect(2, 12, 16, 1);                   // brass band
+    return c;
+  }
+  // Solar Lance (from Lance): a gold barrel over a small sun.
+  function makeCannonTurretSolarLance() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    x.fillStyle = '#ff9c44';
+    x.fillRect(5, 13, 10, 1);                   // sun rays
+    x.fillRect(9, 9, 2, 10);
+    x.fillStyle = '#ffcc20';
+    x.fillRect(7, 11, 6, 5);                    // sun disc
+    x.fillStyle = '#c8a040';
+    x.fillRect(9, 2, 2, 10);                    // gold barrel
+    x.fillStyle = '#fff0b0';
+    x.fillRect(7, 0, 6, 2);                     // lens emitter
+    x.fillStyle = '#ffffff';
+    x.fillRect(9, 0, 1, 1);                     // lens glint
+    return c;
+  }
+  // Stormcaller (from Tesla): a taller coil with two spark prongs.
+  function makeCannonTurretStormcaller() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    x.fillStyle = '#1a3a5a';
+    x.fillRect(5, 14, 10, 5);                   // base
+    x.fillStyle = '#5a8acc';
+    x.fillRect(7, 5, 6, 10);                    // coil housing
+    x.fillStyle = '#b0d8ff';
+    x.fillRect(6, 3, 8, 2);                     // coil discs
+    x.fillRect(7, 8, 6, 1);
+    x.fillRect(7, 11, 6, 1);
+    x.fillStyle = '#4a4440';
+    x.fillRect(3, 6, 2, 6);                     // prongs
+    x.fillRect(15, 6, 2, 6);
+    x.fillStyle = '#fee761';
+    x.fillRect(3, 4, 2, 2);                     // sparks
+    x.fillRect(15, 4, 2, 2);
+    x.fillRect(9, 0, 2, 3);
+    x.fillStyle = '#aa7822';
+    x.fillRect(5, 14, 10, 1);                   // brass band
+    return c;
+  }
+  // Scattergun (from Buckshot): a bell-mouth blunderbuss.
+  function makeCannonTurretScattergun() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    x.fillStyle = '#5c2a14';
+    x.fillRect(7, 9, 6, 9);                     // wooden stock
+    x.fillStyle = '#cc8a3a';
+    x.fillRect(7, 4, 6, 6);                     // barrel
+    x.fillStyle = '#ee9a4a';
+    x.fillRect(3, 0, 14, 4);                    // wide bell mouth
+    x.fillStyle = '#3a1a0a';
+    x.fillRect(5, 1, 2, 2);                     // three bores
+    x.fillRect(9, 1, 2, 2);
+    x.fillRect(13, 1, 2, 2);
+    x.fillStyle = '#e8b830';
+    x.fillRect(7, 6, 6, 1);                     // gold bands
+    x.fillRect(7, 12, 6, 1);
+    return c;
+  }
+  // Phalanx (from Minigun): a domed housing with three short barrels.
+  function makeCannonTurretPhalanx() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    x.fillStyle = '#5a5a5a';
+    x.fillRect(4, 9, 12, 9);                    // dome housing
+    x.fillRect(6, 7, 8, 2);
+    x.fillStyle = '#7a7a7a';
+    x.fillRect(6, 10, 3, 2);                    // dome highlight
+    x.fillStyle = '#3a3a3a';
+    x.fillRect(6, 1, 2, 7);                     // three barrels
+    x.fillRect(9, 0, 2, 8);
+    x.fillRect(12, 1, 2, 7);
+    x.fillStyle = '#1a1a1a';
+    x.fillRect(6, 1, 2, 1);                     // muzzles
+    x.fillRect(9, 0, 2, 1);
+    x.fillRect(12, 1, 2, 1);
+    x.fillStyle = '#aa7822';
+    x.fillRect(4, 15, 12, 1);                   // brass band
+    return c;
+  }
+  // Absolute Zero (from Cryo): a crystal spire throwing off shards.
+  function makeCannonTurretAbsoluteZero() {
+    var c = makeCanvas(20, 20);
+    var x = c.getContext('2d');
+    x.fillStyle = '#3a4055';
+    x.fillRect(4, 14, 12, 4);                   // frosted base
+    x.fillStyle = '#80c0ff';
+    x.fillRect(3, 6, 3, 6);                     // side shards
+    x.fillRect(14, 6, 3, 6);
+    x.fillStyle = '#c8e8ff';
+    x.fillRect(7, 2, 6, 13);                    // crystal spire
+    x.fillStyle = '#3080d0';
+    x.fillRect(9, 4, 2, 9);                     // cold core
+    x.fillStyle = '#ffffff';
+    x.fillRect(9, 0, 2, 2);                     // tip and sparkles
+    x.fillRect(4, 5, 1, 1);
+    x.fillRect(15, 5, 1, 1);
+    x.fillStyle = '#e8b830';
+    x.fillRect(4, 14, 12, 1);                   // gold band
+    return c;
+  }
 
   function makeCake(slices) {
     var c = makeCanvas(48, 48);
@@ -1430,16 +1692,16 @@ body.has-ant-buster-page {
     // red/cream blanket regardless of which checker square it lands on.
     x.fillStyle = 'rgba(0,0,0,0.35)';
     x.fillRect(6, 42, 36, 3);
-    // Plate: dark navy (was white) for hard contrast against both blanket
+    // Plate: warm dark wood (was white) for hard contrast against both blanket
     // colors. The white plate disappeared on the cream squares.
-    x.fillStyle = '#181425';
+    x.fillStyle = '#2a1810';
     x.fillRect(6, 36, 36, 6);
-    x.fillStyle = '#262b44';
+    x.fillStyle = '#5a3a26';
     x.fillRect(6, 36, 36, 1);                 // plate top highlight
     if (fillRatio > 0) {
       // Dark outline ring under the cake body so it reads as a silhouette
       // even when sitting on a red square.
-      x.fillStyle = '#181425';
+      x.fillStyle = '#2a1810';
       x.fillRect(11, 17 + (1 - fillRatio) * 18, 26, fillRatio * 19 + 2);
       // Cake body
       x.fillStyle = '#feae34';
@@ -1448,7 +1710,7 @@ body.has-ant-buster-page {
       x.fillStyle = '#fee761';
       x.fillRect(15, 12 + (1 - fillRatio) * 18, 18, fillRatio * 9);
       // Candle outline + body
-      x.fillStyle = '#181425';
+      x.fillStyle = '#2a1810';
       x.fillRect(22, 4, 4, 11);
       x.fillStyle = '#e43b44';
       x.fillRect(23, 5, 2, 9);
@@ -1470,28 +1732,48 @@ body.has-ant-buster-page {
     x.beginPath();
     x.ellipse(16, 22, 11, 5, 0, 0, Math.PI * 2);
     x.fill();
-    x.fillStyle = '#181425';
+    x.fillStyle = '#1f1712';
     x.beginPath();
     x.ellipse(16, 22, 4, 2, 0, 0, Math.PI * 2);
     x.fill();
     return c;
   }
 
-  function makeProjectile() {
+  // Projectile sprites, 4x4, one per look: heavy is an iron ball with a
+  // highlight, quick a brass tracer, rubber a pink pea, and status shots a
+  // dot in their status color. drawProjectiles picks one per shot.
+  function makeShot(outline, fill, hi) {
     var c = makeCanvas(4, 4);
     var x = c.getContext('2d');
-    x.fillStyle = '#181425';
-    x.fillRect(0, 0, 4, 4);
+    x.fillStyle = outline;
+    x.fillRect(1, 0, 2, 4);
+    x.fillRect(0, 1, 4, 2);
+    x.fillStyle = fill;
+    x.fillRect(1, 1, 2, 2);
+    x.fillStyle = hi;
+    x.fillRect(1, 1, 1, 1);
     return c;
   }
+  function makeProjectiles() {
+    return {
+      heavy:  makeShot('#2a1810', '#4a4440', '#a89e90'),
+      quick:  makeShot('#6a4a10', '#e0b040', '#fff0b0'),
+      rubber: makeShot('#a02864', '#ff77a8', '#ffd0e0'),
+      slow:   makeShot('#2a5a8a', '#a4d4ff', '#ffffff'),
+      freeze: makeShot('#2a5a8a', '#c8e8ff', '#ffffff'),
+      poison: makeShot('#2a5a10', '#7acc20', '#c8f5a8'),
+      stun:   makeShot('#6a5a10', '#fee761', '#ffffff'),
+      knockback: makeShot('#6a5a10', '#fee761', '#ffffff')
+    };
+  }
 
-  // King — final-wave boss (Plan 3 Task 29). 32x32 dark navy body with brown
+  // King — final-wave boss (Plan 3 Task 29). 32x32 warm near-black body with brown
   // legs, a yellow three-spike crown over a dark band, and a red gem on the
   // chest so the ant reads as a regal threat at any zoom level.
   function makeKingSprite() {
     var c = makeCanvas(32, 32);
     var x = c.getContext('2d');
-    x.fillStyle = '#262b44';
+    x.fillStyle = '#2e1e18';
     x.fillRect(8, 8, 16, 22);                    // body
     x.fillStyle = '#7a3a1a';
     x.fillRect(6, 12, 4, 4); x.fillRect(22, 12, 4, 4);   // legs upper
@@ -1625,6 +1907,7 @@ body.has-ant-buster-page {
 
   game.sprites = {
     worker: makeWorkerSprite(),
+    carrier: makeCarrierSprite(),
     royal_guard: makeRoyalGuardSprite(),
     soldier: makeSoldierSprite(),
     scout: makeScout(),
@@ -1637,8 +1920,6 @@ body.has-ant-buster-page {
     king: makeKingSprite(),
     splat: makeAntSplat(),
     royalGuardSplat: makeRoyalGuardSplat(),
-    cannonBase: makeCannonBase(),
-    cannonTurret: makeCannonTurret(),         // kept for backward refs; lookups now go through turrets[kind]
     turrets: {
       howitzer: makeCannonTurret(),
       siege: makeCannonTurretSiege(),
@@ -1674,24 +1955,76 @@ body.has-ant-buster-page {
       pink_pea: makeCannonTurretPinkPea(),
       bouncy_bubble: makeCannonTurretBouncyBubble(),
       rubber_wrecking_ball: makeCannonTurretRubberWreckingBall(),
-      // Plan 8a — God-tier vertical slice (9 of 18). Plan 8b fills in the rest.
+      // God tier, all 18.
       particle_cannon: makeCannonTurretParticleCannon(),
       annihilator: makeCannonTurretAnnihilator(),
+      saturation: makeCannonTurretSaturation(),
+      cluster_strike: makeCannonTurretClusterStrike(),
+      vortex: makeCannonTurretVortex(),
       earthshaker: makeCannonTurretEarthshaker(),
+      hailstorm: makeCannonTurretHailstorm(),
       phoenix: makeCannonTurretPhoenix(),
       reaper: makeCannonTurretReaper(),
+      solar_lance: makeCannonTurretSolarLance(),
       hawkeye: makeCannonTurretHawkeye(),
+      stormcaller: makeCannonTurretStormcaller(),
+      scattergun: makeCannonTurretScattergun(),
+      phalanx: makeCannonTurretPhalanx(),
       blizzard: makeCannonTurretBlizzard(),
+      absolute_zero: makeCannonTurretAbsoluteZero(),
       tempest: makeCannonTurretTempest(),
       biohazard: makeCannonTurretBiohazard()
     },
     anthill: makeAnthill(),
-    projectile: makeProjectile(),
+    shots: makeProjectiles(),
     coin: makeCoinSprite(),
     cakeSlice: makeCakeSliceSprite(),
     titleCake: makeTitleCakeSprite()
   };
   // Note: cake sprite is regenerated in render() per frame because it depends on slice count.
+
+  // A few turret sprites (Marksman, Sharpshooter, Lance, Phantom, Demolisher)
+  // were drawn with the barrel lying sideways on a 28x28 canvas, while
+  // drawCannonTurrets assumes "up" is the firing direction, so they aimed 90
+  // degrees off. Stand them up once here, muzzle first (their muzzle sits at
+  // the left edge, so a quarter turn clockwise points it up).
+  ['marksman', 'sharpshooter', 'lance', 'phantom', 'demolisher'].forEach(function (k) {
+    var src = game.sprites.turrets[k];
+    var c = makeCanvas(src.height, src.width);
+    var x = c.getContext('2d');
+    x.translate(c.width, 0);
+    x.rotate(Math.PI / 2);
+    x.drawImage(src, 0, 0);
+    game.sprites.turrets[k] = c;
+  });
+
+  // Tinted copies of the ant sprites: one per status effect, plus white for
+  // the hit flash. Made on first use and cached, so a frozen or flashing ant
+  // is still a single drawImage.
+  var ANT_TINTS = {
+    white:  ['#ffffff', 1],
+    freeze: ['#cdeeff', 0.7],
+    slow:   ['#8cc4ee', 0.45],
+    stun:   ['#fee761', 0.5],
+    burn:   ['#ff7a30', 0.5],
+    poison: ['#8ad830', 0.5]
+  };
+  var tintCache = {};
+  function tintedSprite(key, tint) {
+    var id = key + ':' + tint;
+    if (!tintCache[id]) {
+      var src = game.sprites[key];
+      var c = makeCanvas(src.width, src.height);
+      var x = c.getContext('2d');
+      x.drawImage(src, 0, 0);
+      x.globalCompositeOperation = 'source-atop';
+      x.globalAlpha = ANT_TINTS[tint][1];
+      x.fillStyle = ANT_TINTS[tint][0];
+      x.fillRect(0, 0, c.width, c.height);
+      tintCache[id] = c;
+    }
+    return tintCache[id];
+  }
 
   // === RENDERING ===
   // Wood-grain panel background filling the right shop column.
@@ -1865,7 +2198,7 @@ body.has-ant-buster-page {
     var bbW = WIDTH - 32;
     var bbH = 16;
     drawWoodenButton(bbX, bbY, bbW, bbH, 'wood');
-    ctx.font = 'bold 9px monospace';
+    ctx.font = 'bold 10px monospace';
     var backLabel;
     if (ui.shopInfoFrom === 'detail') {
       if (ui.selectedCannon) {
@@ -1879,11 +2212,11 @@ body.has-ant-buster-page {
     } else {
       backLabel = '< BACK TO CANNONS';
     }
-    drawTextWithShadow(backLabel, bbX + bbW / 2, bbY + bbH / 2, '#fee761', 'bold 9px monospace', 'center');
-    ui.shopInfoBackRect = { x: bbX, y: bbY, w: bbW, h: bbH };
+    drawTextWithShadow(backLabel, bbX + bbW / 2, bbY + bbH / 2, '#fee761', 'bold 10px monospace', 'center');
+    ui.shopInfoBackRect = { x: bbX, y: stripY, w: bbW, h: 24 };   // tap area padded to the strip edge
 
     // FIELD GUIDE eyebrow below the back button.
-    drawTextWithShadow('FIELD GUIDE', WIDTH / 2, stripY + 28, '#c8a868', 'bold 8px monospace', 'center');
+    drawTextWithShadow('FIELD GUIDE', WIDTH / 2, stripY + 28, '#c8a868', 'bold 10px monospace', 'center');
 
     // Two columns
     var colTop = stripY + 36;
@@ -1912,7 +2245,7 @@ body.has-ant-buster-page {
     ctx.textAlign = 'start';
     ctx.textBaseline = 'middle';
     ctx.fillText(fittedInfoName, leftX + 8, colTop + 12);
-    ctx.font = 'bold 8px monospace';
+    ctx.font = 'bold 10px monospace';
     ctx.fillStyle = '#8a5a30';
     ctx.fillText(sk.family + ' family', leftX + 8, colTop + 26);
 
@@ -1923,7 +2256,7 @@ body.has-ant-buster-page {
     var values3 = ['' + sk.damage, '' + sk.fireRate, '' + sk.range];
     for (var sI = 0; sI < 3; sI++) {
       var sCx = leftX + 8 + colW * sI + colW / 2;
-      ctx.font = 'bold 7px monospace';
+      ctx.font = 'bold 10px monospace';
       ctx.fillStyle = '#8a5a30';
       ctx.textAlign = 'center';
       ctx.fillText(labels3[sI], sCx, statsY);
@@ -1941,10 +2274,10 @@ body.has-ant-buster-page {
       if (!tierLabelP) { tierLabelP = 'base'; }
       descP = sk.family + ' ' + tierLabelP;
     }
-    drawWrappedTextDark(descP, leftX + 8, colTop + 64, leftW - 16, '#3a2210', 'bold 9px monospace', 12);
+    drawWrappedTextDark(descP, leftX + 8, colTop + 62, leftW - 16, '#3a2210', 'bold 10px monospace', 13);
 
     // === RIGHT: EVOLVES TO header + cream evolution cards ===
-    drawTextWithShadow('EVOLVES TO', rightX + rightW / 2, colTop + 6, '#fee761', 'bold 8px monospace', 'center');
+    drawTextWithShadow('EVOLVES TO', rightX + rightW / 2, colTop + 6, '#fee761', 'bold 10px monospace', 'center');
     var evolveTop = colTop + 14;
     var evolveH = colH - 14;
     // Up to 3 cards, with 4px gaps. rh = (evolveH - 8) / 3 = ~39 with colH 140
@@ -1975,41 +2308,40 @@ body.has-ant-buster-page {
       ctx.fillRect(px + pw - 4, rowY, 2, rh);
       ctx.fillRect(px + 2, rowY + rh - 2, pw - 4, 2);
 
-      // Top line: name + tier badge
+      // Top line: name + tier badge. Phones get 10 px for everything here.
+      var small = 7;
+      var stat = 8;
+      if (isPortrait()) { small = 10; stat = 10; }
+      ctx.font = 'bold ' + small + 'px monospace';
+      var tierLabel2 = udef.tier;
+      if (!tierLabel2) { tierLabel2 = 'mid'; }
+      var tierW = ctx.measureText(tierLabel2.toUpperCase()).width;
       ctx.font = 'bold 10px monospace';
-      var fittedInfoUpgName = truncateToWidth(udef.name, pw - 42);
+      var fittedInfoUpgName = truncateToWidth(udef.name, pw - 28 - tierW);
       ctx.fillStyle = '#3a2210';
       ctx.textAlign = 'start';
       ctx.textBaseline = 'middle';
       ctx.fillText(fittedInfoUpgName, px + 12, rowY + 13);
 
-      var tierLabel2 = udef.tier;
-      if (!tierLabel2) { tierLabel2 = 'mid'; }
-      ctx.font = 'bold 7px monospace';
+      ctx.font = 'bold ' + small + 'px monospace';
       ctx.fillStyle = '#8a5a30';
       ctx.textAlign = 'end';
       ctx.fillText(tierLabel2.toUpperCase(), px + pw - 8, rowY + 13);
 
       // Stats line
-      ctx.font = 'bold 8px monospace';
+      ctx.font = 'bold ' + stat + 'px monospace';
       ctx.fillStyle = '#5a3a20';
       ctx.textAlign = 'start';
       ctx.fillText('DMG ' + udef.damage + '  RATE ' + udef.fireRate + '  RNG ' + udef.range, px + 10, rowY + 27);
 
-      // Description line — only render if the row is tall enough to fit a
-      // 7px text baseline at y+38 plus descenders without clipping the card's
-      // bottom border. Landscape cards (rh=46) qualify; portrait cards
-      // (rh~39) do not, so descriptions are dropped there.
+      // Role line — only render if the row is tall enough to fit a 7px text
+      // baseline at y+38 plus descenders without clipping the card's bottom
+      // border. Landscape cards (rh=46) qualify; portrait cards (rh~39) do
+      // not, so it is dropped there.
       if (rh >= 46) {
-        var udesc = udef.description;
-        if (!udesc) {
-          var ut = udef.tier;
-          if (!ut) { ut = 'mid'; }
-          udesc = udef.family + ' ' + ut;
-        }
         ctx.font = 'bold 7px monospace';
         ctx.fillStyle = '#7a5a40';
-        ctx.fillText(truncate(udesc, 32), px + 10, rowY + 38);
+        ctx.fillText(truncateToWidth(cannonRole(udef), pw - 16), px + 10, rowY + 38);
       }
 
       ctx.textAlign = 'start';
@@ -2082,9 +2414,12 @@ body.has-ant-buster-page {
     ctx.textBaseline = 'alphabetic';
   }
 
-  function truncate(s, n) {
-    if (s.length <= n) { return s; }
-    return s.substring(0, n - 1) + '...';
+  // A cannon's one-line role: the first sentence of its description, kept
+  // to 32 characters or less so it fits the evolve cards and phone shop cards.
+  function cannonRole(def) {
+    var s = def.description.split('. ')[0];
+    if (s.charAt(s.length - 1) !== '.') { s = s + '.'; }
+    return s;
   }
 
   // Pixel-aware truncation. Caller MUST set ctx.font before calling so the
@@ -2205,7 +2540,7 @@ body.has-ant-buster-page {
         ctx.fillRect(spX, spY + 39, 40, 1);
         // Render the cannon (base + turret) in the centered tile. Sprites are
         // 32x32 so center inside the 40x40 inset with a 4 px margin.
-        ctx.drawImage(game.sprites.cannonBase, spX + 4, spY + 4);
+        ctx.drawImage(cannonBaseFor(k), spX + 4, spY + 4);
         var turret = game.sprites.turrets[k];
         if (turret) { ctx.drawImage(turret, spX + 10, spY + 4); }
 
@@ -2225,24 +2560,9 @@ body.has-ant-buster-page {
         if (canAfford) { costColor = '#fee761'; } else { costColor = '#888'; }
         drawTextWithShadow(costStr, rowStartX + 16, cy + 84, costColor, 'bold 11px monospace', 'start');
 
-        // Consolidated stats card — all three stats (DMG/RATE/RNG) in a
-        // single recessed 3-column tag near the bottom of the card. At
-        // 7px label / 9px value the columns fit even at 115 wide.
-        var statsY = cy + cardH - 32;
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
-        ctx.fillRect(cx + 8, statsY, cardW - 16, 24);
-        ctx.fillStyle = '#2a1810';
-        ctx.fillRect(cx + 8, statsY, cardW - 16, 1);
-        var statColW = (cardW - 16) / 3;
-        var sc1 = cx + 8 + statColW * 0.5;
-        var sc2 = cx + 8 + statColW * 1.5;
-        var sc3 = cx + 8 + statColW * 2.5;
-        drawTextWithShadow('DMG', sc1, statsY + 7, '#c8a868', 'bold 7px monospace', 'center');
-        drawTextWithShadow('' + sk.damage, sc1, statsY + 18, '#f5e6c8', 'bold 9px monospace', 'center');
-        drawTextWithShadow('RATE', sc2, statsY + 7, '#c8a868', 'bold 7px monospace', 'center');
-        drawTextWithShadow('' + sk.fireRate, sc2, statsY + 18, '#f5e6c8', 'bold 9px monospace', 'center');
-        drawTextWithShadow('RNG', sc3, statsY + 7, '#c8a868', 'bold 7px monospace', 'center');
-        drawTextWithShadow('' + sk.range, sc3, statsY + 18, '#f5e6c8', 'bold 9px monospace', 'center');
+        // A short role line instead of the DMG/RATE/RNG columns, which came
+        // out at 5 CSS px on a phone. The numbers live in the "?" field guide.
+        drawWrappedText(cannonRole(sk), cx + 9, cy + 96, cardW - 14, '#f5e6c8', 'bold 10px monospace', 13);
 
         // ? hangtag at top-right. Larger than landscape (16 vs 18) for tappability.
         var tagW = 18;
@@ -2267,7 +2587,9 @@ body.has-ant-buster-page {
         ctx.fillText('?', tagX + tagW / 2, tagY + tagH / 2 + 1);
         ctx.textAlign = 'start';
         ctx.textBaseline = 'alphabetic';
-        ui.shopInfoRects.push({ x: tagX, y: tagY, w: tagW, h: tagH, kind: k });
+        // The tap area reaches past the tag toward the card's corner and a
+        // little inward, so a near miss opens the guide instead of arming.
+        ui.shopInfoRects.push({ x: tagX - 10, y: tagY - 6, w: tagW + 14, h: tagH + 14, kind: k });
 
         // Armed-card highlight + Tap a spot pill
         if (ui.armedKind === k) {
@@ -2286,7 +2608,7 @@ body.has-ant-buster-page {
           ctx.fillRect(pillX, pillY + pillH - 1, pillW, 1);
           ctx.fillRect(pillX, pillY, 1, pillH);
           ctx.fillRect(pillX + pillW - 1, pillY, 1, pillH);
-          drawTextWithShadow('TAP A SPOT', pillX + pillW / 2, pillY + pillH / 2, '#2a1810', 'bold 8px monospace', 'center');
+          drawTextWithShadow('TAP A SPOT', pillX + pillW / 2, pillY + pillH / 2, '#2a1810', 'bold 10px monospace', 'center');
         }
       } else {
         // === LANDSCAPE CARD === (existing visual coherence layout, unchanged)
@@ -2303,7 +2625,7 @@ body.has-ant-buster-page {
         // Render the full cannon (base + turret) so the shop card matches the
         // in-game silhouette. Match the in-game offsets: base centered in the
         // 32x32 tile, turret offset +6 px on x.
-        ctx.drawImage(game.sprites.cannonBase, spXL, spYL);
+        ctx.drawImage(cannonBaseFor(k), spXL, spYL);
         var turretL = game.sprites.turrets[k];
         if (turretL) { ctx.drawImage(turretL, spXL + 6, spYL); }
 
@@ -2338,7 +2660,7 @@ body.has-ant-buster-page {
         drawTextWithShadow('DMG', col1X, statsYL + 4, '#c8a868', 'bold 8px monospace', 'start');
         drawTextWithShadow('' + sk.damage, col1X + 22, statsYL + 4, '#f5e6c8', 'bold 10px monospace', 'start');
         drawTextWithShadow('RATE', col2X, statsYL + 4, '#c8a868', 'bold 8px monospace', 'start');
-        drawTextWithShadow('' + sk.fireRate, col2X + 26, statsYL + 4, '#f5e6c8', 'bold 10px monospace', 'start');
+        drawTextWithShadow('' + sk.fireRate, col2X + 22, statsYL + 4, '#f5e6c8', 'bold 10px monospace', 'start');
         drawTextWithShadow('RNG', col3X, statsYL + 4, '#c8a868', 'bold 8px monospace', 'start');
         drawTextWithShadow('' + sk.range, col3X + 22, statsYL + 4, '#f5e6c8', 'bold 10px monospace', 'start');
 
@@ -2437,24 +2759,34 @@ body.has-ant-buster-page {
     ui.selectedCannon = null;
   }
 
-  // Plan 7 — Targeting row: 5 buttons (C, F, L, S, W) + label below.
+  // Plan 7 — Targeting row: 5 buttons (C, F, cake slice, S, W) + label below.
   // Returns the y-coordinate immediately after the row, so drawTowerPanel
   // can push the upgrade buttons down by the row's vertical extent.
   // Sets ui.targetingRects to a 5-array of hit-test rects in mode order:
-  //   [closest, first, last, strongest, weakest].
+  //   [closest, first, carrying, strongest, weakest].
+  // The cake-slice button ("Thieves") goes after ants running off with a
+  // slice; it replaced "Last", which was ambiguous on an open blanket.
+  // Phones get wider, taller buttons (the portrait column has the room).
   function drawTargetingRow(c, px, py) {
     var def = CANNON_KINDS[c.kind];
     if (def.aura) {
       ui.targetingRects = [];
       return py;
     }
-    var modes = ['closest', 'first', 'last', 'strongest', 'weakest'];
-    var glyphs = ['C', 'F', 'L', 'S', 'W'];
-    var modeNames = ['Closest', 'First', 'Last', 'Strongest', 'Weakest'];
-    var modeColors = ['#4a6acc', '#c8a040', '#888', '#c84444', '#c84090'];
+    var modes = ['closest', 'first', 'carrying', 'strongest', 'weakest'];
+    var glyphs = ['C', 'F', '', 'S', 'W'];
+    var modeNames = ['Closest', 'First', 'Thieves', 'Strongest', 'Weakest'];
+    var modeColors = ['#4a6acc', '#c8a040', '#feae34', '#c84444', '#c84090'];
     var btnW = 22;
     var btnH = 22;
     var gap = 4;
+    var labelFont = 'bold 8px monospace';
+    if (isPortrait()) {
+      btnW = 44;
+      btnH = 26;
+      gap = 6;
+      labelFont = 'bold 10px monospace';
+    }
 
     var active = c.targetingMode;
     if (!active) { active = 'closest'; }
@@ -2472,16 +2804,20 @@ body.has-ant-buster-page {
       }
       var glyphColor;
       if (isActive) { glyphColor = '#fee761'; } else { glyphColor = '#f5e6c8'; }
-      drawTextWithShadow(glyphs[i], bx + btnW / 2, by + btnH / 2, glyphColor, 'bold 11px monospace', 'center');
+      if (modes[i] === 'carrying') {
+        ctx.drawImage(game.sprites.cakeSlice, Math.round(bx + btnW / 2 - 6), Math.round(by + btnH / 2 - 7));
+      } else {
+        drawTextWithShadow(glyphs[i], bx + btnW / 2, by + btnH / 2, glyphColor, 'bold 11px monospace', 'center');
+      }
       ui.targetingRects.push({ x: bx, y: by, w: btnW, h: btnH });
     }
 
-    var labelY = py + btnH + 14;
+    var labelY = py + btnH + 12;
     var activeIdx = 0;
     for (var li = 0; li < modes.length; li++) {
       if (modes[li] === active) { activeIdx = li; break; }
     }
-    drawTextWithShadow('TARGETING ' + modeNames[activeIdx].toUpperCase(), px, labelY, '#c8a868', 'bold 8px monospace', 'start');
+    drawTextWithShadow('TARGETING ' + modeNames[activeIdx].toUpperCase(), px, labelY, '#c8a868', labelFont, 'start');
     return labelY + 8;
   }
 
@@ -2540,8 +2876,37 @@ body.has-ant-buster-page {
     var afterTargetingY = drawTargetingRow(c, px + 8, py + 110);
 
     // Upgrade rows + sell — shared helpers so portrait can render the same.
+    // A cannon at the end of its line has no upgrade rows, so its
+    // description fills that space instead of bare wood.
+    if (sk.upgradesTo.length === 0) {
+      drawPaperNote(sk.description, px + 2, afterTargetingY + 6, pw - 4, 'bold 9px monospace', 14);
+    }
     drawTowerPanelUpgrades(c, sk, px, pw, afterTargetingY + 6, /*upgRowH=*/ 42);
     drawTowerPanelSell(c, px, pw, HEIGHT - 30, /*sellH=*/ 24, /*variant=*/ 'red');
+  }
+
+  // A cream paper card holding a wrapped line of text, sized to the text.
+  function drawPaperNote(text, x, y, w, font, lineH) {
+    ctx.font = font;
+    var words = text.split(' ');
+    var lines = 1;
+    var line = '';
+    for (var i = 0; i < words.length; i++) {
+      var test = line ? line + ' ' + words[i] : words[i];
+      if (ctx.measureText(test).width > w - 20) { lines = lines + 1; line = words[i]; } else { line = test; }
+    }
+    var h = lines * lineH + 14;
+    var grd = ctx.createLinearGradient(x, y, x, y + h);
+    grd.addColorStop(0, '#fff8e8');
+    grd.addColorStop(1, '#f0dfb8');
+    ctx.fillStyle = grd;
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#2a1810';
+    ctx.fillRect(x, y, w, 2);
+    ctx.fillRect(x, y, 2, h);
+    ctx.fillRect(x + w - 2, y, 2, h);
+    ctx.fillRect(x, y + h - 2, w, 2);
+    drawWrappedTextDark(text, x + 10, y + 7, w - 20, '#3a2210', font, lineH);
   }
 
   // Portrait: two-column horizontal layout in the bottom strip.
@@ -2556,8 +2921,9 @@ body.has-ant-buster-page {
     var bbW = WIDTH - 32;
     var bbH = 16;
     drawWoodenButton(bbX, bbY, bbW, bbH, 'wood');
-    drawTextWithShadow('< BACK TO CANNONS', bbX + bbW / 2, bbY + bbH / 2, '#fee761', 'bold 9px monospace', 'center');
-    ui.detailBackRect = { x: bbX, y: bbY, w: bbW, h: bbH };
+    drawTextWithShadow('< BACK TO CANNONS', bbX + bbW / 2, bbY + bbH / 2, '#fee761', 'bold 10px monospace', 'center');
+    // Tap area padded from the strip's top edge down to the columns.
+    ui.detailBackRect = { x: bbX, y: stripY, w: bbW, h: 22 };
 
     // Two columns
     var colTop = stripY + 22;
@@ -2576,11 +2942,11 @@ body.has-ant-buster-page {
     // Name
     var detailNameFitP = fitFont(sk.name, leftW - 16, 'bold __PX__px monospace', 14, 9);
     drawTextWithShadow(detailNameFitP.text, leftX + 8, colTop + 12, '#fee761', detailNameFitP.font, 'start');
-    drawTextWithShadow(sk.family + ' family', leftX + 8, colTop + 26, '#c8a868', 'bold 8px monospace', 'start');
+    drawTextWithShadow(sk.family + ' family', leftX + 8, colTop + 26, '#c8a868', 'bold 10px monospace', 'start');
 
     // 4-stat row in 4 even columns (DMG / RATE / RNG / KILLS)
-    var statsY = colTop + 40;
-    var statsH = 28;
+    var statsY = colTop + 38;
+    var statsH = 30;
     drawWoodenTag(leftX + 4, statsY, leftW - 8, statsH);
     var colW = (leftW - 8) / 4;
     var killCountP;
@@ -2590,13 +2956,13 @@ body.has-ant-buster-page {
     var valColorsP = ['#f5e6c8', '#f5e6c8', '#f5e6c8', '#fee761'];
     for (var iP = 0; iP < 4; iP++) {
       var cxP = leftX + 4 + colW * iP + colW / 2;
-      drawTextWithShadow(labelsP[iP], cxP, statsY + 9, '#c8a868', 'bold 7px monospace', 'center');
-      drawTextWithShadow(valuesP[iP], cxP, statsY + 20, valColorsP[iP], 'bold 11px monospace', 'center');
+      drawTextWithShadow(labelsP[iP], cxP, statsY + 9, '#c8a868', 'bold 10px monospace', 'center');
+      drawTextWithShadow(valuesP[iP], cxP, statsY + 22, valColorsP[iP], 'bold 11px monospace', 'center');
     }
 
     // Targeting row — sits below the stats tag. drawTargetingRow renders
     // 5 buttons starting at (x, y) and adds a "TARGETING X" label below them.
-    drawTargetingRow(c, leftX + 8, statsY + statsH + 10);
+    drawTargetingRow(c, leftX + 8, statsY + statsH + 8);
 
     // === RIGHT COLUMN: upgrade rows + sell ===
     var sellH = 20;
@@ -2605,10 +2971,15 @@ body.has-ant-buster-page {
     var upgArea = upgBottom - upgTop;     // ~130 with colH 154
     // 3 upgrade rows with 4 px gaps = 3*rh + 2*4 = upgArea; so rh = (upgArea - 8) / 3
     var upgRowH = Math.floor((upgArea - 8) / 3);
+    if (sk.upgradesTo.length === 0) {
+      drawPaperNote(sk.description, rightX + 2, upgTop, rightW - 4, 'bold 10px monospace', 13);
+    }
     drawTowerPanelUpgrades(c, sk, rightX, rightW, upgTop, upgRowH);
 
-    // Sell button at the bottom of the right column
+    // Sell button at the bottom of the right column; its tap area runs to
+    // the bottom edge of the canvas.
     drawTowerPanelSell(c, rightX, rightW, upgBottom + 4, sellH, 'red');
+    ui.sellRect.h = HEIGHT - ui.sellRect.y;
   }
 
   // Shared upgrade-row renderer. Renders up to 3 upgrade buttons starting
@@ -2617,7 +2988,6 @@ body.has-ant-buster-page {
   function drawTowerPanelUpgrades(c, sk, px, pw, baseY, upgRowH) {
     var upgrades = sk.upgradesTo;
     if (!upgrades) { upgrades = []; }
-    var hoveredLockedRect = null;
     ui.upgradeRects = [null, null, null];
     ui.detailUpgradeInfoRects = [null, null, null];
     for (var i2 = 0; i2 < upgrades.length; i2++) {
@@ -2633,12 +3003,12 @@ body.has-ant-buster-page {
         if (!game.godTierUnlocked) { isLocked = true; }
       }
 
-      // Plan 4 unlock pulse
+      // Plan 4 unlock pulse, 1.5 s on the effects clock.
       if (isGod) {
-        var pulseAge = game.time - game.godTierUnlockPulseStart;
+        var pulseAge = game.fxTime - game.godTierUnlockPulseStart;
         if (pulseAge >= 0) {
-          if (pulseAge < 0.5) {
-            var pulseAlpha = 1 - (pulseAge / 0.5);
+          if (pulseAge < 1.5) {
+            var pulseAlpha = 1 - (pulseAge / 1.5);
             ctx.save();
             ctx.globalAlpha = pulseAlpha;
             ctx.fillStyle = '#fee761';
@@ -2687,8 +3057,13 @@ body.has-ant-buster-page {
       else if (canAfford) { costColor = '#fee761'; }
       else { costColor = '#ff7070'; }
       drawTextWithShadow('' + udef.cost, px + pw - 26, by + 11, costColor, 'bold 10px monospace', 'end');
-      // Stats line
-      drawTextWithShadow('DMG ' + udef.damage + '  RATE ' + udef.fireRate + '  RNG ' + udef.range, px + 10, by + 28, '#f5e6c8', 'bold 8px monospace', 'start');
+      // Stats line (a locked god-tier row says when it opens instead, below
+      // at full strength so it reads on touch too, where there is no hover).
+      var statFont = 'bold 8px monospace';
+      if (isPortrait()) { statFont = 'bold 10px monospace'; }
+      if (!isLocked) {
+        drawTextWithShadow('DMG ' + udef.damage + '  RATE ' + udef.fireRate + '  RNG ' + udef.range, px + 10, by + 28, '#f5e6c8', statFont, 'start');
+      }
 
       // Cream paper "?" hangtag at top-right — opens info for this upgrade.
       var ihtW = 16;
@@ -2716,28 +3091,15 @@ body.has-ant-buster-page {
 
       ctx.restore();
 
-      ui.upgradeRects[i2] = { x: px + 2, y: by, w: pw - 4, h: rh, toKind: uk, locked: isLocked };
-      ui.detailUpgradeInfoRects[i2] = { x: ihtX, y: ihtY, w: ihtW, h: ihtH, kind: uk };
-
       if (isLocked) {
-        if (ui.mouseX >= px + 2) {
-          if (ui.mouseX <= px + pw - 2) {
-            if (ui.mouseY >= by) {
-              if (ui.mouseY <= by + rh) {
-                hoveredLockedRect = { x: px + 2, y: by, w: pw - 4, h: rh };
-              }
-            }
-          }
-        }
+        drawTextWithShadow('UNLOCKS AFTER WAVE 15', px + 10, by + 28, '#fee761', statFont, 'start');
       }
-    }
 
-    // Locked god-tier tooltip
-    if (hoveredLockedRect) {
-      var tipX = hoveredLockedRect.x;
-      var tipY = hoveredLockedRect.y - 18;
-      drawWoodenTag(tipX, tipY, hoveredLockedRect.w, 16);
-      drawTextWithShadow('Unlocks at wave 15', tipX + hoveredLockedRect.w / 2, tipY + 8, '#fee761', 'bold 8px monospace', 'center');
+      ui.upgradeRects[i2] = { x: px + 2, y: by, w: pw - 4, h: rh, toKind: uk, locked: isLocked };
+      // The "?" tap area covers the row's full height at its right end, and
+      // is tested before the row itself, so a near miss opens the guide
+      // instead of buying the upgrade.
+      ui.detailUpgradeInfoRects[i2] = { x: ihtX - 6, y: by, w: (px + pw - 2) - (ihtX - 6), h: rh, kind: uk };
     }
   }
 
@@ -2756,7 +3118,7 @@ body.has-ant-buster-page {
 
   // Layer 1: blanket + grass tiles + cake plate background.
   function drawBackground() {
-    ctx.fillStyle = '#193c3e';
+    ctx.fillStyle = '#2e4a2a';                  // moss grass (was a cool teal)
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
     // Picnic blanket — alternating red/white check on top of the grass field.
@@ -2772,17 +3134,17 @@ body.has-ant-buster-page {
         ctx.fillRect(blanketX + bx, blanketY + by, checkSize, checkSize);
       }
     }
-
-    // Shop panel background (right column). Drawn early so HUD/shop content
-    // composites over it later in the layer list.
-    ctx.fillStyle = '#1a1c2c';
-    ctx.fillRect(PLAYFIELD_W, 0, SHOP_W, HEIGHT);
   }
 
   // Layer 2: cake (regenerated each frame because it depends on slice count).
+  // The plate dips a pixel for a moment when an ant grabs a slice.
   function drawCake() {
     var cakeSprite = makeCake(game.cake.slices);
-    ctx.drawImage(cakeSprite, game.cake.x - 24, game.cake.y - 24);
+    var dip = 0;
+    if (game.fxTime - game.cakeDipFx < 0.12) {
+      if (!prefersReducedMotion()) { dip = 1; }
+    }
+    ctx.drawImage(cakeSprite, game.cake.x - 24, game.cake.y - 24 + dip);
   }
 
   // Layer 3: anthill.
@@ -2807,143 +3169,169 @@ body.has-ant-buster-page {
 
   // Layer 5: range circle for the selected cannon. Drawn under ants and cannons
   // so it never obscures moving entities.
+  // Draws a circle as a 1.5 px Sticky Yellow line over a darker 3 px line, so
+  // it reads on both the red and the cream squares of the blanket.
+  function strokeRing(x, y, r, color, dashed) {
+    ctx.save();
+    if (dashed) { ctx.setLineDash([4, 4]); }
+    ctx.strokeStyle = 'rgba(42, 24, 16, 0.55)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();
+  }
+
   function drawRangeCircle(c) {
     var selKind = CANNON_KINDS[c.kind];
-    ctx.strokeStyle = 'rgba(255, 231, 97, 0.5)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.arc(c.x, c.y, selKind.range, 0, Math.PI * 2);
-    ctx.stroke();
+    // An aura cannon's ring already shows its reach.
+    if (!selKind.aura) { strokeRing(c.x, c.y, selKind.range, '#fee761', false); }
 
     // Hover-preview: when the player hovers an upgrade button, show the upgrade
-    // target's range as a dashed purple circle. Honest preview before spending gold.
+    // target's range as a dashed pink circle. Honest preview before spending gold.
     if (ui.hoveredUpgrade) {
       var udef = CANNON_KINDS[ui.hoveredUpgrade];
-      if (udef) {
-        ctx.strokeStyle = '#a040c0';
-        ctx.setLineDash([4, 4]);
-        ctx.beginPath();
-        ctx.arc(c.x, c.y, udef.range, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.setLineDash([]);
-      }
+      if (udef) { strokeRing(c.x, c.y, udef.range, '#ff77a8', true); }
     }
   }
 
-  // Layer 5c: persistent cannon auras (Blizzard, Plan 4 — MP-N). Translucent
-  // light-blue radial fill that visually communicates the aura range. Drawn
-  // under bases/turrets/ants so ants walking through don't get obscured by
-  // it. Renders only for cannons whose def carries the aura field.
+  // Layer 5c: persistent cannon auras (Blizzard, Plan 4 — MP-N). An icy ring
+  // plus a very faint warm wash marks the aura's reach without painting half
+  // the blanket blue. Drawn under bases/turrets/ants.
   function drawCannonAuras() {
     for (var i = 0; i < game.cannons.length; i++) {
       var c = game.cannons[i];
       var def = CANNON_KINDS[c.kind];
       if (!def.aura) { continue; }
-      var au = def.aura;
       ctx.save();
-      ctx.fillStyle = 'rgba(150, 200, 255, 0.15)';
-      ctx.strokeStyle = 'rgba(150, 200, 255, 0.4)';
-      ctx.lineWidth = 1;
+      ctx.fillStyle = 'rgba(255, 248, 232, 0.06)';
       ctx.beginPath();
-      ctx.arc(c.x, c.y, au.radius, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-      ctx.restore();
-    }
-  }
-
-  // Plan 4 — god-tier halo. Renders a soft pulsing gold disc under any cannon
-  // whose def.tier === 'god'. Drawn between auras and bases so the halo sits
-  // beneath the round base sprite without bleeding over the turret.
-  // Period ~2s (sin of game.time * PI), alpha range 0.30 to 0.60.
-  function drawGodTierHalos() {
-    for (var i = 0; i < game.cannons.length; i++) {
-      var c = game.cannons[i];
-      var def = CANNON_KINDS[c.kind];
-      if (def.tier !== 'god') { continue; }
-      var alpha = 0.45 + 0.15 * Math.sin(game.time * Math.PI);
-      ctx.save();
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = '#fee761';
-      ctx.beginPath();
-      ctx.arc(c.x, c.y, 22, 0, Math.PI * 2);
+      ctx.arc(c.x, c.y, def.aura.radius, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
+      strokeRing(c.x, c.y, def.aura.radius, 'rgba(200, 232, 255, 0.85)', true);
     }
   }
 
   // Layer 6: static cannon bases. Split from the turret pass so the round bases
-  // sit under ants while the turrets read on top.
+  // sit under ants while the turrets read on top. The base carries the tier rim
+  // and family ring (see makeCannonBase).
   function drawCannonBases() {
     for (var ci = 0; ci < game.cannons.length; ci++) {
       var c = game.cannons[ci];
-      ctx.drawImage(game.sprites.cannonBase, Math.round(c.x - 16), Math.round(c.y - 16));
+      ctx.drawImage(cannonBaseFor(c.kind), Math.round(c.x - 16), Math.round(c.y - 16));
     }
   }
 
   // Layer 7: ants, sorted top-down by y so a lower ant draws over a higher one.
   // The slice() copy keeps game.ants stable for indices/refs used elsewhere.
+  // Which status tints an ant when it has several: the one that matters most
+  // to the player first (a frozen ant is a shatter target, a stunned one is
+  // stuck), then the damage-over-time ones, then slow.
+  var STATUS_TINT_ORDER = ['freeze', 'stun', 'burn', 'poison', 'slow'];
+
   function drawAnts() {
     var sorted = game.ants.slice().sort(function(a, b) { return a.y - b.y; });
+    var calm = prefersReducedMotion();
     for (var i = 0; i < sorted.length; i++) {
       var a = sorted[i];
       var k = ANT_KINDS[a.kind];
       var sprite;
+      var left = Math.round(a.x - k.spriteW / 2);
+      var top = Math.round(a.y - k.spriteH / 2);
       if (a.dead) {
-        // Delivered ants vanish silently. Only killed ants splat. Nested ifs avoid
-        // the AND operator (gets HTML-encoded inside inline scripts in this theme).
-        if (a.deliveredAt === 0) {
-          if (a.kind === 'royal_guard') {
-            sprite = game.sprites.royalGuardSplat;
-          } else {
-            sprite = game.sprites.splat;
-          }
+        // Delivered ants vanish (the slice-lost ring at the anthill marks
+        // them). Killed ants splat: it lands 30 percent big, settles, and
+        // fades over its last 0.2 s. Nested ifs avoid the AND operator.
+        if (a.deliveredAt !== 0) { continue; }
+        if (a.kind === 'royal_guard') {
+          sprite = game.sprites.royalGuardSplat;
         } else {
-          continue;
+          sprite = game.sprites.splat;
         }
+        var age = game.fxTime - a.deathFx;
+        var s = 1;
+        if (age < 0.07) { s = 1.3; }
+        var sw = sprite.width * s;
+        var sh = sprite.height * s;
+        ctx.save();
+        if (age > 0.3) { ctx.globalAlpha = Math.max(0, 1 - (age - 0.3) / 0.2); }
+        ctx.drawImage(sprite, Math.round(a.x - sw / 2), Math.round(a.y - sh / 2), sw, sh);
+        ctx.restore();
+        continue;
+      }
+      var tint = null;
+      for (var ti = 0; ti < STATUS_TINT_ORDER.length; ti++) {
+        if (a.effects[STATUS_TINT_ORDER[ti]]) { tint = STATUS_TINT_ORDER[ti]; break; }
+      }
+      if (tint) {
+        sprite = tintedSprite(k.spriteKey, tint);
       } else {
         sprite = game.sprites[k.spriteKey];
       }
-      if (a.intangible) {
-        ctx.save();
-        ctx.globalAlpha = 0.3;
-        ctx.drawImage(sprite, Math.round(a.x - k.spriteW / 2), Math.round(a.y - k.spriteH / 2));
-        ctx.restore();
-      } else {
-        ctx.drawImage(sprite, Math.round(a.x - k.spriteW / 2), Math.round(a.y - k.spriteH / 2));
+      ctx.save();
+      if (a.intangible) { ctx.globalAlpha = 0.3; }
+      ctx.drawImage(sprite, left, top);
+      // Hit flash: a white silhouette for a few frames after a direct hit.
+      if (game.fxTime - a.hitFx < 0.05) {
+        ctx.globalAlpha = ctx.globalAlpha * 0.85;
+        ctx.drawImage(tintedSprite(k.spriteKey, 'white'), left, top);
       }
-      if (!a.dead) {
-        // Plan 4 — Biohazard infected outline. Bright cyan pulse around any
-        // ant whose poison effect carries damageAmp >= 1.25 (Biohazard's
-        // signature). Identifies the +25% priority target at a glance,
-        // distinct from poison's existing green tint. Sin-based alpha pulse
-        // (period ~0.6s); ~2px stroke width on top of the ant sprite.
-        if (a.effects) {
-          if (a.effects.poison) {
-            if (a.effects.poison.damageAmp) {
-              if (a.effects.poison.damageAmp >= 1.25) {
-                var biAlpha = 0.65 + 0.25 * Math.sin(game.time * 10);
-                ctx.save();
-                ctx.globalAlpha = biAlpha;
-                ctx.strokeStyle = '#00ffff';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.arc(a.x, a.y, 10, 0, Math.PI * 2);
-                ctx.stroke();
-                ctx.restore();
-              }
-            }
+      ctx.restore();
+      // Small status marks on top of the tint: an ember over a burning ant,
+      // a drip under a poisoned one, two stars over a stunned one.
+      var cx = Math.round(a.x);
+      if (a.effects.burn) {
+        var emberX = cx;
+        if (!calm) {
+          if (Math.floor(game.fxTime * 8) % 2 === 0) { emberX = cx - 1; }
+        }
+        ctx.fillStyle = '#ff9c44';
+        ctx.fillRect(emberX, top - 2, 2, 2);
+        ctx.fillStyle = '#fee761';
+        ctx.fillRect(emberX, top - 2, 1, 1);
+      }
+      if (a.effects.poison) {
+        ctx.fillStyle = '#7acc20';
+        ctx.fillRect(cx + 2, top + k.spriteH, 1, 2);
+      }
+      if (a.effects.stun) {
+        ctx.fillStyle = '#fee761';
+        ctx.fillRect(cx - 4, top - 2, 2, 2);
+        ctx.fillRect(cx + 2, top - 3, 2, 2);
+      }
+      // Plan 4 — Biohazard infected ring around any ant whose poison
+      // carries damageAmp >= 1.25: the +25 percent priority target. Bile
+      // green, and it only pulses when motion is welcome.
+      if (a.effects.poison) {
+        if (a.effects.poison.damageAmp) {
+          if (a.effects.poison.damageAmp >= 1.25) {
+            var biAlpha = 0.8;
+            if (!calm) { biAlpha = 0.65 + 0.25 * Math.sin(game.fxTime * 10); }
+            ctx.save();
+            ctx.globalAlpha = biAlpha;
+            ctx.strokeStyle = '#9be03a';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(a.x, a.y, k.spriteW / 2 + 2, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
           }
         }
-        if (a.carrying) {
-          // Crumb sub-step: tiny orange dot above the ant body.
-          ctx.fillStyle = '#feae34';
-          ctx.fillRect(Math.round(a.x - 3), Math.round(a.y - 12), 6, 4);
-          ctx.fillStyle = '#fee761';
-          ctx.fillRect(Math.round(a.x - 2), Math.round(a.y - 11), 4, 2);
-        }
-        drawAntHpBar(a);
       }
+      if (a.carrying) {
+        // The stolen slice rides on the ant's back.
+        ctx.fillStyle = '#2a1810';
+        ctx.fillRect(cx - 4, Math.round(a.y) - 2, 8, 6);
+        ctx.fillStyle = '#feae34';
+        ctx.fillRect(cx - 3, Math.round(a.y) - 1, 6, 4);
+        ctx.fillStyle = '#fee761';
+        ctx.fillRect(cx - 2, Math.round(a.y) - 1, 4, 1);
+      }
+      drawAntHpBar(a);
     }
   }
 
@@ -2975,16 +3363,18 @@ body.has-ant-buster-page {
       if (style.borderColor) { border = style.borderColor; }
     }
 
-    var bx = ant.x - bw / 2;
-    var by = ant.y - 14;
+    // Sits 4 px over the sprite's top edge (it used to float 14 px over the
+    // center, which drifted off small ants in a crowd), with a dark border so
+    // it stays tied to its ant.
+    var bx = Math.round(ant.x - bw / 2);
+    var by = Math.round(ant.y - k.spriteH / 2) - bh - 3;
     var pct = ant.hp / ant.maxHp;
     if (pct < 0) { pct = 0; }
 
-    if (border) {
-      ctx.fillStyle = border;
-      ctx.fillRect(bx - 1, by - 1, bw + 2, bh + 2);
-    }
-    ctx.fillStyle = '#262b44';
+    if (!border) { border = '#2a1810'; }
+    ctx.fillStyle = border;
+    ctx.fillRect(bx - 1, by - 1, bw + 2, bh + 2);
+    ctx.fillStyle = '#4a3220';
     ctx.fillRect(bx, by, bw, bh);
     ctx.fillStyle = color;
     ctx.fillRect(bx, by, bw * pct, bh);
@@ -3018,16 +3408,22 @@ body.has-ant-buster-page {
       } else {
         turretSprite = game.sprites.turrets[c.kind];
         if (!turretSprite) { turretSprite = game.sprites.turrets.howitzer; }
-        drawX = -10; drawY = -16;
+        // 20x20 turrets pivot on their breech; the larger ones are centered.
+        if (turretSprite.width === 20) {
+          drawX = -10; drawY = -16;
+        } else {
+          drawX = -turretSprite.width / 2; drawY = -turretSprite.height / 2;
+        }
       }
       ctx.drawImage(turretSprite, drawX, drawY);
       ctx.restore();
       // Plan 4 — muzzle flash. Renders for FLASH_DUR seconds after the cannon
       // fires; alpha fades linearly. flashScale on def scales the flash
-      // radius for god-tier rows (default 1.0, god-tier 1.7).
-      if (c.lastFiredAt) {
+      // radius for god-tier rows (default 1.0, god-tier 1.7). Timed on fxTime
+      // so it still shows at 3x.
+      if (c.flashFx) {
         var FLASH_DUR = 0.08;
-        var dtSinceFire = game.time - c.lastFiredAt;
+        var dtSinceFire = game.fxTime - c.flashFx;
         if (dtSinceFire >= 0) {
           if (dtSinceFire < FLASH_DUR) {
             var fAlpha = 1 - dtSinceFire / FLASH_DUR;
@@ -3054,7 +3450,7 @@ body.has-ant-buster-page {
       }
       if (c.disabled) {
         // Steady (no 3 Hz blink) when the visitor prefers reduced motion.
-        var sparkOn = Math.floor(game.time * 6) % 2 === 0;
+        var sparkOn = Math.floor(game.fxTime * 6) % 2 === 0;
         if (prefersReducedMotion()) { sparkOn = true; }
         if (sparkOn) {
           ctx.fillStyle = '#ff5040';
@@ -3091,8 +3487,25 @@ body.has-ant-buster-page {
       var pScale = p.visualScale ? p.visualScale : 1.0;
       var pSize = 4 * pScale;
       var pOff = pSize / 2;
-      ctx.drawImage(game.sprites.projectile, Math.round(p.x - pOff), Math.round(p.y - pOff + arcOffset), pSize, pSize);
+      ctx.drawImage(shotSpriteFor(p), Math.round(p.x - pOff), Math.round(p.y - pOff + arcOffset), pSize, pSize);
     }
+  }
+
+  // Which 4x4 shot sprite a projectile uses: rubber peas are pink, a shot
+  // that carries a status wears its status color, quick shots are brass
+  // tracers and everything else is an iron ball.
+  function shotSpriteFor(p) {
+    var shots = game.sprites.shots;
+    if (!p.sourceCannon) { return shots.heavy; }
+    var def = CANNON_KINDS[p.sourceCannon.kind];
+    if (def.family === 'rubber') { return shots.rubber; }
+    var st = p.statusOnHit;
+    if (st) {
+      if (Array.isArray(st)) { st = st[st.length - 1]; }
+      if (shots[st.kind]) { return shots[st.kind]; }
+    }
+    if (def.family === 'quick') { return shots.quick; }
+    return shots.heavy;
   }
 
   // Layer 9b: beam lines (Glacier). Thin icy line from a beam cannon to its
@@ -3147,17 +3560,20 @@ body.has-ant-buster-page {
   function drawLightningBolts() {
     for (var bi = 0; bi < game.lightningBolts.length; bi++) {
       var b = game.lightningBolts[bi];
-      var lifeRemaining = b.expiresAt - game.time;
+      var lifeRemaining = b.expiresAt - game.fxTime;
       var alpha = lifeRemaining / 0.15;
       if (alpha < 0) { alpha = 0; }
       if (alpha > 1) { alpha = 1; }
-      ctx.strokeStyle = 'rgba(180, 220, 255, ' + alpha + ')';
+      ctx.strokeStyle = 'rgba(255, 240, 176, ' + alpha + ')';
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(b.points[0].x, b.points[0].y);
+      // The jitter is the lightning feel; it holds still for reduced motion.
+      var jit = 6;
+      if (prefersReducedMotion()) { jit = 0; }
       for (var pi = 1; pi < b.points.length; pi++) {
-        var jx = b.points[pi].x + (Math.random() * 6 - 3);
-        var jy = b.points[pi].y + (Math.random() * 6 - 3);
+        var jx = b.points[pi].x + (Math.random() * jit - jit / 2);
+        var jy = b.points[pi].y + (Math.random() * jit - jit / 2);
         ctx.lineTo(jx, jy);
       }
       ctx.stroke();
@@ -3245,7 +3661,42 @@ body.has-ant-buster-page {
         ctx.stroke();
         ctx.restore();
       }
+      // A red ring that grows from a point: a slice grabbed off the cake
+      // (small) or carried into the anthill (big). ef.r is the final radius.
+      if (ef.kind === 'redRing') {
+        var gp = ef.t / ef.life;
+        ctx.save();
+        ctx.globalAlpha = 1 - gp;
+        ctx.strokeStyle = '#e43b44';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(ef.x, ef.y, 6 + gp * ef.r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
     }
+    drawPopups();
+  }
+
+  // Popups rise 10 px over 0.8 s and fade in their last 0.3 s. With reduced
+  // motion they stay put and just fade. Expired ones are dropped here.
+  function drawPopups() {
+    var LIFE = 0.8;
+    var kept = [];
+    var rise = !prefersReducedMotion();
+    for (var i = 0; i < game.popups.length; i++) {
+      var pp = game.popups[i];
+      var age = game.fxTime - pp.born;
+      if (age >= LIFE) { continue; }
+      kept.push(pp);
+      var py = pp.y;
+      if (rise) { py = py - (age / LIFE) * 10; }
+      ctx.save();
+      if (age > LIFE - 0.3) { ctx.globalAlpha = (LIFE - age) / 0.3; }
+      drawTextWithShadow(pp.text, Math.round(pp.x), Math.round(py), pp.color, 'bold 9px monospace', 'center');
+      ctx.restore();
+    }
+    game.popups = kept;
   }
 
   // Visual coherence pass — shared wooden chrome primitives.
@@ -3401,6 +3852,12 @@ body.has-ant-buster-page {
     var tagY = 1;
     var tagH = HUD_H - 2;
     var tagX = 4;
+    // Phones show the canvas at about 0.7 CSS px per game px, so the small
+    // caps labels go up to 10 px there (7 CSS px) instead of 8.
+    var labelFont = 'bold 8px monospace';
+    if (isPortrait()) { labelFont = 'bold 10px monospace'; }
+    ctx.font = labelFont;
+    var labelGap = ctx.measureText('WAVE').width + 8;
 
     // 1. Coin tag — 12x12 sprite + gold value. Set font BEFORE measuring so
     // the tag width tracks the actual rendered glyphs (otherwise we'd be
@@ -3413,11 +3870,22 @@ body.has-ant-buster-page {
     drawTextWithShadow(goldStr, tagX + 20, tagY + tagH / 2, '#fee761', 'bold 11px monospace', 'start');
     tagX = tagX + coinTagW + 4;
 
-    // 2. Cake tag — 12x12 cake-slice + warm gold value.
+    // 2. Cake tag — slices still yours (8 minus the ones carried home), so it
+    // only drops when a slice is really gone; one an ant is still carrying,
+    // or one lying on the blanket, can be won back. Flashes red when one
+    // reaches the anthill.
     ctx.font = 'bold 11px monospace';
-    var cakeStr = game.cake.slices + '/8';
+    var cakeStr = (8 - game.cake.lost) + '/8';
     var cakeTagW = 14 + ctx.measureText(cakeStr).width + 14;
     drawWoodenTag(tagX, tagY, cakeTagW, tagH);
+    var lostAge = game.fxTime - game.sliceLostFx;
+    if (lostAge < 0.8) {
+      ctx.save();
+      ctx.globalAlpha = 0.6 * (1 - lostAge / 0.8);
+      ctx.fillStyle = '#e43b44';
+      ctx.fillRect(tagX + 1, tagY + 1, cakeTagW - 2, tagH - 2);
+      ctx.restore();
+    }
     ctx.drawImage(game.sprites.cakeSlice, tagX + 4, tagY + 5);
     drawTextWithShadow(cakeStr, tagX + 20, tagY + tagH / 2, '#ffd86b', 'bold 11px monospace', 'start');
     tagX = tagX + cakeTagW + 4;
@@ -3425,33 +3893,40 @@ body.has-ant-buster-page {
     // 3. Wave tag — small caps "WAVE" + white value.
     ctx.font = 'bold 11px monospace';
     var waveStr = (game.waveIndex + 1) + '/' + WAVES.length;
-    var waveTagW = 28 + ctx.measureText(waveStr).width + 8;
+    var waveTagW = 5 + labelGap + ctx.measureText(waveStr).width + 8;
     drawWoodenTag(tagX, tagY, waveTagW, tagH);
-    drawTextWithShadow('WAVE', tagX + 5, tagY + tagH / 2, '#f5e6c8', 'bold 8px monospace', 'start');
-    drawTextWithShadow(waveStr, tagX + 28, tagY + tagH / 2, '#ffffff', 'bold 11px monospace', 'start');
+    drawTextWithShadow('WAVE', tagX + 5, tagY + tagH / 2, '#f5e6c8', labelFont, 'start');
+    drawTextWithShadow(waveStr, tagX + 5 + labelGap, tagY + tagH / 2, '#ffffff', 'bold 11px monospace', 'start');
     tagX = tagX + waveTagW + 4;
+
+    // Send Next is a fixed 90 px so the widgets beside it don't shift as the
+    // bonus counts down.
+    var btnW = 90;
 
     // 4. Prep tag — small caps "PREP" + light-green value, only during prep.
     if (game.waveState === 'prep') {
       ctx.font = 'bold 11px monospace';
       var prepStr = Math.ceil(game.prepRemaining) + 's';
-      var prepTagW = 26 + ctx.measureText(prepStr).width + 8;
+      var prepTagW = 5 + labelGap + ctx.measureText(prepStr).width + 8;
       drawWoodenTag(tagX, tagY, prepTagW, tagH);
-      drawTextWithShadow('PREP', tagX + 5, tagY + tagH / 2, '#f5e6c8', 'bold 8px monospace', 'start');
-      drawTextWithShadow(prepStr, tagX + 28, tagY + tagH / 2, '#c8f5a8', 'bold 11px monospace', 'start');
+      drawTextWithShadow('PREP', tagX + 5, tagY + tagH / 2, '#f5e6c8', labelFont, 'start');
+      drawTextWithShadow(prepStr, tagX + 5 + labelGap, tagY + tagH / 2, '#c8f5a8', 'bold 11px monospace', 'start');
 
-      // Send Next button — green wooden, right-edge.
-      var btnW = 64;
+      // Send Next button — green wooden, right-edge. The label shows the
+      // gold you get for skipping the rest of the wait.
       var btnH = HUD_H - 4;
       var btnX = hudRightEdge - btnW - 4;
       var btnY = 2;
       ui.sendNextRect = { x: btnX, y: btnY, w: btnW, h: btnH };
       drawWoodenButton(btnX, btnY, btnW, btnH, 'green');
+      var sendLabel = 'Send Next';
+      var sendBonus = sendNextBonus();
+      if (sendBonus > 0) { sendLabel = 'Send Next +' + sendBonus; }
       ctx.font = 'bold 10px monospace';
       ctx.fillStyle = '#1a1a0a';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('Send Next', btnX + btnW / 2, btnY + btnH / 2);
+      ctx.fillText(sendLabel, btnX + btnW / 2, btnY + btnH / 2);
       ctx.textAlign = 'start';
       ctx.textBaseline = 'alphabetic';
     } else {
@@ -3462,11 +3937,11 @@ body.has-ant-buster-page {
     // Wooden tag underneath each so they read as part of the HUD chrome on
     // the right edge. Pause and speed sit at fixed positions; Send Next
     // appears to their right during prep.
-    ui.pauseRect.x = hudRightEdge - 122;
+    ui.pauseRect.x = hudRightEdge - btnW - 58;
     ui.pauseRect.y = 2;
     ui.pauseRect.w = 22;
     ui.pauseRect.h = HUD_H - 4;
-    ui.speedRect.x = hudRightEdge - 96;
+    ui.speedRect.x = hudRightEdge - btnW - 32;
     ui.speedRect.y = 2;
     ui.speedRect.w = 22;
     ui.speedRect.h = HUD_H - 4;
@@ -3522,7 +3997,7 @@ body.has-ant-buster-page {
     if (ui.pointerType === 'touch') { ghostDy = -30; }
     if (ui.pointerType === 'pen') { ghostDy = -30; }
     ctx.globalAlpha = 0.6;
-    ctx.drawImage(game.sprites.cannonBase, Math.round(ui.mouseX - 16), Math.round(ui.mouseY - 16 + ghostDy));
+    ctx.drawImage(cannonBaseFor(ui.armedKind), Math.round(ui.mouseX - 16), Math.round(ui.mouseY - 16 + ghostDy));
     ctx.drawImage(dragTurret, Math.round(ui.mouseX - 10), Math.round(ui.mouseY - 16 + ghostDy));
     // Invalid-spot red tint over the ghost (Task 7). Drawn on top with a
     // multiply-ish blend by stacking a translucent red rect; cheap and
@@ -3539,35 +4014,111 @@ body.has-ant-buster-page {
     ctx.stroke();
   }
 
-  // Wave-intro banner — slides in (alpha ramp), dwells, fades out over the
-  // last 0.5s. Lives in the overlay layer so it can ride above gameplay.
+  // Banner — fades in, dwells, fades out over the last 0.5s, then the next
+  // queued one takes its place. Lives in the overlay layer so it can ride
+  // above gameplay. Sized to its text; a sub line adds a smaller second row.
   function drawBanner() {
-    if (!game.banner.active) { return; }
-    var bt = game.time - game.banner.startedAt;
-    if (bt > game.banner.duration) {
-      game.banner.active = false;
-      return;
+    var b = game.banner;
+    if (b.active) {
+      if (game.fxTime - b.startedAt > b.duration) { b.active = false; }
     }
+    if (!b.active) {
+      if (game.bannerQueue.length === 0) { return; }
+      var next = game.bannerQueue.shift();
+      b.active = true;
+      b.text = next.text;
+      b.sub = next.sub;
+      b.style = next.style;
+      b.duration = next.duration;
+      b.startedAt = game.fxTime;
+    }
+    var bt = game.fxTime - b.startedAt;
     var alpha = 1;
     if (bt < 0.4) { alpha = bt / 0.4; }
-    if (bt > game.banner.duration - 0.5) { alpha = (game.banner.duration - bt) / 0.5; }
+    if (bt > b.duration - 0.5) { alpha = (b.duration - bt) / 0.5; }
+    var subFont = 'bold 10px monospace';
+    ctx.font = 'bold 12px monospace';
+    var w = ctx.measureText(b.text).width + 32;
+    if (b.sub) {
+      ctx.font = subFont;
+      var subW = ctx.measureText(b.sub).width + 32;
+      if (subW > w) { w = subW; }
+    }
+    if (w < 140) { w = 140; }
+    var h = 26;
+    if (b.sub) { h = 42; }
+    var x = Math.round(PLAYFIELD_W / 2 - w / 2);
+    var y = HUD_H + 8;
+    var color = '#fee761';
     ctx.save();
     ctx.globalAlpha = alpha;
-    var w = 140;
-    var h = 26;
-    var x = PLAYFIELD_W / 2 - w / 2;
-    var y = HUD_H + 8;
-    if (game.banner.isBoss) {
+    if (b.style === 'boss') {
       drawWoodenSignWine(x, y, w, h);
-      drawTextWithShadow(game.banner.text, x + w / 2, y + h / 2, '#ffaaaa', 'bold 12px monospace', 'center');
-    } else if (game.banner.isFinal) {
+      color = '#ffaaaa';
+    } else if (b.style === 'final') {
       drawWoodenSignWine(x, y, w, h);
-      drawTextWithShadow(game.banner.text, x + w / 2, y + h / 2, '#fee761', 'bold 12px monospace', 'center');
     } else {
       drawWoodenSign(x, y, w, h);
-      drawTextWithShadow(game.banner.text, x + w / 2, y + h / 2, '#fee761', 'bold 12px monospace', 'center');
+      if (b.style === 'gold') {
+        ctx.strokeStyle = '#fee761';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x + 4, y + 4, w - 8, h - 8);
+      }
+    }
+    if (b.sub) {
+      drawTextWithShadow(b.text, x + w / 2, y + 15, color, 'bold 12px monospace', 'center');
+      drawTextWithShadow(b.sub, x + w / 2, y + 29, '#f5e6c8', subFont, 'center');
+    } else {
+      drawTextWithShadow(b.text, x + w / 2, y + h / 2, color, 'bold 12px monospace', 'center');
     }
     ctx.restore();
+  }
+
+  // During prep, the banner slot shows what the next wave brings: one small
+  // sprite and a count per ant kind, on a wine sign for boss waves. Drawn
+  // only while no banner is up, so it never covers one.
+  function drawWavePreview() {
+    if (game.state !== 'playing') { return; }
+    if (game.waveState !== 'prep') { return; }
+    if (game.banner.active) { return; }
+    if (game.bannerQueue.length > 0) { return; }
+    var wv = WAVES[game.waveIndex];
+    var kinds = [];
+    var counts = {};
+    for (var i = 0; i < wv.spawns.length; i++) {
+      var t = wv.spawns[i].type;
+      if (!counts[t]) { counts[t] = 0; kinds.push(t); }
+      counts[t] = counts[t] + wv.spawns[i].count;
+    }
+    var labelFont = 'bold 9px monospace';
+    if (isPortrait()) { labelFont = 'bold 10px monospace'; }
+    ctx.font = labelFont;
+    var label = 'NEXT';
+    if (wv.isBoss) { label = 'BOSS NEXT'; }
+    var labelW = ctx.measureText(label).width;
+    ctx.font = 'bold 10px monospace';
+    var w = 12 + labelW + 6;
+    for (var j = 0; j < kinds.length; j++) {
+      w = w + 21 + ctx.measureText('x' + counts[kinds[j]]).width + 8;
+    }
+    w = w + 4;
+    var h = 22;
+    var x = Math.round(PLAYFIELD_W / 2 - w / 2);
+    var y = HUD_H + 6;
+    if (wv.isBoss) { drawWoodenSignWine(x, y, w, h); } else { drawWoodenTag(x, y, w, h); }
+    drawTextWithShadow(label, x + 10, y + h / 2, '#c8a868', labelFont, 'start');
+    var cx = x + 12 + labelW + 6;
+    for (var k = 0; k < kinds.length; k++) {
+      var spr = game.sprites[ANT_KINDS[kinds[k]].spriteKey];
+      ctx.fillStyle = '#2a1810';
+      ctx.fillRect(cx - 1, y + h / 2 - 9, 18, 18);
+      ctx.fillStyle = '#e8d4a8';
+      ctx.fillRect(cx, y + h / 2 - 8, 16, 16);              // cream tile so dark ants read on the wood
+      ctx.drawImage(spr, cx, y + h / 2 - 8, 16, 16);
+      drawTextWithShadow('x' + counts[kinds[k]], cx + 21, y + h / 2, '#f5e6c8', 'bold 10px monospace', 'start');
+      ctx.font = 'bold 10px monospace';
+      cx = cx + 21 + ctx.measureText('x' + counts[kinds[k]]).width + 8;
+    }
   }
 
   // drawSplashAnt: renders the existing worker-ant sprite at one of three
@@ -3686,22 +4237,32 @@ body.has-ant-buster-page {
     } else {
       ui.idleContinueRect = null;
     }
+
+    // Best run so far, under the sign, so a second run has something to beat.
+    var best = readBestWave();
+    if (best > 0) {
+      drawTextWithShadow('YOUR BEST: ' + bestWaveLabel(best).toUpperCase(), WIDTH / 2, signY + signH + 16, '#fee761', 'bold 10px monospace', 'center');
+    }
   }
 
   function drawTutorialHint() {
     if (game.state !== 'playing') { return; }
     if (ui.hintDone) { return; }
+    if (game.paused) { return; }
+    // Only during play; the win and lose signs sit where the card would.
+    if (game.waveState === 'won') { return; }
+    if (game.waveState === 'lost') { return; }
     // The hint stays until the first cannon lands, then retires for the run.
     if (game.cannons.length !== 0) { ui.hintDone = true; return; }
     // Step aside while a cannon is being dragged or armed so it never covers the drop spot.
     if (ui.armedKind !== null) { return; }
     var hintLine1 = 'Drag a cannon from the shop';
-    var hintLine2 = 'onto the picnic blanket to start';
+    var hintLine2 = 'onto the blanket. The ants are coming.';
     if (usesTouch()) {
       hintLine1 = 'Tap a cannon in the shop,';
-      hintLine2 = 'then tap the blanket to place it';
+      hintLine2 = 'then tap the blanket to place it.';
     }
-    var w = 220;
+    var w = 252;
     var h = 64;
     var x = 60;
     var y = 110;
@@ -3745,7 +4306,9 @@ body.has-ant-buster-page {
 
     drawTextWithShadow('HOLD UP', PLAYFIELD_W / 2, signY + 22, '#c8a868', 'bold 10px monospace', 'center');
     drawTextWithShadow('PAUSED', PLAYFIELD_W / 2, signY + 52, '#fee761', 'bold 24px monospace', 'center');
-    drawTextWithShadow('Space to resume', PLAYFIELD_W / 2, signY + 78, '#f5e6c8', 'bold 10px monospace', 'center');
+    var resumeHint = 'Space or click to resume';
+    if (usesTouch()) { resumeHint = 'Tap to resume'; }
+    drawTextWithShadow(resumeHint, PLAYFIELD_W / 2, signY + 78, '#f5e6c8', 'bold 10px monospace', 'center');
 
     var rrW = 100;
     var rrH = 22;
@@ -3782,7 +4345,18 @@ body.has-ant-buster-page {
     ctx.fillRect(x + w - 9, y + 6, 2, 2);
   }
 
+  // How far into the result screen we are, as a 0..1 fade. The win sign
+  // waits a second first so the King's burst plays out on the open board.
+  function resultFade(delay) {
+    var t = (game.fxTime - game.endedFx - delay) / 0.5;
+    if (t < 0) { return 0; }
+    if (t > 1) { return 1; }
+    return t;
+  }
+
   function drawLoseOverlay() {
+    ctx.save();
+    ctx.globalAlpha = resultFade(0);
     // Saturated red dim
     ctx.fillStyle = 'rgba(80, 10, 10, 0.55)';
     ctx.fillRect(0, HUD_H, PLAYFIELD_W, PLAYFIELD_H);
@@ -3804,21 +4378,34 @@ body.has-ant-buster-page {
     // Title with subtle horizontal jitter (1 px @ ~3 Hz), skipped for reduced motion.
     var jx = 0;
     if (!prefersReducedMotion()) {
-      var p = (game.time * 6) % 2;
+      var p = (game.fxTime * 6) % 2;
       if (p < 1) { jx = 1; } else { jx = -1; }
     }
     ctx.save();
     ctx.shadowBlur = 14;
     ctx.shadowColor = 'rgba(255, 80, 80, 0.5)';
-    drawTextWithShadow('THE ANTS WIN', PLAYFIELD_W / 2 + jx, signY + 70, '#ff5050', 'bold 32px monospace', 'center');
+    drawTextWithShadow('THE ANTS WIN', PLAYFIELD_W / 2 + jx, signY + 60, '#ff5050', 'bold 32px monospace', 'center');
     ctx.restore();
 
+    // How far this run got, and the best so far.
+    var reached = game.waveIndex + 1;
+    var lostLine = 'You made it to wave ' + reached;
+    var best = readBestWave();
+    if (best > reached) { lostLine = lostLine + '. Best: ' + bestWaveLabel(best); }
+    drawTextWithShadow(lostLine, PLAYFIELD_W / 2, signY + 90, '#f5e6c8', 'bold 10px monospace', 'center');
+
     if (restartReady()) {
-      drawTextWithShadow('Click to try again', PLAYFIELD_W / 2, signY + signH - 22, '#ffaaaa', 'bold 10px monospace', 'center');
+      var againHint = 'Click to try again';
+      if (usesTouch()) { againHint = 'Tap to try again'; }
+      drawTextWithShadow(againHint, PLAYFIELD_W / 2, signY + signH - 18, '#ffaaaa', 'bold 10px monospace', 'center');
     }
+    ctx.restore();
   }
 
   function drawWinOverlay() {
+    var calm = prefersReducedMotion();
+    ctx.save();
+    ctx.globalAlpha = resultFade(1);
     // Warm radial dim — golden glow at the center, deeper dim at the edges.
     var cxR = PLAYFIELD_W / 2;
     var cyR = HUD_H + PLAYFIELD_H / 2;
@@ -3828,12 +4415,19 @@ body.has-ant-buster-page {
     ctx.fillStyle = grd;
     ctx.fillRect(0, HUD_H, PLAYFIELD_W, PLAYFIELD_H);
 
-    // Confetti — eight pieces drifting down, looping every 4 s.
-    var t = (game.time % 4) / 4;
+    // Confetti — eight pieces drifting down the playfield, looping every 4 s,
+    // clipped so none of it falls over the HUD or the shop. Held still for
+    // reduced motion.
+    var t = (game.fxTime % 4) / 4;
+    if (calm) { t = 0.3; }
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, HUD_H, PLAYFIELD_W, PLAYFIELD_H);
+    ctx.clip();
     for (var i = 0; i < WIN_CONFETTI_LAYOUT.length; i++) {
       var p = WIN_CONFETTI_LAYOUT[i];
       var phase = (t + i / 8) % 1;
-      var py = phase * (HEIGHT + 20) - 10;
+      var py = HUD_H + phase * (PLAYFIELD_H + 20) - 10;
       ctx.save();
       ctx.translate(p.x, py);
       ctx.rotate(phase * Math.PI * 4);
@@ -3841,6 +4435,7 @@ body.has-ant-buster-page {
       ctx.fillRect(-3, -4, 6, 8);
       ctx.restore();
     }
+    ctx.restore();
 
     // Sign
     var signW = 280;
@@ -3858,9 +4453,10 @@ body.has-ant-buster-page {
       ctx.fillStyle = '#f5e6c8';
       ctx.fillRect(cx + 1, candleY + 1, 2, 12);
       // Flame flicker — uses time so all three flicker together. Cheap.
-      var flick = (game.time * 4 + c) % 1;
+      var flick = (game.fxTime * 4 + c) % 1;
       var flameH;
       if (flick < 0.5) { flameH = 5; } else { flameH = 6; }
+      if (calm) { flameH = 6; }
       ctx.fillStyle = '#ff9c44';
       ctx.fillRect(cx + 1, candleY - flameH, 2, flameH);
       ctx.fillStyle = '#fee761';
@@ -3872,11 +4468,17 @@ body.has-ant-buster-page {
     ctx.save();
     ctx.shadowBlur = 18;
     ctx.shadowColor = 'rgba(254, 231, 97, 0.6)';
-    drawTextWithShadow('VICTORY', PLAYFIELD_W / 2, signY + 70, '#fff8a0', 'bold 40px monospace', 'center');
+    drawTextWithShadow('VICTORY', PLAYFIELD_W / 2, signY + 62, '#fff8a0', 'bold 40px monospace', 'center');
     ctx.restore();
+    var kept = 8 - game.cake.lost;
+    var keptLine = kept + ' of 8 slices kept, ' + game.kills + ' ants squashed';
+    drawTextWithShadow(keptLine, PLAYFIELD_W / 2, signY + 92, '#f5e6c8', 'bold 10px monospace', 'center');
     if (restartReady()) {
-      drawTextWithShadow('Click to restart', PLAYFIELD_W / 2, signY + signH - 22, '#f5e6c8', 'bold 10px monospace', 'center');
+      var restartHint = 'Click to play again';
+      if (usesTouch()) { restartHint = 'Tap to play again'; }
+      drawTextWithShadow(restartHint, PLAYFIELD_W / 2, signY + signH - 18, '#c8a868', 'bold 10px monospace', 'center');
     }
+    ctx.restore();
   }
 
   // Layer 13: overlays — drag preview, wave banner, then full-screen modals.
@@ -3885,6 +4487,7 @@ body.has-ant-buster-page {
   function drawOverlays() {
     drawDragPreview();
     drawBanner();
+    drawWavePreview();
     drawTutorialHint();
     if (game.paused) {
       drawPauseOverlay();
@@ -3922,8 +4525,7 @@ body.has-ant-buster-page {
     if (ui.selectedCannon) { drawRangeCircle(ui.selectedCannon); } // 5. range circle
     drawConeDots();            // 5b. cone-DoT overlay (under bases/ants)
     drawCannonAuras();         // 5c. persistent radial auras (Blizzard MP-N)
-    drawGodTierHalos();        // 5d. pulsing gold halo under T3 god-tier turrets
-    drawCannonBases();         // 6. static cannon bases (under turrets/ants)
+    drawCannonBases();         // 6. static cannon bases (tier rim + family ring)
     drawAnts();                // 7. ants, sorted top-down by y
     drawShatterParticles();    // 7b. cyan shatter particles (Plan 6 Brittle)
     drawTargetingOverlay();    // 7c. selected-cannon target line + reticle (Plan 7)
@@ -3935,7 +4537,11 @@ body.has-ant-buster-page {
     drawHud();                 // 11. HUD strip
     if (ui.shopMode === 'info') {   // 12. info panel takes precedence (recursive drill-down)
       drawShopBackground();
-      drawTextWithShadow('CANNONS', PLAYFIELD_W + SHOP_W / 2, 14, '#c8a868', 'bold 9px monospace', 'center');
+      // The sidebar header only exists in landscape; in portrait this x is
+      // off the right edge and clipped to "CAN".
+      if (!isPortrait()) {
+        drawTextWithShadow('CANNONS', PLAYFIELD_W + SHOP_W / 2, 14, '#c8a868', 'bold 9px monospace', 'center');
+      }
       drawShopInfoPanel();
     } else if (ui.selectedCannon) {   // shop / tower-detail panel
       drawTowerPanel(ui.selectedCannon);
@@ -3977,6 +4583,7 @@ body.has-ant-buster-page {
   var ANT_KINDS = {
     worker: {
       name: 'Worker',
+      blurb: 'Grabs a slice and runs it home.',   // first-sighting banner line
       hp: 10,
       speed: 30,
       carryingSpeedMult: 1.5,    // Plan 3 Task 33 — flee-sprint at 1.5x; spec acceptance item 21 covers worker-turned-carrier too
@@ -3996,6 +4603,7 @@ body.has-ant-buster-page {
     },
     royal_guard: {
       name: 'Royal Guard',
+      blurb: 'Escorts the King. Reapers cannot one-shot it.',
       hp: 20,
       speed: 35,
       carryingSpeedMult: 1.5,
@@ -4014,6 +4622,7 @@ body.has-ant-buster-page {
     },
     carrier: {
       name: 'Carrier',
+      blurb: 'Tougher than a worker, same taste for cake.',
       hp: 15,
       speed: 30,
       carryingSpeedMult: 1.5,    // Plan 3 Task 33 — flees at 45 px/s once a slice is grabbed (panic sprint)
@@ -4022,7 +4631,7 @@ body.has-ant-buster-page {
       jitterRate: 4.0,
       wanderFreqMin: 0.3, wanderFreqMax: 0.7,
       wanderAmpMin: 0.9, wanderAmpMax: 1.5,
-      spriteKey: 'worker',
+      spriteKey: 'carrier',
       spriteW: 16, spriteH: 16,
       slowResist: 0,
       damageMult: 1,
@@ -4033,6 +4642,7 @@ body.has-ant-buster-page {
     },
     scout: {
       name: 'Scout',
+      blurb: 'Fast and flimsy. Easy to miss.',
       hp: 6,
       speed: 60,
       carryingSpeedMult: 1.5,    // Plan 3 Task 33 — flee-sprint at 1.5x; spec acceptance item 21 covers worker-turned-carrier too
@@ -4052,6 +4662,7 @@ body.has-ant-buster-page {
     },
     soldier: {
       name: 'Soldier',
+      blurb: 'Armored. Small hits do half damage.',
       hp: 40,
       speed: 20,
       gold: 5,
@@ -4071,6 +4682,7 @@ body.has-ant-buster-page {
     },
     tank: {
       name: 'Tank',
+      blurb: 'Armored, and too heavy to carry cake.',
       hp: 150,
       speed: 12,
       gold: 10,
@@ -4090,6 +4702,7 @@ body.has-ant-buster-page {
     },
     splitter: {
       name: 'Splitter',
+      blurb: 'Breaks into two little ants when it dies.',
       hp: 25,
       speed: 25,
       gold: 4,
@@ -4133,6 +4746,7 @@ body.has-ant-buster-page {
     },
     phase: {
       name: 'Phase',
+      blurb: 'Fades out now and then. Shots pass through.',
       hp: 20,
       speed: 35,
       gold: 6,
@@ -4154,6 +4768,7 @@ body.has-ant-buster-page {
     },
     bomber: {
       name: 'Bomber',
+      blurb: 'When it pops, nearby cannons stall for 5 seconds.',
       hp: 30,
       speed: 40,
       gold: 7,
@@ -4187,6 +4802,7 @@ body.has-ant-buster-page {
     },
     queen: {
       name: 'Queen',
+      blurb: 'Big and tough. Six workers pop out when she falls.',
       hp: 400,
       speed: 15,
       gold: 50,
@@ -4216,6 +4832,7 @@ body.has-ant-buster-page {
     // the cake — only the drip-workers can finish a run.
     king: {
       name: 'King',
+      blurb: 'Armored. His guards keep coming until he falls.',
       hp: 3000,
       speed: 10,
       gold: 200,
@@ -4359,22 +4976,24 @@ body.has-ant-buster-page {
     if (def.onApply) { def.onApply(ant, magnitude); }
   }
 
-  // Plan 6: Shatter particle factory. Called by the Brittle predicate inside
-  // applyDamage when a heavy-family direct hit lands on a frozen ant. Pushes
-  // 10 cyan particles onto game.shatterParticles with random radial velocity.
-  // The particles tick on real-time dt (see updateShatterParticles below) so
-  // the visual stays readable at any game speed.
-  function spawnShatterParticles(x, y) {
-    for (var i = 0; i < 10; i++) {
+  // Particle burst factory. Plan 6's Brittle shatter (cyan), plus the King's
+  // death burst (gold and red). Pushes `count` particles onto
+  // game.shatterParticles with random radial velocity. The particles tick on
+  // real-time dt (see updateShatterParticles below) so the visual stays
+  // readable at any game speed.
+  function spawnBurst(x, y, color, count, speed, lifetime, size) {
+    for (var i = 0; i < count; i++) {
       var angle = Math.random() * Math.PI * 2;
-      var speed = 80 + Math.random() * 60;
+      var v = speed * (0.6 + Math.random() * 0.4);
       game.shatterParticles.push({
         x: x,
         y: y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
+        vx: Math.cos(angle) * v,
+        vy: Math.sin(angle) * v,
         age: 0,
-        lifetime: 0.18
+        lifetime: lifetime,
+        color: color,
+        size: size
       });
     }
   }
@@ -4403,12 +5022,12 @@ body.has-ant-buster-page {
   function drawShatterParticles() {
     if (game.shatterParticles.length === 0) { return; }
     ctx.save();
-    ctx.fillStyle = '#88f0ff';
     for (var i = 0; i < game.shatterParticles.length; i++) {
       var p = game.shatterParticles[i];
       var alpha = 1 - (p.age / p.lifetime);
       ctx.globalAlpha = alpha;
-      ctx.fillRect(Math.round(p.x) - 1, Math.round(p.y) - 1, 2, 2);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(Math.round(p.x) - 1, Math.round(p.y) - 1, p.size, p.size);
     }
     ctx.restore();
   }
@@ -4462,8 +5081,9 @@ body.has-ant-buster-page {
       speed: k.speed,
       heading: (Math.random() * 2 - 1) * 0.5,   // radians; small random offset from east
       dead: false,
-      deathTime: 0,
-      deliveredAt: 0,                            // future tasks read this; unused today
+      deathFx: 0,                                // fxTime of death; the splat plays out from here
+      hitFx: -10,                                // fxTime of the last direct hit (white flash)
+      deliveredAt: 0,                            // non-zero once carried home; drawAnts skips the splat
       carrying: false,
       wanderPhase: Math.random() * Math.PI * 2,
       wanderFreq: k.wanderFreqMin + Math.random() * (k.wanderFreqMax - k.wanderFreqMin),
@@ -4478,6 +5098,13 @@ body.has-ant-buster-page {
     };
     game.ants.push(ant);
     if (k.onSpawn) { k.onSpawn(ant); }
+    // First time this run a kind shows up, introduce it with a banner.
+    if (k.blurb) {
+      if (!game.seenKinds[kindKey]) {
+        game.seenKinds[kindKey] = true;
+        showBanner('NEW ANT: ' + k.name.toUpperCase(), 'wood', k.blurb);
+      }
+    }
     return ant;
   }
 
@@ -4532,10 +5159,7 @@ body.has-ant-buster-page {
   }
 
   function updateAnt(ant, dt) {
-    if (ant.dead) {
-      ant.deathTime += dt;
-      return;
-    }
+    if (ant.dead) { return; }
     var targetX;
     var targetY;
     if (ant.carrying) {
@@ -4706,7 +5330,12 @@ body.has-ant-buster-page {
           game.cake.lost += 1;
           a.dead = true;
           a.deliveredAt = game.time;   // mark delivery so drawAnts skips the splat sprite
-          a.deathTime = 0;             // pruneAnts drops this on the next frame
+          a.deathFx = game.fxTime;
+          // Make the loss visible: a red ring at the anthill, a callout, and
+          // the HUD cake tag flashes (drawHud reads sliceLostFx).
+          game.sliceLostFx = game.fxTime;
+          game.effects.push({ kind: 'redRing', x: a.x, y: a.y, t: 0, life: 0.6, r: 30 });
+          addPopup(a.x + 20, a.y - 18, 'SLICE LOST', '#ff8a8a');
           if (game.cake.lost >= 8) {
             endRun('lost');
           }
@@ -4745,6 +5374,9 @@ body.has-ant-buster-page {
             game.cake.slices -= 1;
             a.carrying = true;
             a.heading = angleTowards(a.x, a.y, a.spawnOrigin.x, a.spawnOrigin.y);
+            // A slice coming off the cake: small red ring and a plate dip.
+            game.cakeDipFx = game.fxTime;
+            game.effects.push({ kind: 'redRing', x: game.cake.x, y: game.cake.y, t: 0, life: 0.35, r: 18 });
           }
         }
       }
@@ -4755,9 +5387,10 @@ body.has-ant-buster-page {
     var kept = [];
     for (var i = 0; i < game.ants.length; i++) {
       var a = game.ants[i];
+      // Dead ants stay for 0.5 s on the effects clock so the splat can play.
       if (!a.dead) {
         kept.push(a);
-      } else if (a.deathTime < 0.5) {
+      } else if (game.fxTime - a.deathFx < 0.5) {
         kept.push(a);
       }
     }
@@ -4790,9 +5423,9 @@ body.has-ant-buster-page {
   var CANNON_KINDS = {
     howitzer: {
       name: 'Howitzer',
-      description: 'Slow, hard-hitting single shot. The foundation of the heavy line.',
+      description: 'Slow, heavy single shot. Shatters slowed or frozen ants.',
       cost: 50,
-      damage: 5,
+      damage: 8,
       fireRate: 0.6,         // shots per second
       range: 110,
       projectileSpeed: 200,
@@ -4802,7 +5435,7 @@ body.has-ant-buster-page {
     },
     siege: {
       name: 'Siege',
-      description: 'Harder hit, longer reach. Same slow rhythm as the Howitzer.',
+      description: 'Much harder hits. Same slow rhythm as the Howitzer.',
       cost: 50,
       damage: 12,
       fireRate: 0.6,
@@ -4814,6 +5447,7 @@ body.has-ant-buster-page {
     },
     railgun: {
       name: 'Railgun',
+      description: 'Pierces a whole line of ants. Ignores armor, too.',
       cost: 90,
       damage: 25,
       fireRate: 0.6,
@@ -4827,7 +5461,7 @@ body.has-ant-buster-page {
     },
     mortar: {
       name: 'Mortar',
-      description: 'Lobs a shell that splashes on impact. Hits clusters.',
+      description: 'Lobs a shell that splashes. Good for clusters.',
       cost: 60,
       damage: 8,
       fireRate: 0.5,
@@ -4841,6 +5475,7 @@ body.has-ant-buster-page {
     },
     patriot: {
       name: 'Patriot',
+      description: 'Homing missile, small blast. Long range, never misses.',
       cost: 110,
       damage: 20,
       fireRate: 0.5,
@@ -4854,6 +5489,7 @@ body.has-ant-buster-page {
     },
     demolisher: {
       name: 'Demolisher',
+      description: 'One huge, slow shot. Punches through armor.',
       cost: 110,
       damage: 60,
       fireRate: 0.25,
@@ -4866,6 +5502,7 @@ body.has-ant-buster-page {
     },
     hellfire: {
       name: 'Hellfire',
+      description: 'Big lobbed shell, wide splash. Fires from far away.',
       cost: 90,
       damage: 15,
       fireRate: 0.4,
@@ -4879,7 +5516,7 @@ body.has-ant-buster-page {
     },
     discus: {
       name: 'Discus',
-      description: 'Bouncing disc. Hits the same ant up to three times.',
+      description: 'Disc flies out and comes back. Hits on both trips.',
       cost: 60,
       damage: 4,
       fireRate: 0.4,
@@ -4892,6 +5529,7 @@ body.has-ant-buster-page {
     },
     ricochet: {
       name: 'Ricochet',
+      description: 'Longer-range disc. Pierces an extra ant on the way back.',
       cost: 90,
       damage: 8,
       fireRate: 0.4,
@@ -4905,6 +5543,7 @@ body.has-ant-buster-page {
     },
     shockwave: {
       name: 'Shockwave',
+      description: 'Slow blast with a huge splash. Shakes the whole blanket.',
       cost: 110,
       damage: 50,
       fireRate: 0.15,
@@ -4918,7 +5557,7 @@ body.has-ant-buster-page {
     },
     repeater: {
       name: 'Repeater',
-      description: 'Light, fast pellets. Trades damage per shot for fire rate.',
+      description: 'Light, fast pellets. Good early, weak on armor.',
       cost: 50,
       damage: 1,
       fireRate: 4,
@@ -4930,7 +5569,7 @@ body.has-ant-buster-page {
     },
     autocannon: {
       name: 'Auto-Cannon',
-      description: 'Higher fire rate than the Repeater. Sustained pressure.',
+      description: 'Faster, harder pellets. Keeps up steady pressure.',
       cost: 50,
       damage: 2,
       fireRate: 6,
@@ -4942,6 +5581,7 @@ body.has-ant-buster-page {
     },
     marksman: {
       name: 'Marksman',
+      description: 'Long-range shot. Extra damage on unhurt ants.',
       cost: 70,
       damage: 8,
       fireRate: 0.6,
@@ -4957,6 +5597,7 @@ body.has-ant-buster-page {
     },
     spotter: {
       name: 'Spotter',
+      description: 'Marks its target. Every cannon nearby focuses on it.',
       cost: 60,
       damage: 3,
       fireRate: 2,
@@ -4969,7 +5610,7 @@ body.has-ant-buster-page {
     },
     vulcan: {
       name: 'Vulcan',
-      description: 'Spins up to a punishing fire rate. Pays off on long lanes.',
+      description: 'Rotary gun. Spins up to a silly fire rate.',
       cost: 80,
       damage: 3,
       fireRate: 9,
@@ -4982,7 +5623,7 @@ body.has-ant-buster-page {
     },
     plasma_torch: {
       name: 'Plasma Torch',
-      description: 'Cone of plasma that burns over time. Soft on armor.',
+      description: 'Short flame cone. Burns everything in front of it.',
       cost: 90,
       damage: 0,                 // cone-DoT cannons don't fire projectiles
       fireRate: 0,
@@ -5000,7 +5641,7 @@ body.has-ant-buster-page {
     },
     sharpshooter: {
       name: 'Sharpshooter',
-      description: 'Long-range precision shot. Picks off targets at the back.',
+      description: 'Very long range. Extra damage on unhurt ants.',
       cost: 100,
       damage: 25,
       fireRate: 0.5,
@@ -5020,6 +5661,7 @@ body.has-ant-buster-page {
     },
     lance: {
       name: 'Lance',
+      description: 'Steady beam that never misses. Long reach.',
       cost: 110,
       damage: 0,                 // beam cannons deal damage via beam.tickDamage
       fireRate: 0,
@@ -5037,6 +5679,7 @@ body.has-ant-buster-page {
     },
     phantom: {
       name: 'Phantom',
+      description: 'Huge range, slow shots. Double damage on Queens.',
       cost: 110,
       damage: 40,
       fireRate: 0.3,
@@ -5054,6 +5697,7 @@ body.has-ant-buster-page {
     },
     tesla: {
       name: 'Tesla',
+      description: 'Chain lightning. Jumps to three more ants.',
       cost: 100,
       damage: 10,
       fireRate: 1,
@@ -5066,7 +5710,7 @@ body.has-ant-buster-page {
     },
     twingun: {
       name: 'Twin Gun',
-      description: 'Two barrels firing alternately. Each hit can apply a status effect.',
+      description: 'Two barrels side by side. Cheap, steady chip damage.',
       cost: 75,
       damage: 2,
       fireRate: 1,
@@ -5079,13 +5723,13 @@ body.has-ant-buster-page {
     },
     triple_threat: {
       name: 'Triple Threat',
-      description: 'Three barrels, three status hits per volley.',
+      description: 'Three barrels in a fan. Good for crowds.',
       cost: 70,
       damage: 2,
       fireRate: 1,
       range: 110,
       projectileSpeed: 240,
-      family: 'double',
+      family: 'status',
       tier: 'mid',
       barrels: 3,
       spread: 0.10,          // ~5.7 deg per step — wider than Twin Gun's default
@@ -5093,12 +5737,13 @@ body.has-ant-buster-page {
     },
     buckshot: {
       name: 'Buckshot',
+      description: 'Five-pellet spread. Brutal up close.',
       cost: 90,
       damage: 2,
       fireRate: 0.8,
       range: 90,
       projectileSpeed: 220,
-      family: 'double',
+      family: 'status',
       tier: 'final',
       pellets: 5,
       coneDeg: 50,           // 50 deg fan, ~12.5 deg between pellets
@@ -5106,37 +5751,39 @@ body.has-ant-buster-page {
     },
     minigun: {
       name: 'Minigun',
+      description: 'Sprays tiny pellets very fast. Loves a crowd.',
       cost: 110,
       damage: 1,
       fireRate: 14,
       range: 120,
       projectileSpeed: 320,
-      family: 'double',
+      family: 'status',
       tier: 'final',
       aimJitter: 0.05,       // ~2.9 deg max per-shot angular wobble
       upgradesTo: ['phalanx']
     },
     toxin: {
       name: 'Toxin',
-      description: 'Inflicts poison. Damage continues after the shot lands.',
+      description: 'Poisons ants. Damage keeps ticking after the hit.',
       cost: 75,
       damage: 1,
       fireRate: 1,
       range: 100,
       projectileSpeed: 200,
-      family: 'double',
+      family: 'status',
       tier: 'mid',
       statusOnHit: { kind: 'poison', magnitude: 1, duration: 5 },   // 1 dps over 5s = 5 dmg DoT
       upgradesTo: ['plague', 'sonic_pulse']
     },
     cryo: {
       name: 'Cryo',
+      description: 'Freezes ants for a moment. Frozen ants take extra damage.',
       cost: 110,
       damage: 3,
       fireRate: 1,
       range: 110,
       projectileSpeed: 220,
-      family: 'double',
+      family: 'status',
       tier: 'final',
       // damageAmp tag on the freeze effect: subsequent damage from any cannon
       // lands +50% while the 0.8s freeze is active. See Step 2 stamp pattern
@@ -5146,12 +5793,13 @@ body.has-ant-buster-page {
     },
     plague: {
       name: 'Plague',
+      description: 'Stronger poison. Spreads to nearby ants when one dies.',
       cost: 90,
       damage: 2,
       fireRate: 1,
       range: 110,
       projectileSpeed: 200,
-      family: 'double',
+      family: 'status',
       tier: 'final',
       // spreads tag on the poison effect: when the carrier dies, the same
       // poison (matched magnitude + remaining duration) propagates to live
@@ -5162,12 +5810,13 @@ body.has-ant-buster-page {
     },
     sonic_pulse: {
       name: 'Sonic Pulse',
+      description: 'Sonic blast. Knocks ants back and stuns them.',
       cost: 90,
       damage: 5,
       fireRate: 0.8,
       range: 100,
       projectileSpeed: 240,
-      family: 'double',
+      family: 'status',
       tier: 'final',
       // statusOnHit array: knockback (one-shot 30 px backward shove) +
       // stun (0.4s zero-movement). Array form is handled by the
@@ -5180,7 +5829,7 @@ body.has-ant-buster-page {
     },
     frost: {
       name: 'Frost',
-      description: 'Slows ants on hit. Pairs with heavy cannons for shatter combos.',
+      description: 'Slows ants. Heavy cannons shatter slowed ants.',
       cost: 75,
       damage: 1,
       fireRate: 1.5,
@@ -5193,6 +5842,7 @@ body.has-ant-buster-page {
     },
     glacier: {
       name: 'Glacier',
+      description: 'Icy beam. Keeps one ant slowed to a crawl.',
       cost: 90,
       damage: 1,
       fireRate: 0,
@@ -5214,7 +5864,7 @@ body.has-ant-buster-page {
     // family stays "casual / approachable" by design.
     pink_pea: {
       name: 'Pink Pea',
-      description: 'Bouncy rubber pellet. Casual cousin of the heavy line, no gating.',
+      description: 'Bouncy rubber pea. Hops to a second ant after a hit.',
       cost: 50,
       damage: 5,
       fireRate: 0.8,
@@ -5230,7 +5880,7 @@ body.has-ant-buster-page {
     },
     bouncy_bubble: {
       name: 'Bouncy Bubble',
-      description: 'Round bouncing pellet. Wider knockback than Pink Pea.',
+      description: 'Bigger bounce. Hops between three ants.',
       cost: 80,
       damage: 12,
       fireRate: 0.6,
@@ -5246,7 +5896,7 @@ body.has-ant-buster-page {
     },
     rubber_wrecking_ball: {
       name: 'Rubber Wrecking Ball',
-      description: 'Heavy bouncing payload. Big knockback, slow recovery.',
+      description: 'Huge rubber ball. Knocks the first ant back, then bounces.',
       cost: 120,
       damage: 30,
       fireRate: 0.4,
@@ -5272,6 +5922,7 @@ body.has-ant-buster-page {
     // drawGodTierHalos when tier === 'god'.
     particle_cannon: {
       name: 'Particle Cannon',
+      description: 'Railgun\'s big brother. Pierces everything, ignores armor.',
       cost: 250,
       damage: 60,
       fireRate: 0.6,
@@ -5286,6 +5937,7 @@ body.has-ant-buster-page {
     },
     annihilator: {
       name: 'Annihilator',
+      description: 'Enormous shot plus a splash. Armor doesn\'t matter.',
       cost: 280,
       damage: 120,
       fireRate: 0.3,
@@ -5302,6 +5954,7 @@ body.has-ant-buster-page {
     },
     saturation: {
       name: 'Saturation',
+      description: 'Three shells per volley. Rains splash over a wide area.',
       cost: 260,
       damage: 25,
       fireRate: 0.5,
@@ -5321,6 +5974,7 @@ body.has-ant-buster-page {
     },
     cluster_strike: {
       name: 'Cluster Strike',
+      description: 'Missile that splits into three. Each one homes in.',
       cost: 280,
       damage: 30,
       fireRate: 0.5,
@@ -5340,6 +5994,7 @@ body.has-ant-buster-page {
     },
     vortex: {
       name: 'Vortex',
+      description: 'Two discs at once. Each pierces on the way back.',
       cost: 250,
       damage: 12,
       fireRate: 0.4,
@@ -5355,6 +6010,7 @@ body.has-ant-buster-page {
     },
     earthshaker: {
       name: 'Earthshaker',
+      description: 'Giant slow slam. Stuns every ant in a wide ring.',
       cost: 300,
       damage: 80,
       fireRate: 0.12,
@@ -5378,6 +6034,7 @@ body.has-ant-buster-page {
     // ride on top of any sourceCannon-keyed multiplier in applyDamage.
     hailstorm: {
       name: 'Hailstorm',
+      description: 'Vulcan\'s big brother. Spins up to a storm of shots.',
       cost: 250,
       damage: 4,
       fireRate: 14,
@@ -5392,6 +6049,7 @@ body.has-ant-buster-page {
     },
     phoenix: {
       name: 'Phoenix',
+      description: 'Wide flame cone. Burning ants spread fire as it fades.',
       cost: 260,
       damage: 0,
       fireRate: 0,
@@ -5412,6 +6070,7 @@ body.has-ant-buster-page {
     },
     reaper: {
       name: 'Reaper',
+      description: 'One-shots Workers and Scouts. Huge range.',
       cost: 280,
       damage: 60,
       fireRate: 0.5,
@@ -5432,6 +6091,7 @@ body.has-ant-buster-page {
     },
     solar_lance: {
       name: 'Solar Lance',
+      description: 'Golden beam, pierces two ants. Very long reach.',
       cost: 290,
       damage: 0,
       fireRate: 0,
@@ -5453,6 +6113,7 @@ body.has-ant-buster-page {
     },
     hawkeye: {
       name: 'Hawkeye',
+      description: 'Shoots across the whole blanket. Triple damage on Queens.',
       cost: 300,
       damage: 80,
       fireRate: 0.3,
@@ -5472,6 +6133,7 @@ body.has-ant-buster-page {
     },
     stormcaller: {
       name: 'Stormcaller',
+      description: 'Bigger chain lightning. Six jumps at full damage.',
       cost: 280,
       damage: 18,
       fireRate: 1,
@@ -5487,19 +6149,20 @@ body.has-ant-buster-page {
       upgradesTo: []
     },
 
-    // === DOUBLE FAMILY GOD-TIER (Plan 4 — Bucket E, Task 21) ===
-    // Six T3 rows for the Double / status lineage. Blizzard uses MP-N (Task
+    // === STATUS FAMILY GOD-TIER (Plan 4 — Bucket E, Task 21) ===
+    // Six T3 rows for the status lineage. Blizzard uses MP-N (Task
     // 11). Absolute Zero and Tempest carry splashStatus: true with
     // splashMult: 0 — the splash exists only to broadcast the status, not to
     // damage. Biohazard's spreadRadius reads in poison.onTargetDeath (below).
     scattergun: {
       name: 'Scattergun',
+      description: 'Eight-pellet blast. Each pellet pierces one ant.',
       cost: 260,
       damage: 3,
       fireRate: 0.7,
       range: 100,
       projectileSpeed: 320,
-      family: 'double',
+      family: 'status',
       tier: 'god',
       pellets: 8,
       // coneDeg is the existing pellet-fan field; spreadDeg is the spec name.
@@ -5510,12 +6173,13 @@ body.has-ant-buster-page {
     },
     phalanx: {
       name: 'Phalanx',
+      description: 'Three barrels, absurd fire rate. Shreds swarms.',
       cost: 280,
       damage: 2,
       fireRate: 18,
       range: 140,
       projectileSpeed: 380,
-      family: 'double',
+      family: 'status',
       tier: 'god',
       barrels: 3,
       aimJitter: 0,
@@ -5524,12 +6188,13 @@ body.has-ant-buster-page {
     },
     blizzard: {
       name: 'Blizzard',
+      description: 'Snowstorm aura. Slows and hurts every ant nearby.',
       cost: 260,
       damage: 0,
       fireRate: 0,
       range: 150,
       projectileSpeed: 0,
-      family: 'double',
+      family: 'status',
       tier: 'god',
       // MP-N persistent radial aura (Task 11). damagePerTick is per render
       // tick at 60fps; updateCannons scales by dt. slow expires after
@@ -5548,12 +6213,13 @@ body.has-ant-buster-page {
     },
     absolute_zero: {
       name: 'Absolute Zero',
+      description: 'Freezing blast. Freezes every ant in a small ring.',
       cost: 280,
       damage: 6,
       fireRate: 1,
       range: 130,
       projectileSpeed: 280,
-      family: 'double',
+      family: 'status',
       tier: 'god',
       // 1.5x damageAmp on the freeze tag — Plan 3's freeze.damageAmp pathway
       // multiplies subsequent damage during the freeze window.
@@ -5567,12 +6233,13 @@ body.has-ant-buster-page {
     },
     biohazard: {
       name: 'Biohazard',
+      description: 'Toxic shot. Poisoned ants take extra damage and spread it.',
       cost: 260,
       damage: 4,
       fireRate: 1,
       range: 130,
       projectileSpeed: 260,
-      family: 'double',
+      family: 'status',
       tier: 'god',
       // 30 dmg over 8s = 3.75 dps. spreadRadius 50 propagates on death;
       // damageAmp 1.25 makes the infected ant take 25% extra from any damage
@@ -5583,12 +6250,13 @@ body.has-ant-buster-page {
     },
     tempest: {
       name: 'Tempest',
+      description: 'Storm shot. Knocks back and stuns a whole cluster.',
       cost: 260,
       damage: 10,
       fireRate: 0.7,
       range: 110,
       projectileSpeed: 280,
-      family: 'double',
+      family: 'status',
       tier: 'god',
       // splash for splashStatus broadcast only — splashMult 0, no damage.
       splash: { radius: 50, falloff: 0, splashMult: 0 },
@@ -5717,19 +6385,20 @@ body.has-ant-buster-page {
         if (cur.ant.hp > best.ant.hp) { best = cur; }
       } else if (mode === 'weakest') {
         if (cur.ant.hp < best.ant.hp) { best = cur; }
+      } else if (mode === 'carrying') {
+        // Ants running off with a slice first, then the closest of those.
+        if (cur.ant.carrying !== best.ant.carrying) {
+          if (cur.ant.carrying) { best = cur; }
+        } else if (cur.distSq < best.distSq) {
+          best = cur;
+        }
       } else {
-        // first or last: compare squared distance to cake.
+        // first: the ant closest to the cake.
         var ccdx = cur.ant.x - game.cake.x;
         var ccdy = cur.ant.y - game.cake.y;
         var bcdx = best.ant.x - game.cake.x;
         var bcdy = best.ant.y - game.cake.y;
-        var cToCake = ccdx * ccdx + ccdy * ccdy;
-        var bToCake = bcdx * bcdx + bcdy * bcdy;
-        if (mode === 'first') {
-          if (cToCake < bToCake) { best = cur; }
-        } else if (mode === 'last') {
-          if (cToCake > bToCake) { best = cur; }
-        }
+        if (ccdx * ccdx + ccdy * ccdy < bcdx * bcdx + bcdy * bcdy) { best = cur; }
       }
     }
     return best.ant;
@@ -5963,7 +6632,7 @@ body.has-ant-buster-page {
     // Plan 4 — stamp the fire moment so drawCannonTurrets can render a brief
     // muzzle flash for ~0.08s after firing. flashScale on def scales the
     // flash radius (god-tier rows set 1.7 to read as a heavier discharge).
-    cannon.lastFiredAt = game.time;
+    cannon.flashFx = game.fxTime;
 
     // Tesla arc-jump primitive (Plan 3 — MP-J). Resolves the primary hit and
     // up to def.teslaArc.jumps chain hits in one tick: each jump finds the
@@ -6005,7 +6674,7 @@ body.has-ant-buster-page {
         current = nearest;
       }
 
-      var bolt = { points: [{ x: cannon.x, y: cannon.y }], expiresAt: game.time + 0.15 };
+      var bolt = { points: [{ x: cannon.x, y: cannon.y }], expiresAt: game.fxTime + 0.15 };
       for (var hi = 0; hi < hits.length; hi++) {
         bolt.points.push({ x: hits[hi].x, y: hits[hi].y });
       }
@@ -6225,21 +6894,30 @@ body.has-ant-buster-page {
         if (pamp) { dmg = dmg * pamp; }
       }
     }
-    // Plan 6: Brittle synergy. Heavy-family direct hit on a frozen ant deals
-    // 2x damage on top of any existing freeze.damageAmp (composes multiplicatively),
-    // consumes the freeze status, and spawns a cyan shatter visual. Direct hit
-    // only — splash, beam, aura, and chain-link calls leave isDirectHit unset.
-    // Nested ifs to dodge the inline-script and-operator encoding gotcha.
+    // Plan 6: Brittle synergy. A heavy-family direct hit on a frozen ant deals
+    // 2x damage on top of any existing freeze.damageAmp (composes
+    // multiplicatively) and consumes the freeze. On a slowed ant (Frost,
+    // Glacier, Blizzard) it deals 1.5x and consumes the slow, so the Frost
+    // plus heavy combo the field guide describes works from the early game
+    // instead of needing a Cryo. Either way a shatter burst and a callout
+    // show it happened. Direct hit only — splash, beam, aura, and chain-link
+    // calls leave isDirectHit unset. Nested ifs to dodge the inline-script
+    // and-operator encoding gotcha.
     if (isDirectHit) {
+      if (game.fxTime - ant.hitFx > 0.1) { ant.hitFx = game.fxTime; }
       if (sourceCannon) {
         var sk2 = CANNON_KINDS[sourceCannon.kind];
         if (sk2.family === 'heavy') {
-          if (ant.effects) {
-            if (ant.effects.freeze) {
-              dmg = dmg * 2;
-              delete ant.effects.freeze;
-              spawnShatterParticles(ant.x, ant.y);
-            }
+          if (ant.effects.freeze) {
+            dmg = dmg * 2;
+            delete ant.effects.freeze;
+            spawnBurst(ant.x, ant.y, '#c8f0ff', 12, 140, 0.25, 2);
+            addPopup(ant.x, ant.y - 12, 'SHATTER x2', '#c8f0ff');
+          } else if (ant.effects.slow) {
+            dmg = dmg * 1.5;
+            delete ant.effects.slow;
+            spawnBurst(ant.x, ant.y, '#a4d4ff', 8, 110, 0.2, 2);
+            addPopup(ant.x, ant.y - 12, 'SHATTER', '#c8f0ff');
           }
         }
       }
@@ -6275,9 +6953,29 @@ body.has-ant-buster-page {
   function killAnt(ant, killer) {
     if (ant.dead) { return; }
     ant.dead = true;
-    ant.deathTime = 0;
+    ant.deathFx = game.fxTime;
     var k = ANT_KINDS[ant.kind];
     game.gold = game.gold + k.gold;
+    game.kills = game.kills + 1;
+    addPopup(ant.x, ant.y - 10, '+' + k.gold, '#fee761');
+    // The King gets a real send-off: a gold and red burst, a shake, and a
+    // banner, before his last guards are mopped up and the Victory sign fades in.
+    if (ant.kind === 'king') {
+      spawnBurst(ant.x, ant.y, '#fee761', 40, 160, 0.9, 3);
+      spawnBurst(ant.x, ant.y, '#e43b44', 20, 110, 0.7, 3);
+      spawnBurst(ant.x, ant.y, '#fff8e8', 12, 70, 0.5, 2);
+      game.screenshake.magnitude = 6;
+      game.screenshake.decay = 6;
+      game.bannerQueue = [];
+      game.banner.active = false;
+      var guardsLeft = 0;
+      for (var gi = 0; gi < game.ants.length; gi++) {
+        if (!game.ants[gi].dead) { guardsLeft = guardsLeft + 1; }
+      }
+      var kingSub = '';
+      if (guardsLeft > 0) { kingSub = 'Clear out the last of his guards.'; }
+      showBanner('THE KING IS DOWN', 'gold', kingSub);
+    }
     // Task 23: dropping a slice on the ground (replaces Plan 1's instant cake.slices++ snap-back).
     // The slice sits where the ant fell. Another canPickup ant can claim it (ground pickup branch
     // in checkPickupsAndDeliveries); after 8s of nobody claiming, it returns to the cake without
@@ -6869,6 +7567,19 @@ body.has-ant-buster-page {
     return DEFAULT_PREP_REGULAR;
   }
 
+  // Gold for skipping the rest of the prep wait: half the seconds left. The
+  // Send Next label shows it so people know skipping pays.
+  function sendNextBonus() {
+    return Math.floor(game.prepRemaining / 2);
+  }
+
+  function sendNext() {
+    var bonus = sendNextBonus();
+    game.gold = game.gold + bonus;
+    game.prepRemaining = 0;
+    if (bonus > 0) { addPopup(34, HUD_H + 10, '+' + bonus, '#fee761'); }
+  }
+
   // Spawner state machine: prep -> wave -> (prep | won) ; lost is set by the
   // cake-loss path. Reads game.time for spawn scheduling.
   function updateWaveState(dt) {
@@ -6881,7 +7592,10 @@ body.has-ant-buster-page {
         game.spawner.nextSpawnAt = game.time + WAVES[game.waveIndex].spawns[0].delay;
         game.spawner.queueDone = false;
         var wv = WAVES[game.waveIndex];
-        showBanner(wv.bannerText, !!wv.isBoss, wv.number === 25);
+        var waveStyle = 'wood';
+        if (wv.isBoss) { waveStyle = 'boss'; }
+        if (wv.number === 25) { waveStyle = 'final'; }
+        showBanner(wv.bannerText, waveStyle);
       }
       return;
     }
@@ -6922,13 +7636,17 @@ body.has-ant-buster-page {
           // intentional rebalance to make the 21-cannon roster's choices feel
           // meaningful in the late-game economy).
           game.gold = game.gold + (20 + wv.number);
-          // Plan 4: wave-15 unlocks god-tier upgrades. Fires once per run.
-          // Stamps godTierUnlockPulseStart so the selected-tower panel can
-          // render a 0.5s golden halo on T2 finals' god-tier buttons.
+          if (game.waveIndex + 1 < WAVES.length) {
+            showBanner('WAVE ' + wv.number + ' CLEARED', 'wood', '+' + (20 + wv.number) + ' gold bonus');
+          }
+          // Plan 4: wave-15 unlocks god-tier upgrades. Fires once per run,
+          // with its own gold banner. Stamps godTierUnlockPulseStart so the
+          // selected-tower panel also flashes its god-tier rows.
           if (wv.number === 15) {
             if (!game.godTierUnlocked) {
               game.godTierUnlocked = true;
-              game.godTierUnlockPulseStart = game.time;
+              game.godTierUnlockPulseStart = game.fxTime;
+              showBanner('GOD-TIER CANNONS UNLOCKED', 'gold', 'Every final cannon can upgrade once more.');
             }
           }
           if (game.waveIndex + 1 >= WAVES.length) {
@@ -6954,7 +7672,13 @@ body.has-ant-buster-page {
     game.cannons = [];
     game.projectiles = [];
     game.effects = [];
-    game.lightningBolts = [];   // bolts expire against game.time, which just reset to 0
+    game.lightningBolts = [];
+    game.popups = [];
+    game.bannerQueue = [];
+    game.seenKinds = {};
+    game.kills = 0;
+    game.sliceLostFx = -10;
+    game.cakeDipFx = -10;
     game.accumulator = 0;
     game.spawnJobs = [];
     game.slices = [];
@@ -6969,17 +7693,12 @@ body.has-ant-buster-page {
     game.spawner.nextSpawnAt = 0;
     game.spawner.queueDone = false;
     game.banner.active = false;
-    game.banner.text = '';
-    game.banner.startedAt = 0;
-    game.banner.duration = 2.5;
-    game.banner.isBoss = false;
-    game.banner.isFinal = false;
     game.screenshake.magnitude = 0;
     game.screenshake.decay = 0;
     game.paused = false;
     game.speed = 1;
     game.godTierUnlocked = false;
-    game.godTierUnlockPulseStart = 0;
+    game.godTierUnlockPulseStart = -10;
     ui.sendNextRect = null;
     ui.restartRunRect = null;
     ui.activePointerId = null;
@@ -7009,13 +7728,36 @@ body.has-ant-buster-page {
   function endRun(result) {
     game.waveState = result;
     ui.endedAt = performance.now();
+    game.endedFx = game.fxTime;
+    if (result === 'won') { recordBestWave(WAVES.length + 1); } else { recordBestWave(game.waveIndex + 1); }
     clearSave();
   }
 
   // True once the win/lose screen has been up long enough that a tap on it was
-  // meant, not a panicked one from the last second of play.
+  // meant, not a panicked one from the last second of play. The win sign
+  // fades in a second later (resultFade), so it waits a second longer.
   function restartReady() {
-    return performance.now() - ui.endedAt >= 1000;
+    var wait = 1000;
+    if (game.waveState === 'won') { wait = 2000; }
+    return performance.now() - ui.endedAt >= wait;
+  }
+
+  // Best run, kept in its own key so it outlives the run save. Stored as the
+  // highest wave reached; WAVES.length + 1 means all 25 were cleared.
+  var BEST_KEY = 'dariobimbi-ant-buster-best';
+  function readBestWave() {
+    var n = 0;
+    try { n = parseInt(window.localStorage.getItem(BEST_KEY), 10); } catch (err) { n = 0; }
+    if (!isCount(n, WAVES.length + 1)) { return 0; }
+    return n;
+  }
+  function recordBestWave(n) {
+    if (n <= readBestWave()) { return; }
+    try { window.localStorage.setItem(BEST_KEY, String(n)); } catch (err) { }
+  }
+  function bestWaveLabel(n) {
+    if (n > WAVES.length) { return 'all ' + WAVES.length + ' waves'; }
+    return 'wave ' + n;
   }
 
   // === SAVE AND RESUME ===
@@ -7027,7 +7769,9 @@ body.has-ant-buster-page {
   // is derived and rebuilt on restore.
   var SAVE_KEY = 'dariobimbi-ant-buster-run';
   var SAVE_VERSION = 1;
-  var SAVE_TARGETING = ['closest', 'first', 'last', 'strongest', 'weakest'];
+  // 'last' was replaced by 'carrying'; older saves that still say 'last'
+  // validate and are switched over in continueRun.
+  var SAVE_TARGETING = ['closest', 'first', 'carrying', 'strongest', 'weakest', 'last'];
 
   function clearSave() {
     ui.savedRun = null;
@@ -7035,6 +7779,7 @@ body.has-ant-buster-page {
   }
 
   function saveRun() {
+    recordBestWave(game.waveIndex + 1);
     var cannons = [];
     for (var i = 0; i < game.cannons.length; i++) {
       var c = game.cannons[i];
@@ -7140,6 +7885,12 @@ body.has-ant-buster-page {
     game.cake.slices = s.cakeSlices;
     game.cake.lost = s.cakeLost;
     game.godTierUnlocked = s.godTierUnlocked;
+    // Ants from waves already beaten were introduced in the earlier session.
+    for (var w = 0; w < s.waveIndex; w++) {
+      for (var g = 0; g < WAVES[w].spawns.length; g++) {
+        game.seenKinds[WAVES[w].spawns[g].type] = true;
+      }
+    }
     for (var i = 0; i < s.cannons.length; i++) {
       var sc = s.cannons[i];
       if (!canPlaceCannon(sc.x, sc.y)) {
@@ -7153,6 +7904,7 @@ body.has-ant-buster-page {
         applyUpgrade(c, sc.kindHistory[u]);
       }
       c.targetingMode = sc.targetingMode;
+      if (c.targetingMode === 'last') { c.targetingMode = 'carrying'; }
       c.kills = sc.kills;
       game.cannons.push(c);
     }
@@ -7339,6 +8091,16 @@ body.has-ant-buster-page {
       if (ui.restartRunRect) {
         if (inRect(p, ui.restartRunRect)) { resetGame(); return; }
       }
+      // Any other tap on the paused playfield resumes, so phone players
+      // aren't left looking for a Space key. The gesture ends here, so its
+      // pointerup can't also place an armed cannon on the spot.
+      if (inPlayfield(p)) {
+        game.paused = false;
+        canvas.releasePointerCapture(evt.pointerId);
+        ui.activePointerId = null;
+        ui.pointerType = null;
+        return;
+      }
     }
     // HUD pause + speed widgets — always live during 'playing' state. Tested before
     // any other hit-test in case the playfield ever extends under them.
@@ -7378,19 +8140,7 @@ body.has-ant-buster-page {
     }
     if (game.waveState === 'prep') {
       if (ui.sendNextRect) {
-        var r = ui.sendNextRect;
-        if (p.x >= r.x) {
-          if (p.x <= r.x + r.w) {
-            if (p.y >= r.y) {
-              if (p.y <= r.y + r.h) {
-                var bonus = Math.floor(game.prepRemaining / 2);
-                game.gold = game.gold + bonus;
-                game.prepRemaining = 0;
-                return;
-              }
-            }
-          }
-        }
+        if (inRect(p, ui.sendNextRect)) { sendNext(); return; }
       }
     }
     if (game.state === 'playing') {
@@ -7445,7 +8195,7 @@ body.has-ant-buster-page {
           // Plan 7 — Targeting row hit-test. Mode strings are positional and
           // must match the order in drawTargetingRow's `modes` array.
           if (ui.targetingRects) {
-            var tModes = ['closest', 'first', 'last', 'strongest', 'weakest'];
+            var tModes = ['closest', 'first', 'carrying', 'strongest', 'weakest'];
             for (var ti = 0; ti < ui.targetingRects.length; ti++) {
               var trec = ui.targetingRects[ti];
               if (trec) {
@@ -7745,12 +8495,11 @@ body.has-ant-buster-page {
     updateAnts(dt);
     updateCannons(dt);
     updateProjectiles(dt);
-    updateEffects(dt);
-    // Tesla lightning bolts decay against game.time (already advanced above).
+    // Tesla lightning bolts decay against fxTime, like the other effects.
     // Each bolt lives ~0.15s; expired bolts are filtered out before render.
     var keptBolts = [];
     for (var lbi = 0; lbi < game.lightningBolts.length; lbi++) {
-      if (game.lightningBolts[lbi].expiresAt > game.time) {
+      if (game.lightningBolts[lbi].expiresAt > game.fxTime) {
         keptBolts.push(game.lightningBolts[lbi]);
       }
     }
@@ -7768,7 +8517,12 @@ body.has-ant-buster-page {
     if (elapsed > 0.25) { elapsed = 0.25; }   // clamp to avoid spiral-of-death
     // Screenshake and shatter particles run on the wall clock, outside
     // update(), so they settle on the pause, win and lose screens and last the
-    // same time at any speed.
+    // same time at any speed. fxTime and the transient effects do the same,
+    // but hold still while paused.
+    if (!game.paused) {
+      game.fxTime = game.fxTime + elapsed;
+      updateEffects(elapsed);
+    }
     if (game.screenshake.magnitude > 0) {
       game.screenshake.magnitude = game.screenshake.magnitude - game.screenshake.decay * elapsed;
       if (game.screenshake.magnitude < 0) { game.screenshake.magnitude = 0; }
@@ -7832,11 +8586,7 @@ body.has-ant-buster-page {
     if (e.key === 'Enter') {
       e.preventDefault();
       if (e.repeat) { return; }
-      if (game.waveState === 'prep') {
-        var bonus = Math.floor(game.prepRemaining / 2);
-        game.gold = game.gold + bonus;
-        game.prepRemaining = 0;
-      }
+      if (game.waveState === 'prep') { sendNext(); }
       return;
     }
     if (e.key === ' ') {
