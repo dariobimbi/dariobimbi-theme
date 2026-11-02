@@ -7,56 +7,18 @@
  */
 
 /*
- * Curated lineup. `path` is resolved against the published page tree below —
- * anything not published is silently dropped. `preview` keys the CSS-only
- * motion sketch in the card's top strip (see style.css "Demo card previews").
+ * Curated lineup. `path` is resolved against the published page tree below,
+ * and anything not published is silently dropped. Tag, blurb, tech, badge and
+ * the `preview` key for the CSS-only motion sketch come from
+ * dariobimbi_demo_meta() in inc/demos.php (shared with the demos hub); only the
+ * title, accent and call to action are specific to this showcase.
  * Accents stick to the warm palette (pink / yellow); no cool blue/purple here.
  */
 $picks = [
-    [
-        'path'    => 'demos/ant-buster',
-        'title'   => 'Ant Buster',
-        'accent'  => 'yellow',
-        'preview' => 'ant-buster',
-        'tag'     => 'Game · Canvas',
-        'badge'   => 'Playable',
-        'blurb'   => 'A tower-defense game about keeping ants off the picnic. Place your cannons, survive the waves, and try not to let them carry the food away. It is the biggest thing I have built just for the fun of it.',
-        'tech'    => [ 'Vanilla JS', 'Canvas 2D', 'Zero deps' ],
-        'cta'     => 'Play it',
-    ],
-    [
-        'path'    => 'demos/pokedex',
-        'title'   => 'Pokédex',
-        'accent'  => 'pink',
-        'preview' => 'pokedex',
-        'tag'     => 'Two APIs',
-        'badge'   => '',
-        'blurb'   => 'Browse every Pokémon, then pick one and see every trading card it has ever appeared on, with live pricing. Two public APIs talking to each other with no framework in sight.',
-        'tech'    => [ 'PokéAPI', 'pokemontcg.io', 'Vanilla JS' ],
-        'cta'     => 'Open it',
-    ],
-    [
-        'path'    => 'demos/prompt-studio',
-        'title'   => 'Prompt Studio',
-        'accent'  => 'yellow',
-        'preview' => 'prompt-studio',
-        'tag'     => 'AI · Tooling',
-        'badge'   => '',
-        'blurb'   => 'A little studio for writing and scoring AI prompts. Pick a task, draft a prompt, and it grades how the result came out so you can see what is actually working.',
-        'tech'    => [ 'Vanilla JS', 'Single file', 'Zero deps' ],
-        'cta'     => 'Try it',
-    ],
-    [
-        'path'    => 'demos/card-browser',
-        'title'   => 'Card Browser',
-        'accent'  => 'pink',
-        'preview' => 'card-browser',
-        'tag'     => 'Live API',
-        'badge'   => '',
-        'blurb'   => 'Browse Pokémon TCG cards and sealed product by set, in English or Japanese, with live prices coming through a server-side proxy that keeps the API key out of the page.',
-        'tech'    => [ 'JustTCG', 'WP REST API', 'Transient cache' ],
-        'cta'     => 'Open it',
-    ],
+    [ 'path' => 'demos/ant-buster',   'title' => 'Ant Buster',    'accent' => 'yellow', 'cta' => 'Play it' ],
+    [ 'path' => 'demos/pokedex',      'title' => 'Pokédex',       'accent' => 'pink',   'cta' => 'Open it' ],
+    [ 'path' => 'demos/prompt-studio', 'title' => 'Prompt Studio', 'accent' => 'yellow', 'cta' => 'Try it' ],
+    [ 'path' => 'demos/card-browser', 'title' => 'Card Browser',  'accent' => 'pink',   'cta' => 'Open it' ],
 ];
 
 /* Resolve to published pages only; drop the rest. */
@@ -64,6 +26,7 @@ $cards = [];
 foreach ( $picks as $p ) {
     $page = get_page_by_path( $p['path'] );
     if ( $page && 'publish' === get_post_status( $page ) ) {
+        $p        = array_merge( dariobimbi_demo_meta_for( $page->post_name ), $p );
         $p['url'] = get_permalink( $page );
         $cards[]  = $p;
     }
@@ -98,44 +61,7 @@ $demos_url = ( $demos_hub && 'publish' === get_post_status( $demos_hub ) ) ? get
         <li class="demo-card demo-card--<?php echo esc_attr( $c['accent'] ); ?>">
             <a class="demo-card-link" href="<?php echo esc_url( $c['url'] ); ?>" aria-labelledby="play-<?php echo esc_attr( $c['preview'] ); ?>-title">
                 <div class="demo-card-preview demo-card-preview--<?php echo esc_attr( $c['preview'] ); ?>" aria-hidden="true">
-                    <?php if ( $c['preview'] === 'ant-buster' ) : ?>
-                        <span class="cp-ab-cannon"></span>
-                        <span class="cp-ab-shot"></span>
-                        <span class="cp-ab-crumb"></span>
-                        <span class="cp-ab-ant"></span>
-                        <span class="cp-ab-ant"></span>
-                        <span class="cp-ab-ant"></span>
-                    <?php elseif ( $c['preview'] === 'prompt-studio' ) : ?>
-                        <span class="cp-ps-panel">
-                            <span class="cp-ps-line cp-ps-line-1"></span>
-                            <span class="cp-ps-line cp-ps-line-2"></span>
-                            <span class="cp-ps-caret"></span>
-                        </span>
-                        <span class="cp-ps-spark cp-ps-spark-1"></span>
-                        <span class="cp-ps-spark cp-ps-spark-2"></span>
-                        <span class="cp-ps-spark cp-ps-spark-3"></span>
-                    <?php elseif ( $c['preview'] === 'pokedex' ) : ?>
-                        <span class="cp-poke-shell">
-                            <span class="cp-poke-led"></span>
-                            <span class="cp-poke-screen">
-                                <?php
-                                $cp_poke_ids = [ 1, 4, 7, 25, 150 ]; // Bulbasaur, Charmander, Squirtle, Pikachu, Mewtwo
-                                foreach ( $cp_poke_ids as $idx => $pid ) :
-                                    $cp_poke_url = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-i/red-blue/transparent/' . $pid . '.png';
-                                ?>
-                                    <img class="cp-poke-sprite cp-poke-sprite-<?php echo $idx; ?>" src="<?php echo esc_url( $cp_poke_url ); ?>" alt="" loading="lazy" decoding="async" width="56" height="56">
-                                <?php endforeach; ?>
-                            </span>
-                        </span>
-                    <?php elseif ( $c['preview'] === 'card-browser' ) : ?>
-                        <span class="cp-tcg-card cp-tcg-card-1"></span>
-                        <span class="cp-tcg-card cp-tcg-card-2"></span>
-                        <span class="cp-tcg-card cp-tcg-card-3"></span>
-                    <?php else : ?>
-                        <span class="cp-default"></span>
-                        <span class="cp-default"></span>
-                        <span class="cp-default"></span>
-                    <?php endif; ?>
+                    <?php dariobimbi_demo_preview( $c['preview'] ); ?>
                 </div>
 
                 <div class="demo-card-body">

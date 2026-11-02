@@ -2365,7 +2365,16 @@ header.wp-block-template-part,
     .demo-card-preview--weather .cp-wx-drop,
     .demo-card-preview--audio .cp-eq,
     .demo-card-preview--sort .cp-sort,
-    .demo-card-preview--life .cp-life,
+    .demo-card-preview--life .cp-life-glider,
+    .demo-card-preview--life .cp-life-frame,
+    .demo-card-preview--live-editor .cp-le-num,
+    .demo-card-preview--live-editor .cp-le-hex,
+    .demo-card-preview--live-editor .cp-le-caret,
+    .demo-card-preview--live-editor .cp-le-card,
+    .demo-card-preview--microgame .cp-mg-player,
+    .demo-card-preview--pug-attack .cp-pa-pug,
+    .demo-card-preview--pug-attack .cp-pa-bullet,
+    .demo-card-preview--pug-attack .cp-pa-cat,
     .demo-card-preview--pokedex .cp-poke-sprite,
     .demo-card-preview--pokedex .cp-poke-led,
     .demo-card-preview--card-browser .cp-tcg-card,
@@ -2380,6 +2389,13 @@ header.wp-block-template-part,
     /* Without animation the sprites would all sit invisible; show the first one. */
     .demo-card-preview--pokedex .cp-poke-sprite-0 {
         opacity: 1 !important;
+    }
+    /* Same for the Life glider: its four phase frames would stack on top of
+       each other, so hold the first phase. */
+    .demo-card-preview--life .cp-life-frame-1,
+    .demo-card-preview--life .cp-life-frame-2,
+    .demo-card-preview--life .cp-life-frame-3 {
+        opacity: 0 !important;
     }
 }
 
