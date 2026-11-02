@@ -709,6 +709,13 @@ header.wp-block-template-part,
     margin-top: var(--wp--preset--spacing--20);
 }
 .hero-ctas .wp-block-button { margin: 0; }
+.hero-contact-link {
+    align-self: center;
+    color: var(--wp--preset--color--muted);
+    text-underline-offset: 0.2em;
+}
+.hero-contact-link:hover,
+.hero-contact-link:focus-visible { color: var(--wp--preset--color--foreground); }
 
 /* Hero photo: tilted card on an offset Sticky-Yellow sticker backing. */
 .hero-figure {

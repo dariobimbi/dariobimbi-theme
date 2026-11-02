@@ -42,6 +42,7 @@ $self_url  = ( $self_page && 'publish' === get_post_status( $self_page ) ) ? get
                 <?php if ( $self_url ) : ?>
                     <div class="wp-block-button is-style-outline"><a class="wp-block-button__link wp-element-button" href="<?php echo esc_url( $self_url ); ?>">See how this site is built</a></div>
                 <?php endif; ?>
+                <a class="hero-contact-link" href="#contact">Or just say hello</a>
             </div>
         </div>
 
