@@ -21,36 +21,32 @@
   <hr class="ps-divider" aria-hidden="true">
 
   <div class="ps-toolbar">
-    <div class="ps-type-bar" role="tablist" aria-label="Prompt type">
-      <button type="button" class="ps-type-chip is-active" role="tab" data-type="write" aria-selected="true">
+    <div class="ps-type-bar" role="group" aria-label="Prompt type">
+      <button type="button" class="ps-type-chip is-active" data-type="write" aria-pressed="true">
         <span class="ps-type-label">Write</span>
         <span class="ps-type-sub">Draft text</span>
       </button>
-      <button type="button" class="ps-type-chip" role="tab" data-type="image" aria-selected="false">
+      <button type="button" class="ps-type-chip" data-type="image" aria-pressed="false">
         <span class="ps-type-label">Image</span>
         <span class="ps-type-sub">Visuals</span>
       </button>
-      <button type="button" class="ps-type-chip" role="tab" data-type="review" aria-selected="false">
+      <button type="button" class="ps-type-chip" data-type="review" aria-pressed="false">
         <span class="ps-type-label">Review</span>
         <span class="ps-type-sub">Audit a prompt</span>
       </button>
     </div>
-    <div class="ps-mode-bar" role="tablist" aria-label="Mode">
-      <button type="button" class="ps-mode-tab is-active" role="tab" data-mode="build" aria-selected="true">Build</button>
-      <button type="button" class="ps-mode-tab" role="tab" data-mode="lint" aria-selected="false">Lint</button>
-      <button type="button" class="ps-mode-tab" role="tab" data-mode="library" aria-selected="false">Library</button>
+    <div class="ps-mode-bar" role="group" aria-label="Mode">
+      <button type="button" class="ps-mode-tab is-active" data-mode="build" aria-pressed="true">Build</button>
+      <button type="button" class="ps-mode-tab" data-mode="lint" aria-pressed="false">Lint</button>
+      <button type="button" class="ps-mode-tab" data-mode="library" aria-pressed="false">Library</button>
     </div>
   </div>
 
   <section id="view-build" class="ps-view" aria-label="Build">
-    <p class="ps-stub">Build view goes here.</p>
+    <noscript><p class="ps-stub">Prompt Studio needs JavaScript turned on to run.</p></noscript>
   </section>
-  <section id="view-lint" class="ps-view" aria-label="Lint" hidden>
-    <p class="ps-stub">Lint view goes here.</p>
-  </section>
-  <section id="view-library" class="ps-view" aria-label="Library" hidden>
-    <p class="ps-stub">Library view goes here.</p>
-  </section>
+  <section id="view-lint" class="ps-view" aria-label="Lint" hidden></section>
+  <section id="view-library" class="ps-view" aria-label="Library" hidden></section>
 
 </div>
 
@@ -214,12 +210,15 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
   padding: 0.35rem;
   opacity: 0;
   transform: translateY(-6px);
-  transition: opacity 0.18s ease, transform 0.18s ease;
+  visibility: hidden;
+  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0s linear 0.18s;
   pointer-events: none;
 }
 .prompt-studio .ps-combo[data-open="true"] .ps-combo-panel {
   opacity: 1;
   transform: translateY(0);
+  visibility: visible;
+  transition-delay: 0s;
   pointer-events: auto;
 }
 .prompt-studio .ps-combo-option {
@@ -377,9 +376,9 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
           suggestions: ['35mm, f/1.8, shallow DOF', '85mm portrait', '24mm wide', 'Macro 100mm', 'Fisheye', 'Telephoto compression', 'Shot on 35mm film', 'IMAX 70mm', 'Vintage Polaroid'] },
         { key:'mood',          label:'Mood',          help:'Feel of the image.',                    placeholder:'Quiet, contemplative.',
           suggestions: ['Cinematic', 'Dreamy', 'Melancholic', 'Peaceful', 'Tense', 'Whimsical', 'Gritty', 'Nostalgic'] },
-        { key:'negative',      label:'Negative prompt', help:'What to exclude.',                    placeholder:'no text, no watermark, no extra limbs' },
-        { key:'aspectRatio',   label:'Parameters',    help:'Aspect ratio and model flags.',         placeholder:'--ar 16:9 --v 6',
-          suggestions: ['--ar 16:9', '--ar 9:16', '--ar 1:1', '--ar 4:3', '--v 6', '--v 6 --style raw', '--niji 6'] },
+        { key:'negative',      label:'Negative prompt', help:'What to leave out. Written as --no in Midjourney, as an "Avoid:" line for other models.', placeholder:'text, watermark, extra limbs' },
+        { key:'aspectRatio',   label:'Aspect ratio',  help:'Flags like --ar 16:9 are Midjourney syntax. Most other image models (GPT Image, Imagen, Firefly and similar) want plain sentences, so say it in words, like "wide 16:9 landscape".', placeholder:'--ar 16:9, or wide 16:9 landscape',
+          suggestions: ['--ar 16:9', '--ar 9:16', '--ar 1:1', '--ar 4:3', '--ar 3:2', '--ar 16:9 --style raw', 'Wide 16:9 landscape', 'Tall 9:16 portrait', 'Square, 1:1 aspect ratio'] },
       ],
       multiline: ['subject','negative'],
       softTokenCap: 80,
@@ -421,7 +420,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
         task: 'Review the diff below and surface anything that would block merge or that the author should reconsider.',
         context: 'The repo is a TypeScript React app. The team values readable diffs over clever code. The author is mid-level.',
         outputFormat: 'Bulleted list grouped by severity (blocker, major, minor, nit). One line per item, with a line reference where possible.',
-        constraints: 'Do not rewrite the code yourself. Only flag and explain. Do not comment on formatting issues that a linter would catch.',
+        constraints: 'Do not rewrite the code yourself, flag and explain instead. Do not comment on formatting issues that a linter would catch.',
         examples: '',
         audience: 'The mid-level engineer who wrote the diff.',
         tone: 'Direct but kind, no hedging.',
@@ -439,7 +438,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
         task: 'Refactor the function below to remove duplicated logic without changing its public signature or observable behavior.',
         context: 'The codebase uses TypeScript. The function has grown through several feature additions and now repeats the same null-check and formatting block in three branches. The public signature must stay identical so callers do not need updating.',
         outputFormat: 'A unified diff (--- a/file +++ b/file format). No prose explanation unless a decision is non-obvious, in which case add a short inline comment.',
-        constraints: 'Do not change the public function signature. Do not add new dependencies. Do not make formatter-only changes (whitespace, semicolons). Every branch in the original must still be reachable in the refactored version.',
+        constraints: 'Do not change the public function signature. Do not add new dependencies. Do not make formatter-only changes (whitespace, semicolons). Every branch in the original must still be reachable in the refactored version. Instead of broad cleanups, keep the diff to the duplication.',
         examples: '',
         audience: 'The reviewer reading the next pull request.',
         tone: 'Terse and precise, no filler.',
@@ -457,7 +456,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
         task: 'Generate Vitest-compatible unit tests for the function pasted below.',
         context: 'The project uses Vitest with the default config. The function is pure (no side effects, no I/O). Tests should be clear enough that a future maintainer understands intent without reading the implementation.',
         outputFormat: 'A single code block containing the complete test file. No prose, no commentary outside the code block. Use descriptive test names in the form: describe(\'functionName\', () => { it(\'...\', ...) }).',
-        constraints: 'Cover exactly: one happy-path case, two distinct edge cases (boundary values or unusual inputs), and one error case (invalid input that should throw or return an error sentinel). Do not test implementation details — test observable behavior only.',
+        constraints: 'Cover exactly: one happy-path case, two distinct edge cases (boundary values or unusual inputs), and one error case (invalid input that should throw or return an error sentinel). Do not test implementation details. Test observable behavior only.',
         examples: '',
         audience: 'Future maintainers who will extend or debug the function.',
         tone: 'Neutral and precise.',
@@ -471,7 +470,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
       title: 'Blog post outline',
       summary: 'Outline a 1200-word post with an H2/H3 structure and a one-line hook per section.',
       fields: {
-        role: 'You are a technical writer who has published extensively on software and product topics.',
+        role: 'You are a technical writer who has published widely on software and product topics.',
         task: 'Outline a 1200-word blog post on the topic provided below.',
         context: 'The post will live on a personal developer blog. The reader arrives from a search or a link shared by a colleague. They are curious and technical but not necessarily an expert on this exact topic. The outline must be tight enough to write from directly, not a vague list of headings.',
         outputFormat: 'H2 and H3 headings arranged as a document outline. Under each heading, one sentence: the hook or argument for that section. Estimate word count per section in parentheses. No full prose yet.',
@@ -509,7 +508,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
       fields: {
         role: 'You are a fiction writer known for economical prose and strong scene work.',
         task: 'Write a short scene of 300 to 400 words using the setting, characters, and tension described in the Context field.',
-        context: 'Setting: [describe the place and time]. Characters: [Character A — one trait] and [Character B — one trait]. Tension: [what they want from each other, or what stands between them]. The scene should begin in motion, land on the tension, and end at a moment of unresolved pressure rather than a resolution.',
+        context: 'Setting: [describe the place and time]. Characters: [Character A, one trait] and [Character B, one trait]. Tension: [what they want from each other, or what stands between them]. The scene should begin in motion, land on the tension, and end at a moment of unresolved pressure rather than a resolution.',
         outputFormat: 'Prose only. No scene heading, no stage directions, no character labels. Write as a literary short story, not a screenplay. 300 to 400 words.',
         constraints: 'No exposition dumps in the first sentence. No genre clichés (no dark-and-stormy-night openings, no "little did she know"). Ground every beat in specific sensory detail rather than abstract emotion. Do not resolve the tension.',
         examples: '',
@@ -527,7 +526,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
       fields: {
         role: 'You are a teacher who specializes in making hard ideas accessible without dumbing them down.',
         task: 'Explain the topic below to a 12-year-old reader.',
-        context: 'Topic: [state the topic here]. The reader is smart and curious but has no background in this subject. The goal is not to simplify away the insight — the key mechanism or idea must survive the explanation intact. Do not condescend.',
+        context: 'Topic: [state the topic here]. The reader is smart and curious but has no background in this subject. The goal is not to simplify away the insight, since the key mechanism or idea must survive the explanation intact. Do not condescend.',
         outputFormat: '4 to 6 short paragraphs (3-5 sentences each). Include one concrete analogy in its own paragraph, introduced with "Think of it like this:". End with one sentence that names the real-world implication.',
         constraints: 'No jargon without an immediate plain-English follow-up. No bullet lists. No rhetorical questions directed at the reader ("Have you ever wondered...?"). The analogy must actually map the mechanism, not just share a surface feature.',
         examples: '',
@@ -547,7 +546,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
         task: 'Write a one-page decision memo for the proposal described below.',
         context: 'Proposal: [describe the decision to be made, the team or org affected, and any constraints already known]. The memo will be read by stakeholders who have limited time and need to understand the recommendation and its trade-offs in under five minutes.',
         outputFormat: 'Markdown with five sections: Context (2-3 sentences), Options Considered (bulleted, 2-3 options with one-line pros/cons each), Recommendation (one sentence, then a short paragraph of rationale), Risks (bulleted, 2-3 items with mitigation notes), What Would Change This Recommendation (1-2 conditions). Total: approximately 400 words.',
-        constraints: 'No executive-summary preamble. Start directly with the Context section. Be concrete about trade-offs — do not hedge every statement. The recommendation must be a single clear choice, not "it depends".',
+        constraints: 'No executive-summary preamble. Start directly with the Context section. Be concrete about trade-offs, and do not hedge every statement. The recommendation must be a single clear choice, not "it depends".',
         examples: '',
         audience: 'Stakeholders who will approve or push back on the decision.',
         tone: 'Clear and confident, with honest acknowledgment of uncertainty.',
@@ -565,7 +564,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
         task: 'Produce a 30-day study plan for the skill and starting level described below.',
         context: 'Skill to learn: [state the skill]. Starting level: [beginner / some exposure / intermediate]. Available time: approximately 30 minutes per day. The learner has a day job and needs a plan that is achievable in short focused sessions, not a bootcamp.',
         outputFormat: 'A markdown table with four columns: Day (or Day Range), Focus Area, Concrete Deliverable (something the learner produces or completes), and 30-Min Check (a specific question or test to confirm the session stuck). Group days into weekly blocks with a one-line weekly goal above each block.',
-        constraints: 'Each deliverable must be specific and completable in one 30-minute session. No "read chapter X" as a deliverable — it must produce something (a summary, a small implementation, a flash card set). The plan must build incrementally: later days depend on earlier ones.',
+        constraints: 'Each deliverable must be specific and completable in one 30-minute session. No "read chapter X" as a deliverable, because it must produce something (a summary, a small implementation, a flash card set). The plan must build incrementally: later days depend on earlier ones.',
         examples: '',
         audience: 'A working professional learning a new skill in short daily sessions.',
         tone: 'Practical and encouraging, without cheerleading.',
@@ -588,7 +587,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
         cameraLens: '85mm, f/1.8',
         mood: 'quiet, contemplative',
         negative: 'no text, no watermark, no extra limbs',
-        aspectRatio: '--ar 3:2 --v 6',
+        aspectRatio: '--ar 3:2',
         advancedOpen: false,
       },
     },
@@ -607,7 +606,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
         cameraLens: '35mm, f/2.8',
         mood: 'quiet industry, city waking up',
         negative: 'no staged poses, no text overlays, no watermark',
-        aspectRatio: '--ar 3:2 --v 6',
+        aspectRatio: '--ar 3:2',
         advancedOpen: false,
       },
     },
@@ -626,7 +625,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
         cameraLens: '90mm macro, f/8',
         mood: 'clean, premium, minimal',
         negative: 'no logos, no reflections, no background clutter, no watermark',
-        aspectRatio: '--ar 1:1 --v 6',
+        aspectRatio: '--ar 1:1',
         advancedOpen: false,
       },
     },
@@ -645,7 +644,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
         cameraLens: '',
         mood: 'eerie, lonely, mysterious',
         negative: 'no text, no watermark, no people',
-        aspectRatio: '--ar 2:3 --v 6',
+        aspectRatio: '--ar 2:3',
         advancedOpen: false,
       },
     },
@@ -664,7 +663,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
         cameraLens: '',
         mood: 'curious, gentle, focused',
         negative: 'no extra limbs, no text, no background details, no watermark',
-        aspectRatio: '--ar 3:4 --niji 6',
+        aspectRatio: '--ar 3:4',
         advancedOpen: false,
       },
     },
@@ -683,7 +682,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
         cameraLens: '',
         mood: 'calm, decorative, craft-like',
         negative: 'no text, no watermark, no shadows, no central composition',
-        aspectRatio: '--ar 1:1 --v 6 --tile',
+        aspectRatio: '--ar 1:1 --tile',
         advancedOpen: false,
       },
     },
@@ -702,7 +701,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
         cameraLens: '',
         mood: 'clean, modern, friendly',
         negative: 'no text, no drop shadows, no gradients beyond flat, no watermark',
-        aspectRatio: '--ar 1:1 --v 6',
+        aspectRatio: '--ar 1:1',
         advancedOpen: false,
       },
     },
@@ -721,7 +720,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
         cameraLens: '',
         mood: 'calm, optimistic, open',
         negative: 'no text, no faces, no sharp edges, no watermark',
-        aspectRatio: '--ar 16:9 --v 6',
+        aspectRatio: '--ar 16:9',
         advancedOpen: false,
       },
     },
@@ -740,7 +739,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
         cameraLens: '',
         mood: 'friendly, low-contrast, approachable',
         negative: 'no text, no watermark, no complex backgrounds, no drop shadows',
-        aspectRatio: '--ar 4:3 --v 6',
+        aspectRatio: '--ar 4:3',
         advancedOpen: false,
       },
     },
@@ -901,9 +900,16 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
   ];
 
   // ---- Lint helpers ----
-  const IMAGE_STYLE_KEYWORDS = ['photorealistic','oil painting','watercolor','35mm','octane render','unreal engine','midjourney','stable diffusion','digital art','concept art','anime','manga','pixel art','low poly','hyperdetailed','masterpiece','trending on artstation','8k','cinematic','cyberpunk','art deco','impressionist','synthwave','vaporwave','surrealism','surrealist','studio ghibli','ghibli','film noir','noir','gouache','ink wash','screen print','vector','clay model','graphite'];
-  const IMAGE_FLAG_REGEX = /(--ar\s+\d|--v\s*\d|--niji|--style|--chaos|--stylize|--quality)/i;
-  const REVIEW_WORDS = ['review','critique','feedback','evaluate','rate','assess'];
+  const IMAGE_STYLE_KEYWORDS = ['photorealistic','photograph','oil painting','watercolor','35mm','octane render','unreal engine','midjourney','stable diffusion','digital art','digital painting','concept art','anime','manga','pixel art','low poly','cinematic','cyberpunk','art deco','impressionist','synthwave','vaporwave','surrealism','surrealist','studio ghibli','ghibli','film noir','noir','gouache','ink wash','screen print','vector','clay model','graphite'];
+  // Broader medium and style words, used only by the Style / medium lint check.
+  const IMAGE_STYLE_RE = /(\bflat\b|illustration|digital paint|photograph|\bphoto\b|\bsketch|charcoal|pastel|collage|\bcel\b|abstract|editorial|documentary|\b3d\b|\brender|minimalist|vintage|retro|isometric|line art|woodcut|linocut|lithograph|mosaic|painting|painted)/i;
+  // 2023-era quality boosters. They do not tell a model what to draw, so they are flagged as filler.
+  const IMAGE_BOOSTER_RE = /\b(8k|4k|masterpiece|trending on artstation|artstation|hyper-?detailed|highly detailed|ultra-?detailed|best quality|award[- ]winning)\b/i;
+  const IMAGE_BOOSTER_RE_ALL = /\b(8k|4k|masterpiece|trending on artstation|artstation|hyper-?detailed|highly detailed|ultra-?detailed|best quality|award[- ]winning)\b/gi;
+  const IMAGE_FLAG_REGEX = /(--ar\s+\d|--v\s*\d|--niji|--style|--chaos|--stylize|--quality|--tile|--no\s)/i;
+  // A review verb as the ask (sentence start, a label, or after "please"), or the word feedback.
+  // "code review" as a noun in a role line does not make a prompt a review request.
+  const REVIEW_RE = /((?:^|[.!?\n>:]\s*|\bplease\s+)(?:review|critique|evaluate|assess|rate)\b|\bfeedback\b)/i;
 
   function detectPromptType(text) {
     if (!text) { return 'write'; }
@@ -918,6 +924,8 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     const commaCount = commaMatches ? commaMatches.length : 0;
     const sentenceMatches = text.match(/[.!?]/g);
     const sentenceCount = sentenceMatches ? sentenceMatches.length : 0;
+    const boosterMatches = text.match(IMAGE_BOOSTER_RE_ALL);
+    if (boosterMatches) { styleHits += boosterMatches.length; }
     if (styleHits >= 2) { return 'image'; }
     if (commaCount >= 4) {
       if (sentenceCount <= 1) { return 'image'; }
@@ -925,37 +933,29 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     // Review checks
     if (text.indexOf('```') !== -1) { return 'review'; }
     if (text.indexOf('"""') !== -1) { return 'review'; }
-    for (let i = 0; i < REVIEW_WORDS.length; i++) {
-      if (t.indexOf(REVIEW_WORDS[i]) !== -1) { return 'review'; }
-    }
+    if (REVIEW_RE.test(text)) { return 'review'; }
     return 'write';
   }
 
-  // Placeholder cycling (chosen once on page load, never while typing)
-  const PLACEHOLDER_VARIANTS = {};
-  // Picks one placeholder set per page load. Field renderer reads from RUBRICS
-  // directly today, so cycling here just means choosing a stable variant once
-  // on init for cosmetic freshness. Future variants can replace these.
-  function pickPlaceholders() {
-    // Intentionally a no-op for v1: RUBRICS placeholders are stable strings.
-    // Wired through so we can add per-field arrays of examples later without
-    // touching renderField.
-  }
-  pickPlaceholders();
-
   // ---- Toast ----
-  function showToast(message, kind) {
-    const k = kind ? kind : 'info';
+  // One polite live region for every toast, created up front so the first message is announced too.
+  function getToastHost() {
     let host = document.getElementById('ps-toast-host');
     if (!host) {
       host = document.createElement('div');
       host.id = 'ps-toast-host';
       host.className = 'ps-toast-host';
+      host.setAttribute('role', 'status');
       document.body.appendChild(host);
     }
+    return host;
+  }
+
+  function showToast(message, kind) {
+    const k = kind ? kind : 'info';
+    const host = getToastHost();
     const el = document.createElement('div');
     el.className = 'ps-toast ps-toast-' + k;
-    el.setAttribute('role', k === 'warn' ? 'alert' : 'status');
     el.textContent = message;
     host.appendChild(el);
     const duration = k === 'warn' ? 5000 : 2000;
@@ -964,16 +964,17 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     }, duration);
   }
 
-  function copyToClipboard(text) {
+  function copyToClipboard(text, doneMessage) {
+    const done = doneMessage ? doneMessage : 'Copied.';
     if (navigator.clipboard) {
       if (navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(function () { showToast('Copied.'); }).catch(function () { fallbackCopy(text); });
+        navigator.clipboard.writeText(text).then(function () { showToast(done); }).catch(function () { fallbackCopy(text, done); });
         return;
       }
     }
-    fallbackCopy(text);
+    fallbackCopy(text, done);
   }
-  function fallbackCopy(text) {
+  function fallbackCopy(text, done) {
     const ta = document.createElement('textarea');
     ta.value = text;
     ta.setAttribute('readonly', '');
@@ -981,7 +982,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     ta.style.left = '-9999px';
     document.body.appendChild(ta);
     ta.select();
-    try { document.execCommand('copy'); showToast('Copied.'); }
+    try { document.execCommand('copy'); showToast(done); }
     catch (e) { showToast('Copy failed.', 'warn'); }
     document.body.removeChild(ta);
   }
@@ -1059,7 +1060,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
       const chip = typeChips[i];
       const isActive = chip.getAttribute('data-type') === state.currentType;
       chip.classList.toggle('is-active', isActive);
-      chip.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      chip.setAttribute('aria-pressed', isActive ? 'true' : 'false');
     }
     // Mode tabs
     const modeTabs = document.querySelectorAll('.ps-mode-tab');
@@ -1067,7 +1068,11 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
       const tab = modeTabs[i];
       const isActive = tab.getAttribute('data-mode') === state.currentMode;
       tab.classList.toggle('is-active', isActive);
-      tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      tab.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    }
+    // Back past an open template modal: the hash no longer names a template, so close it.
+    if (!state.library.openTemplateId) {
+      if (document.getElementById('ps-modal-root')) { closeTemplateModal(); }
     }
     // View containers
     const views = { build: document.getElementById('view-build'), lint: document.getElementById('view-lint'), library: document.getElementById('view-library') };
@@ -1109,7 +1114,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     // Preview + actions
     parts.push('<aside class="ps-preview">');
     parts.push('  <header class="ps-preview-header"><span>Assembled prompt</span><span class="ps-token-meter" id="ps-token-meter"></span></header>');
-    parts.push('  <pre class="ps-preview-text" id="ps-preview-text" aria-live="polite"></pre>');
+    parts.push('  <pre class="ps-preview-text" id="ps-preview-text"></pre>');
     parts.push('  <div class="ps-preview-actions">');
     parts.push('    <button type="button" data-action="copy-prompt">Copy</button>');
     parts.push('    <button type="button" data-action="lint-this">Lint this</button>');
@@ -1143,18 +1148,18 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
       let options = '';
       for (let i = 0; i < field.suggestions.length; i++) {
         const sv = escapeHtml(field.suggestions[i]).replace(/"/g, '&quot;');
-        options += '<button type="button" class="ps-combo-option" role="option" data-action="combo-pick" data-field="' + field.key + '" data-value="' + sv + '">' + escapeHtml(field.suggestions[i]) + '</button>';
+        options += '<button type="button" class="ps-combo-option" role="option" tabindex="-1" aria-selected="false" id="ps-combo-opt-' + field.key + '-' + i + '" data-action="combo-pick" data-field="' + field.key + '" data-value="' + sv + '">' + escapeHtml(field.suggestions[i]) + '</button>';
       }
       inputOrCombo =
         '<div class="ps-combo" data-field="' + field.key + '" data-open="false">' +
           '<input id="' + id + '" name="' + field.key + '" type="text" value="' + escapeHtml(value).replace(/"/g, '&quot;') + '" placeholder="' + placeholder + '" aria-describedby="' + id + '-help" role="combobox" aria-controls="' + panelId + '" aria-expanded="false" aria-autocomplete="list" autocomplete="off" />' +
           '<button type="button" class="ps-combo-toggle" data-action="combo-toggle" data-field="' + field.key + '" tabindex="-1" aria-label="Show suggestions"><svg viewBox="0 0 12 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 1.5 6 6.5 11 1.5"/></svg></button>' +
-          '<div class="ps-combo-panel" id="' + panelId + '" role="listbox">' + options + '<p class="ps-combo-empty" hidden>No matches. Type your own.</p></div>' +
+          '<div class="ps-combo-panel" id="' + panelId + '" role="listbox" aria-label="' + escapeHtml(field.label).replace(/"/g, '&quot;') + ' suggestions">' + options + '<p class="ps-combo-empty" hidden>No matches. Type your own.</p></div>' +
         '</div>';
     } else {
       inputOrCombo = '<input id="' + id + '" name="' + field.key + '" type="text" value="' + escapeHtml(value).replace(/"/g, '&quot;') + '" placeholder="' + placeholder + '" aria-describedby="' + id + '-help" />';
     }
-    return '<label class="ps-field" for="' + id + '"><span class="ps-field-label">' + escapeHtml(field.label) + '</span><span class="ps-field-help" id="' + id + '-help">' + escapeHtml(help) + '</span>' + inputOrCombo + '</label>';
+    return '<div class="ps-field"><label class="ps-field-label" for="' + id + '">' + escapeHtml(field.label) + '</label><span class="ps-field-help" id="' + id + '-help">' + escapeHtml(help) + '</span>' + inputOrCombo + '</div>';
   }
 
   function escapeHtml(s) {
@@ -1168,7 +1173,9 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     const detected = state.lint.detectedType;
     const current = state.currentType;
     const curLabel = escapeHtml(capitalize(current));
-    if (!input || !detected) {
+    let noDetection = !input;
+    if (!detected) { noDetection = true; }
+    if (noDetection) {
       return '<p class="ps-lint-detected-label">Linting against the ' + curLabel + ' rubric. Paste a prompt to auto-detect its type.</p>';
     }
     const detLabel = escapeHtml(capitalize(detected));
@@ -1429,10 +1436,6 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     }
   }
 
-  function root_querySafe(selector) {
-    try { return document.querySelector(selector); } catch (e) { return null; }
-  }
-
   // ---- Click handlers (push hash only, do not render directly) ----
   document.addEventListener('click', function (ev) {
     const typeChip = ev.target.closest('.ps-type-chip');
@@ -1447,36 +1450,6 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     }
   });
 
-  // ---- Keyboard nav on tablists ----
-  document.addEventListener('keydown', function (ev) {
-    const target = ev.target;
-    if (!target) { return; }
-    if (target.classList.contains('ps-type-chip')) {
-      handleTabArrow(ev, target, 'ps-type-chip', TYPES, 'data-type', function (v) { pushRoute(v, null, null); });
-      return;
-    }
-    if (target.classList.contains('ps-mode-tab')) {
-      handleTabArrow(ev, target, 'ps-mode-tab', MODES, 'data-mode', function (v) { pushRoute(null, v, null); });
-    }
-  });
-
-  function handleTabArrow(ev, target, klass, values, attr, apply) {
-    const key = ev.key;
-    if (key !== 'ArrowLeft') {
-      if (key !== 'ArrowRight') { return; }
-    }
-    ev.preventDefault();
-    const current = target.getAttribute(attr);
-    const idx = values.indexOf(current);
-    let nextIdx;
-    if (key === 'ArrowRight') { nextIdx = (idx + 1) % values.length; }
-    else { nextIdx = (idx - 1 + values.length) % values.length; }
-    const nextValue = values[nextIdx];
-    apply(nextValue);
-    const newTarget = document.querySelector('.' + klass + '[' + attr + '="' + nextValue + '"]');
-    if (newTarget) { newTarget.focus(); }
-  }
-
   // ---- popstate ----
   window.addEventListener('popstate', routeFromHash);
 
@@ -1489,7 +1462,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     if (target.id === 'ps-lib-search') {
       state.library.search = target.value;
       // Only re-render the grid, not the input. Preserve caret position.
-      const grid = root_querySafe('.ps-lib-grid');
+      const grid = document.querySelector('.ps-lib-grid');
       if (grid) {
         const focused = document.activeElement;
         const caret = focused ? focused.selectionStart : null;
@@ -1575,7 +1548,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     }
     if (action === 'copy-prompt') {
       const assembled = assemblePrompt(state.currentType, state.drafts[state.currentType]).text;
-      copyToClipboard(assembled);
+      copyToClipboard(assembled, 'Prompt copied.');
       return;
     }
     if (action === 'combo-toggle') {
@@ -1593,14 +1566,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
       return;
     }
     if (action === 'combo-pick') {
-      const fieldKey = btn.getAttribute('data-field');
-      const newValue = btn.getAttribute('data-value');
-      const input = document.getElementById('ps-field-' + fieldKey);
-      if (input) {
-        input.value = newValue;
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-      closeCombo(fieldKey);
+      pickCombo(btn.getAttribute('data-field'), btn.getAttribute('data-value'));
       return;
     }
     if (action === 'lint-this') {
@@ -1646,7 +1612,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
           out += '  - ' + result.flags[i].label + ': ' + result.flags[i].detail + '\n';
         }
       }
-      copyToClipboard(out);
+      copyToClipboard(out, 'Results copied.');
       return;
     }
     if (action === 'lib-cat') {
@@ -1672,7 +1638,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
       const tmpl = TEMPLATES.find(function (t) { return t.id === id; });
       if (!tmpl) { return; }
       const assembled = assemblePrompt(tmpl.type, tmpl.fields).text;
-      copyToClipboard(assembled);
+      copyToClipboard(assembled, 'Template copied.');
       closeTemplateModal();
       return;
     }
@@ -1688,7 +1654,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
       for (const k in tmpl.fields) {
         if (k in draft) { draft[k] = tmpl.fields[k]; }
       }
-      draft.advancedOpen = false;
+      draft.advancedOpen = hasAdvancedContent(tmpl.type);
       scheduleSave();
       closeTemplateModal();
       pushRoute(tmpl.type, 'build', null);
@@ -1718,11 +1684,25 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     for (const k in parsed.fields) {
       if (k in draft) { draft[k] = parsed.fields[k]; }
     }
+    draft.advancedOpen = hasAdvancedContent(type);
     scheduleSave();
     pushRoute(type, 'build', null);
     if (parsed.lossy) {
       showToast('Could not auto-split into fields. Loaded into ' + (type === 'image' ? 'Subject' : (type === 'review' ? 'Content' : 'Task')) + ' for manual editing.', 'warn');
     }
+  }
+
+  // True when any Advanced field holds text, so the section opens instead of hiding it.
+  function hasAdvancedContent(type) {
+    const adv = RUBRICS[type].advanced;
+    const draft = state.drafts[type];
+    for (let i = 0; i < adv.length; i++) {
+      const v = draft[adv[i].key];
+      if (typeof v === 'string') {
+        if (v.trim().length > 0) { return true; }
+      }
+    }
+    return false;
   }
 
   function isDraftDirty(type) {
@@ -1736,7 +1716,6 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     return false;
   }
 
-  // Stubs that arrive in later tasks. Defined now so the renderer can call them.
   function refreshPreview() {
     const preview = document.getElementById('ps-preview-text');
     const meter = document.getElementById('ps-token-meter');
@@ -1791,6 +1770,17 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     return { text: text, instructionsOnly: text, contentOnly: '' };
   }
 
+  // "no text, no watermark" becomes "text, watermark", since --no and "Avoid:" already say it.
+  function negativeItems(raw) {
+    const parts = String(raw).split(/[,;\n]/);
+    const items = [];
+    for (let i = 0; i < parts.length; i++) {
+      const item = parts[i].trim().replace(/^(?:no|without|avoid|not)\s+/i, '');
+      if (item) { items.push(item); }
+    }
+    return items.join(', ');
+  }
+
   function assembleImage(d) {
     const descriptors = [];
     if (d.subject)       { descriptors.push(d.subject); }
@@ -1800,10 +1790,20 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     if (d.colorLighting) { descriptors.push(d.colorLighting); }
     if (d.cameraLens)    { descriptors.push(d.cameraLens); }
     if (d.mood)          { descriptors.push(d.mood); }
-    let main = descriptors.join(', ');
-    if (d.aspectRatio)   { main = (main ? main + ' ' : '') + d.aspectRatio.trim(); }
-    let text = main;
-    if (d.negative)      { text = (text ? text + '\n' : '') + 'Negative: ' + d.negative; }
+    const aspect = d.aspectRatio ? d.aspectRatio.trim() : '';
+    const usesFlags = IMAGE_FLAG_REGEX.test(aspect);
+    // Plain-words aspect ratio reads as one more descriptor; -- flags go at the end of the line.
+    if (aspect) {
+      if (!usesFlags) { descriptors.push(aspect); }
+    }
+    let text = descriptors.join(', ');
+    const negatives = d.negative ? negativeItems(d.negative) : '';
+    if (usesFlags) {
+      text = (text ? text + ' ' : '') + aspect;
+      if (negatives) { text += ' --no ' + negatives; }
+    } else if (negatives) {
+      text = (text ? text + '\n' : '') + 'Avoid: ' + negatives;
+    }
     return { text: text, instructionsOnly: text, contentOnly: '' };
   }
 
@@ -1861,8 +1861,13 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
   function parseImageBack(text) {
     const fields = { subject:'', style:'', composition:'', medium:'', colorLighting:'', cameraLens:'', mood:'', negative:'', aspectRatio:'' };
     let workText = text;
-    // Extract Negative
-    const negMatch = workText.match(/(?:^|\n)Negative:\s*([\s\S]+?)(?:\n|$)/i);
+    // Extract negatives: Midjourney "--no a, b" or an "Avoid:" / "Negative:" line
+    const noFlagMatch = workText.match(/\s--no\s+([^\n]*?)(?=\s--[a-z]|\n|$)/i);
+    if (noFlagMatch) {
+      fields.negative = noFlagMatch[1].trim();
+      workText = workText.replace(noFlagMatch[0], '');
+    }
+    const negMatch = workText.match(/(?:^|\n)(?:Negative|Avoid):\s*([\s\S]+?)(?:\n|$)/i);
     if (negMatch) {
       fields.negative = negMatch[1].trim();
       workText = workText.replace(negMatch[0], '');
@@ -1927,27 +1932,36 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
   }
 
   // ---- Lint rules ----
-  // Each rule: { key, label, check(text) → { present:bool, strength:0..1, detail:'' } }
+  // Each rule: { key, label, weight?, bonus?, check(text) → { present:bool, strength:0..1, detail:'' } }
+  // weight (default 1) scales a rule's share of the score. A bonus rule only adds points when it is
+  // present and is left out of the checklist when it is not, so it is never a penalty.
+  const TASK_VERBS = 'refactor|review|generate|explain|write|summari[sz]e|translate|extract|compare|classify|debug|fix|optimi[sz]e|design|name|brainstorm|outline|rewrite|critique|evaluate|analy[sz]e|create|draft|list|produce|identify|describe|convert|find|build|suggest|plan|propose|recommend|rank|edit|proofread|improve|simplify|calculate|develop|compose|check|audit|assess|determine|prepare|answer|respond|categori[sz]e|sort|group|implement|document|expand|shorten|paraphrase|predict|solve|define|estimate|parse|validate|merge|turn|give|provide|tell|show|make|select|choose';
+  const TASK_RE = new RegExp('(?:^|[.!?\\n>:]\\s*|\\b(?:please|kindly|then|next|first|now)\\s+)(?:' + TASK_VERBS + ')\\b', 'i');
+  const FORMAT_RE = /(\bformat\b|\bbullet(?:ed|s)?\b|\bparagraphs?\b|\bwords?\b|\bsentences?\b|\bjson\b|\btables?\b|\blists?\b|\bnumbered\b|\bmarkdown\b|\bcsv\b|\bheadings?\b|\bheaders?\b|\bdiff\b|\byaml\b|\bcode block\b|\bsteps?\b)/i;
+  const CONSTRAINT_RE = /(\bdo not\b|\bdon'?t\b|\bnever\b|\bmust not\b|\bavoid\b|\bwithout\b|\bexclude\b|\bonly\b|\bstay within\b|\bno more than\b|\bat most\b|\bat least\b|\bunder \d+|\bfewer than\b|\blimit(?:ed)? to\b|\bkeep it\b|\bexactly\b|\bplain language\b|\bno jargon\b|\bwithin \d+|\bup to \d+|\bmax(?:imum)?\b|\bconstraints?\s*:|<constraints>)/i;
+
   const LINT_RULES = {
     write: [
-      { key:'role',        label:'Role / persona',  check: function (t) { return checkPattern(t, /(you are|act as)/i, 'Mentions a role'); } },
+      { key:'role',        label:'Role / persona',  weight:0.5, check: function (t) { const ok = /(you are|act as|\brole\s*:|<role>)/i.test(t); return { present: ok, strength: ok ? 1 : 0, detail: ok ? 'Mentions a role' : 'Optional, but a role can sharpen the voice' }; } },
       { key:'task',        label:'Clear task',      check: function (t) { return checkTaskVerb(t); } },
-      { key:'context',     label:'Context',         check: function (t) { return checkLength(t, 60, 'Has enough context'); } },
-      { key:'outputFormat',label:'Output format',   check: function (t) { return checkPattern(t, /(format|as (a |an )?(json|markdown|list|table|bulleted|csv|diff))/i, 'Specifies output format'); } },
-      { key:'constraints', label:'Constraints',     check: function (t) { return checkPattern(t, /(do not|don'?t|never|must not|avoid|without|exclude|only|stay within|no more than)/i, 'Lists constraints'); } },
+      { key:'context',     label:'Context',         check: function (t) { return checkWriteContext(t); } },
+      { key:'outputFormat',label:'Output format',   check: function (t) { return checkPattern(t, FORMAT_RE, 'Specifies output format'); } },
+      { key:'constraints', label:'Constraints',     check: function (t) { return checkPattern(t, CONSTRAINT_RE, 'Lists constraints'); } },
+      { key:'delimiters',  label:'Pasted material is marked off', bonus:0.25, check: function (t) { return checkPattern(t, /(<\/?[a-z][\w-]*>|```|"""|\n-{3,}\n|\b(?:article|text|content|document|code|diff|input|passage|email|data|draft|transcript|essay|notes)\s*:)/i, 'Uses tags, fences or a label'); } },
+      { key:'examples',    label:'Examples',        bonus:0.25, check: function (t) { return checkPattern(t, /(\bexamples?\s*:|<examples?>|\binput\s*:[\s\S]*\boutput\s*:)/i, 'Shows what good looks like'); } },
     ],
     image: [
       { key:'subject',     label:'Subject',         check: function (t) { return { present: t.length > 0, strength: t.length > 12 ? 1 : 0.5, detail: t.length > 0 ? 'Subject implied' : 'No subject' }; } },
-      { key:'style',       label:'Style',           check: function (t) { return checkAnyKeyword(t, IMAGE_STYLE_KEYWORDS, 'Mentions a recognized style'); } },
-      { key:'composition', label:'Composition',     check: function (t) { return checkPattern(t, /(close-?up|wide|low angle|high angle|portrait|landscape|rule of thirds|symmetr|over the shoulder|aerial|top-?down|dutch angle|macro|centered)/i, 'Frames the shot'); } },
-      { key:'lighting',    label:'Color / light',   check: function (t) { return checkPattern(t, /(light|lit|sunset|dawn|shadow|amber|cool|warm|neon|backlit|golden hour|moody|high-?key|low-?key|overcast|silhouette|candle|dramatic|bright)/i, 'Mentions light or color'); } },
-      { key:'params',      label:'Parameters',      check: function (t) { return checkPattern(t, /(--ar\s+\d|--v\s*\d|--niji|--style|aspect|\d{3,4}\s*x\s*\d{3,4})/i, 'Includes platform parameters'); } },
+      { key:'style',       label:'Style / medium',  check: function (t) { return checkImageStyle(t); } },
+      { key:'composition', label:'Composition',     check: function (t) { return checkPattern(t, /(close-?up|wide|low angle|high angle|portrait|landscape|rule of thirds|thirds|symmetr|over the shoulder|aerial|top-?down|dutch angle|macro|centered|leading lines|negative space|full body|3\/4|three-quarter|seamless|tile|focal|framing|foreground|whitespace|overhead|bird'?s[- ]eye)/i, 'Frames the shot'); } },
+      { key:'lighting',    label:'Color / light',   check: function (t) { return checkPattern(t, /(light|lit|sunset|dawn|shadow|amber|cool|warm|neon|backlit|golden hour|moody|high-?key|low-?key|overcast|silhouette|candle|dramatic|bright|palette|pastel|muted|monochrome)/i, 'Mentions light or color'); } },
+      { key:'params',      label:'Aspect ratio',    check: function (t) { return checkPattern(t, /(--ar\s+\d|--v\s*\d|--niji|--style|\baspect\b|\b\d{1,2}\s*:\s*\d{1,2}\b|\d{3,4}\s*x\s*\d{3,4})/i, 'States an aspect ratio or parameters'); } },
     ],
     review: [
       { key:'content',     label:'Content present', check: function (t) { return { present: /```|"""/.test(t), strength: /```[\s\S]+```|"""[\s\S]+"""/.test(t) ? 1 : 0.4, detail: /```|"""/.test(t) ? 'Fenced block detected' : 'No fenced content block' }; } },
-      { key:'criteria',    label:'Criteria',        check: function (t) { return checkPattern(t, /(criteria|evaluate|assess|judge|grade|rubric)/i, 'Names criteria'); } },
-      { key:'audience',    label:'Audience',        check: function (t) { return checkPattern(t, /(audience|for the|reader|reviewer)/i, 'Names the audience'); } },
-      { key:'outputFormat',label:'Output format',   check: function (t) { return checkPattern(t, /(bulleted|list|table|grouped by|severity|format)/i, 'Specifies output format'); } },
+      { key:'criteria',    label:'Criteria',        check: function (t) { return checkReviewCriteria(t); } },
+      { key:'audience',    label:'Audience',        check: function (t) { return checkPattern(instructionsOf(t), /(audience|for the|reader|reviewer)/i, 'Names the audience'); } },
+      { key:'outputFormat',label:'Output format',   check: function (t) { return checkPattern(instructionsOf(t), FORMAT_RE, 'Specifies output format'); } },
     ],
   };
 
@@ -1973,16 +1987,11 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
         }
         return false;
       } },
-    { id:'style_soup',     appliesTo:['image'], label:'Style soup', detail:'More than 5 quality / style keywords. Modern models ignore the noise or degrade.', test: function (t) {
-        const tl = t.toLowerCase();
-        const soup = ['8k','octane render','unreal engine','trending on artstation','masterpiece','hyperdetailed','best quality','award winning','intricate','ultra detailed'];
-        let hits = 0;
-        for (let i = 0; i < soup.length; i++) {
-          if (tl.indexOf(soup[i]) !== -1) { hits += 1; }
-        }
-        return hits > 5;
+    { id:'quality_boosters', appliesTo:['image'], label:'Filler quality words', detail:'Words like "8k", "masterpiece" and "trending on artstation" were a 2023 habit. Current models mostly ignore them. Describe what you want to see instead: subject, lighting, lens, medium.', test: function (t) { return IMAGE_BOOSTER_RE.test(t); } },
+    { id:'missing_ar',     appliesTo:['image'], label:'Missing aspect ratio', detail:'Midjourney reads --ar 16:9. Most other image models want it in words, like "wide 16:9 landscape".', test: function (t) {
+        if (IMAGE_FLAG_REGEX.test(t)) { return false; }
+        return !/(\b\d{1,2}\s*:\s*\d{1,2}\b|\baspect\b)/i.test(t);
       } },
-    { id:'missing_ar',     appliesTo:['image'], label:'Missing aspect ratio', detail:'Most platforms expect --ar or equivalent.', test: function (t) { return !IMAGE_FLAG_REGEX.test(t); } },
     { id:'unfenced',       appliesTo:['review'], label:'Unfenced content', detail:'Content runs into instructions. Wrap the artifact in triple backticks.', test: function (t) {
       if (/```|"""/.test(t)) { return false; }
       // Skip when the prompt is short enough to be just the rubric scaffolding (no content pasted yet).
@@ -2014,14 +2023,64 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     return { present: false, strength: 0, detail: 'Empty' };
   }
   function checkTaskVerb(text) {
-    // Imperative verbs at the start of a sentence, after a newline, or after a "Task:"-style label.
-    if (/(?:^|[\.\n]\s*|:\s*)(refactor|review|generate|explain|write|summarize|translate|extract|compare|classify|debug|fix|optimize|design|name|brainstorm|outline|rewrite|critique|evaluate|analyze)\b/i.test(text)) {
+    // Imperative verbs at the start of a sentence, after a newline, a tag, a "Task:"-style label or "please".
+    if (TASK_RE.test(text)) {
       return { present: true, strength: 1, detail: 'Imperative task verb' };
     }
     if (text.length > 0) {
       return { present: true, strength: 0.3, detail: 'No clear task verb' };
     }
     return { present: false, strength: 0, detail: 'Empty' };
+  }
+
+  function contextStrength(len, labeled) {
+    if (labeled) {
+      if (len >= 60) { return { present: true, strength: 1, detail: 'Has a Context section' }; }
+      if (len > 0) { return { present: true, strength: 0.4, detail: 'Context section is thin (' + len + ' chars)' }; }
+      return { present: false, strength: 0, detail: 'Context section is empty' };
+    }
+    if (len >= 120) { return { present: true, strength: 1, detail: 'Has background beyond the task' }; }
+    if (len >= 40) { return { present: true, strength: 0.6, detail: 'Some background beyond the task' }; }
+    if (len >= 15) { return { present: true, strength: 0.3, detail: 'Very little beyond the task' }; }
+    return { present: false, strength: 0, detail: 'Nothing beyond the task sentence' };
+  }
+  // A labeled Context: paragraph (or <context> tag) is scored on its own. Without one, the
+  // text left over once the task sentence is taken out stands in for context.
+  function checkWriteContext(text) {
+    const blocks = text.split(/\n\s*\n/);
+    for (let i = 0; i < blocks.length; i++) {
+      const m = blocks[i].match(/^\s*(?:context|background)\s*:\s*([\s\S]*)$/i);
+      if (m) { return contextStrength(m[1].trim().length, true); }
+    }
+    const tagged = text.match(/<(context|background)>([\s\S]*?)<\/\1>/i);
+    if (tagged) { return contextStrength(tagged[2].trim().length, true); }
+    const m = TASK_RE.exec(text);
+    let rest = text;
+    if (m) {
+      const after = text.slice(m.index);
+      const endRel = after.search(/[.!?](?:\s|$)|\n/);
+      const taskEnd = endRel === -1 ? text.length : m.index + endRel + 1;
+      rest = text.slice(0, m.index) + ' ' + text.slice(taskEnd);
+    }
+    return contextStrength(rest.replace(/<[^>]*>/g, ' ').trim().length, false);
+  }
+  function checkImageStyle(text) {
+    const k = checkAnyKeyword(text, IMAGE_STYLE_KEYWORDS, 'Names a style or medium');
+    if (k.present) { return k; }
+    return checkPattern(text, IMAGE_STYLE_RE, 'Names a style or medium');
+  }
+  // Review rules judge the instructions only, so pasted content cannot satisfy them.
+  function instructionsOf(text) {
+    return text.replace(/```[\s\S]*?```/g, ' ').replace(/"""[\s\S]*?"""/g, ' ');
+  }
+  // assembleReview always closes with "...based on the criteria above", so that line is
+  // dropped before looking for criteria.
+  function checkReviewCriteria(text) {
+    const body = instructionsOf(text).replace(/begin your review now[^\n]*/i, '');
+    if (/(?:^|\n)\s*criteria\s*:\s*\S/i.test(body)) {
+      return { present: true, strength: 1, detail: 'Names criteria' };
+    }
+    return checkPattern(body, /\b(criteria|evaluate|assess|judge|grade|rubric)\b/i, 'Names criteria');
   }
 
   // ---- Lint runner ----
@@ -2034,13 +2093,23 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     const rules = LINT_RULES[type];
     const checks = [];
     let totalStrength = 0;
+    let maxScore = 0;
+    let bonusPoints = 0;
     for (let i = 0; i < rules.length; i++) {
       const r = rules[i].check(text);
+      if (rules[i].bonus) {
+        if (r.present) {
+          checks.push({ key: rules[i].key, label: rules[i].label + ' (bonus)', present: true, strength: r.strength, detail: r.detail });
+          bonusPoints += r.strength * rules[i].bonus;
+        }
+        continue;
+      }
+      const w = rules[i].weight ? rules[i].weight : 1;
       checks.push({ key: rules[i].key, label: rules[i].label, present: r.present, strength: r.strength, detail: r.detail });
-      totalStrength += r.strength;
+      totalStrength += r.strength * w;
+      maxScore += w;
     }
-    const maxScore = rules.length;
-    let score = maxScore === 0 ? 0 : Math.round((totalStrength / maxScore) * 100);
+    let score = maxScore === 0 ? 0 : Math.min(100, Math.round(((totalStrength + bonusPoints) / maxScore) * 100));
 
     const flags = [];
     for (let i = 0; i < ANTI_PATTERNS.length; i++) {
@@ -2123,30 +2192,54 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     if (input) { input.setAttribute('aria-expanded', 'true'); }
     filterCombo(fieldKey, input ? input.value : '');
   }
-  function closeCombo(fieldKey) {
-    const combo = document.querySelector('.ps-combo[data-field="' + fieldKey + '"]');
-    if (!combo) { return; }
+  function shutCombo(combo) {
     combo.setAttribute('data-open', 'false');
     const input = combo.querySelector('input');
-    if (input) { input.setAttribute('aria-expanded', 'false'); }
+    if (input) {
+      input.setAttribute('aria-expanded', 'false');
+      input.removeAttribute('aria-activedescendant');
+    }
+    setActiveOption(combo, null);
+  }
+  function closeCombo(fieldKey) {
+    const combo = document.querySelector('.ps-combo[data-field="' + fieldKey + '"]');
+    if (combo) { shutCombo(combo); }
   }
   function closeAllCombos() {
     const combos = document.querySelectorAll('.ps-combo[data-open="true"]');
-    for (let i = 0; i < combos.length; i++) {
-      combos[i].setAttribute('data-open', 'false');
-      const input = combos[i].querySelector('input');
-      if (input) { input.setAttribute('aria-expanded', 'false'); }
-    }
+    for (let i = 0; i < combos.length; i++) { shutCombo(combos[i]); }
   }
   function closeAllCombosExcept(fieldKey) {
     const combos = document.querySelectorAll('.ps-combo[data-open="true"]');
     for (let i = 0; i < combos.length; i++) {
-      if (combos[i].getAttribute('data-field') !== fieldKey) {
-        combos[i].setAttribute('data-open', 'false');
-        const input = combos[i].querySelector('input');
-        if (input) { input.setAttribute('aria-expanded', 'false'); }
-      }
+      if (combos[i].getAttribute('data-field') !== fieldKey) { shutCombo(combos[i]); }
     }
+  }
+  // Marks one option as the keyboard-active one (or none) and points aria-activedescendant at it.
+  function setActiveOption(combo, opt) {
+    const all = combo.querySelectorAll('.ps-combo-option');
+    for (let i = 0; i < all.length; i++) {
+      all[i].classList.remove('is-active');
+      all[i].setAttribute('aria-selected', 'false');
+    }
+    const input = combo.querySelector('input');
+    if (!opt) {
+      if (input) { input.removeAttribute('aria-activedescendant'); }
+      return;
+    }
+    opt.classList.add('is-active');
+    opt.setAttribute('aria-selected', 'true');
+    if (input) { input.setAttribute('aria-activedescendant', opt.id); }
+    opt.scrollIntoView({ block: 'nearest' });
+  }
+  function pickCombo(fieldKey, value) {
+    const input = document.getElementById('ps-field-' + fieldKey);
+    if (input) {
+      input.value = value;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    closeCombo(fieldKey);
+    if (input) { input.focus(); }
   }
   function filterCombo(fieldKey, query) {
     const combo = document.querySelector('.ps-combo[data-field="' + fieldKey + '"]');
@@ -2165,6 +2258,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     }
     const empty = combo.querySelector('.ps-combo-empty');
     if (empty) { empty.hidden = (visible > 0); }
+    setActiveOption(combo, null);
   }
 
   // Open combo on click into its input. Close all combos on outside click.
@@ -2178,7 +2272,9 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
         return;
       }
     }
-    if (t.closest && t.closest('.ps-combo')) { return; }
+    if (t.closest) {
+      if (t.closest('.ps-combo')) { return; }
+    }
     closeAllCombos();
   });
 
@@ -2192,6 +2288,37 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
     } else {
       closeAllCombos();
     }
+  });
+
+  // Arrow keys move through the open list, Enter picks the highlighted option.
+  document.addEventListener('keydown', function (ev) {
+    const t = ev.target;
+    if (!t) { return; }
+    if (t.tagName !== 'INPUT') { return; }
+    const combo = t.closest ? t.closest('.ps-combo') : null;
+    if (!combo) { return; }
+    const key = ev.key;
+    const isOpen = combo.getAttribute('data-open') === 'true';
+    if (key === 'Enter') {
+      const active = combo.querySelector('.ps-combo-option.is-active');
+      if (active) {
+        ev.preventDefault();
+        pickCombo(combo.getAttribute('data-field'), active.getAttribute('data-value'));
+      }
+      return;
+    }
+    if (key !== 'ArrowDown') {
+      if (key !== 'ArrowUp') { return; }
+    }
+    ev.preventDefault();
+    if (!isOpen) { openCombo(combo.getAttribute('data-field')); }
+    const visibleOpts = Array.prototype.filter.call(combo.querySelectorAll('.ps-combo-option'), function (o) { return !o.hidden; });
+    if (visibleOpts.length === 0) { return; }
+    const idx = visibleOpts.indexOf(combo.querySelector('.ps-combo-option.is-active'));
+    let next;
+    if (key === 'ArrowDown') { next = idx + 1 >= visibleOpts.length ? 0 : idx + 1; }
+    else { next = idx <= 0 ? visibleOpts.length - 1 : idx - 1; }
+    setActiveOption(combo, visibleOpts[next]);
   });
 
   // Escape closes the open combo and returns focus to its input.
@@ -2209,6 +2336,7 @@ body.has-prompt-studio-page { background-color: var(--wp--preset--color--surface
   // ---- Init ----
   // Order matters: load storage first (defaults for type/mode), then routeFromHash()
   // — the URL hash wins over storage per spec §2.
+  getToastHost();
   loadFromStorage();
   routeFromHash();
 })();
