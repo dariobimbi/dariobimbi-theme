@@ -919,156 +919,13 @@ header.wp-block-template-part,
 }
 
 /* ============================================================
-   Live editor (CSS playground)
+   Syntax token colors shared with the 404 page. The Live Editor
+   pattern (patterns/live-editor.php) carries its own scoped copy.
    ============================================================ */
-.codepen {
-    margin-top: var(--wp--preset--spacing--20);
-}
-
-.codepen-shell {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    border-radius: 14px;
-}
-
-@media (max-width: 880px) {
-    .codepen-shell { grid-template-columns: 1fr; }
-}
-
-.codepen-pane {
-    background: #0d1326;
-    border: 1px solid #1e2742;
-    border-radius: 12px;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    min-width: 0; /* let pre/textarea actually overflow horizontally */
-}
-
-.codepen-bar {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 14px;
-    background: #0a0e1a;
-    border-bottom: 1px solid #1e2742;
-}
-
-.codepen-dot {
-    width: 11px;
-    height: 11px;
-    border-radius: 50%;
-    flex: 0 0 auto;
-}
-.codepen-dot--r { background: #ff5f57; }
-.codepen-dot--y { background: #febc2e; }
-.codepen-dot--g { background: #28c840; }
-
-.codepen-filename {
-    margin-left: 8px;
-    font-family: var(--wp--preset--font-family--mono);
-    font-size: 0.78rem;
-    color: #94a3b8;
-    letter-spacing: 0.02em;
-}
-
-.codepen-editorWrap {
-    position: relative;
-    height: 460px;
-    background: #0a0e1a;
-    overflow: hidden;
-}
-
-.codepen-highlight,
-.codepen-input {
-    position: absolute;
-    inset: 0;
-    margin: 0;
-    padding: 16px 18px;
-    font-family: var(--wp--preset--font-family--mono);
-    font-size: 0.85rem;
-    line-height: 1.55;
-    white-space: pre;
-    word-wrap: normal;
-    overflow-wrap: normal;
-    word-break: normal;
-    tab-size: 2;
-    -moz-tab-size: 2;
-    box-sizing: border-box;
-}
-
-.codepen-highlight {
-    color: #e8ecf6;
-    pointer-events: none;
-    overflow: auto;
-    scrollbar-width: thin;
-    scrollbar-color: #1e2742 transparent;
-}
-.codepen-highlight code { display: block; }
-
-.codepen-input {
-    background: transparent;
-    color: transparent;
-    caret-color: #c084fc;
-    border: 0;
-    outline: 0;
-    resize: none;
-    overflow: auto;
-    z-index: 2;
-    /* Prevent iOS zoom on focus */
-    font-size: max(0.85rem, 16px);
-}
-@media (min-width: 480px) {
-    .codepen-input { font-size: 0.85rem; }
-}
-
-/* Token colors — one-dark-ish, all values verified ≥ 4.5:1 on #0a0e1a */
+/* brand-fidelity: one-dark syntax colors intentional, do not tokenize */
 .t-comment   { color: #8a93a6; font-style: italic; }
 .t-string    { color: #98c379; }
-.t-variable  { color: #c678dd; }
-.t-color     { color: #e5c07b; }
-.t-swatch {
-    display: inline-block;
-    width: 0.7em; height: 0.7em;
-    margin-right: 4px;
-    border-radius: 2px;
-    border: 1px solid rgba(255,255,255,0.18);
-    vertical-align: -1px;
-}
-.t-number    { color: #d19a66; }
-.t-property  { color: #61afef; }
 .t-func      { color: #56b6c2; }
-.t-brace     { color: #abb2bf; }
-
-.codepen-frame {
-    flex: 1;
-    padding: 24px;
-    background: #0a0e1a;
-    overflow: auto;
-    min-height: 460px;
-}
-.codepen-frame > div {
-    /* Shadow host — let the demo fill */
-    height: 100%;
-    min-height: 100%;
-}
-
-.codepen-hint {
-    margin-top: 18px;
-    color: var(--wp--preset--color--muted);
-    font-size: 0.85rem;
-    text-align: center;
-}
-.codepen-hint code {
-    background: var(--wp--preset--color--surface);
-    padding: 2px 7px;
-    border-radius: 4px;
-    font-family: var(--wp--preset--font-family--mono);
-    font-size: 0.8rem;
-    color: var(--wp--preset--color--accent-soft);
-    border: 1px solid var(--wp--preset--color--subtle);
-}
 
 /* ============================================================
    Accessibility (WCAG 2.1 AA) — focus indicators, skip link,
@@ -1086,16 +943,6 @@ header.wp-block-template-part,
 .wp-block-button__link:focus-visible {
     outline: 2px solid var(--wp--preset--color--accent-soft);
     outline-offset: 4px;
-}
-
-/* The live editor textarea has its outline disabled by default;
-   ring the surrounding pane instead so the focus state is obvious
-   without a clipped outline overlapping the highlight layer. */
-.codepen-input:focus-visible {
-    outline: none;
-}
-.codepen-pane:focus-within {
-    box-shadow: 0 0 0 2px var(--wp--preset--color--accent-soft);
 }
 
 /* WordPress auto-injects a skip link in block themes; restyle it so
