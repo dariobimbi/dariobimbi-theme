@@ -30,13 +30,13 @@
     <!-- /wp:paragraph -->
 
     <!-- wp:html -->
-    <div class="cc" data-default-fg="#60a5fa" data-default-bg="#0a0e1a">
+    <div class="cc" data-default-fg="#f43f5e" data-default-bg="#12100c">
         <div class="cc-controls">
             <label class="cc-field">
                 <span class="cc-field-label">Foreground</span>
                 <span class="cc-field-row">
                     <input type="color" class="cc-color" data-role="fg-color" aria-label="Foreground color picker">
-                    <input type="text" class="cc-hex" data-role="fg-hex" aria-label="Foreground hex value" maxlength="7" autocomplete="off" spellcheck="false">
+                    <input type="text" class="cc-hex" data-role="fg-hex" aria-label="Foreground color value" autocomplete="off" spellcheck="false">
                 </span>
             </label>
 
@@ -44,7 +44,7 @@
                 <span class="cc-field-label">Background</span>
                 <span class="cc-field-row">
                     <input type="color" class="cc-color" data-role="bg-color" aria-label="Background color picker">
-                    <input type="text" class="cc-hex" data-role="bg-hex" aria-label="Background hex value" maxlength="7" autocomplete="off" spellcheck="false">
+                    <input type="text" class="cc-hex" data-role="bg-hex" aria-label="Background color value" autocomplete="off" spellcheck="false">
                 </span>
             </label>
 
@@ -100,7 +100,7 @@
         </ul>
 
         <p class="cc-footnote">
-            "Large" means 18pt regular (≈24px) or 14pt bold (≈18.66px). The UI tile covers icons, form borders, and chart elements per WCAG 2.2 SC 1.4.11.
+            "Large" means 18pt regular (≈24px) or 14pt bold (≈18.66px). The UI tile covers icons, form borders, and chart elements per WCAG 2.2 SC 1.4.11. The text boxes take hex (3, 4, 6 or 8 digits), <code>rgb()</code>, <code>rgba()</code> and color names. If a color has transparency, it gets blended over the other color before the ratio is worked out.
         </p>
     </div>
 
@@ -202,7 +202,7 @@
     .demo-contrast .cc-prev-large       { font-size: 1.5rem;    line-height: 1.3; margin: 0; font-weight: 400; }
     .demo-contrast .cc-prev-large-bold  { font-size: 1.17rem;   line-height: 1.4; margin: 0; }
     .demo-contrast .cc-prev-normal      { font-size: 1rem;      line-height: 1.5; margin: 0; }
-    .demo-contrast .cc-prev-small       { font-size: 0.85rem;   line-height: 1.5; margin: 0; opacity: 0.85; }
+    .demo-contrast .cc-prev-small       { font-size: 0.85rem;   line-height: 1.5; margin: 0; }
     .demo-contrast .cc-prev-button {
         align-self: start;
         margin-top: 0.5rem;
@@ -255,6 +255,7 @@
     /* brand-fidelity — WCAG pass/fail semantics, intentional */
     .demo-contrast .cc-grade.is-aaa { color: #4ade80; border-color: #4ade8055; }
     .demo-contrast .cc-grade.is-aa  { color: var(--wp--preset--color--highlight); border-color: #facc1555; }
+    .demo-contrast .cc-grade.is-aa-large { color: var(--wp--preset--color--highlight); border-color: #facc1555; }
     .demo-contrast .cc-grade.is-fail{ color: var(--wp--preset--color--hot); border-color: #f43f5e55; }
 
     .demo-contrast .cc-tiles {
@@ -326,7 +327,7 @@
     <script>
     /* WCAG 2.x contrast checker — vanilla, ~80 lines of logic.
        Math: w3.org/TR/WCAG22/#dfn-contrast-ratio
-       URL hash carries ?fg=…&bg=… for shareable permalinks. */
+       The query string carries ?fg=…&bg=… for shareable permalinks. */
     (function () {
         const root = document.querySelector('.demo-contrast .cc');
         if (!root) return;
@@ -349,15 +350,81 @@
             'ui':         3.0,
         };
 
-        function normalizeHex(input) {
-            let h = String(input || '').trim().toLowerCase().replace(/^#/, '');
-            if (/^[0-9a-f]{3}$/.test(h)) h = h.split('').map(c => c + c).join('');
-            return /^[0-9a-f]{6}$/.test(h) ? '#' + h : null;
+        // Canvas resolves CSS color names for us, so there is no table to keep.
+        const ctx = document.createElement('canvas').getContext('2d');
+
+        function clampByte(n) { return Math.max(0, Math.min(255, Math.round(n))); }
+
+        // One rgb() channel: a number, or a percentage of 255.
+        function channel(tok) {
+            if (!/^[+-]?(\d+\.?\d*|\.\d+)%?$/.test(tok)) return null;
+            const v = parseFloat(tok);
+            return clampByte(/%$/.test(tok) ? v * 2.55 : v);
         }
 
-        function hexToRgb(hex) {
-            const n = parseInt(hex.slice(1), 16);
-            return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+        // Alpha: a number 0 to 1, or a percentage.
+        function alphaOf(tok) {
+            if (!/^[+-]?(\d+\.?\d*|\.\d+)%?$/.test(tok)) return null;
+            const v = parseFloat(tok);
+            return Math.max(0, Math.min(1, /%$/.test(tok) ? v / 100 : v));
+        }
+
+        // Any color string → { rgb: [r, g, b], a } or null. Takes hex (3, 4, 6
+        // or 8 digits, # optional), rgb()/rgba() and CSS color names.
+        function parseColor(input) {
+            if (input === null) return null;
+            if (input === undefined) return null;
+            const s = String(input).trim().toLowerCase();
+            if (!s) return null;
+
+            const hex = s.replace(/^#/, '');
+            if (/^([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/.test(hex)) {
+                let h = hex;
+                if (h.length < 6) h = h.split('').map(c => c + c).join('');
+                const n = parseInt(h.slice(0, 6), 16);
+                const a = h.length === 8 ? parseInt(h.slice(6), 16) / 255 : 1;
+                return { rgb: [(n >> 16) & 255, (n >> 8) & 255, n & 255], a: a };
+            }
+
+            const fn = s.match(/^rgba?\(\s*([^)]*?)\s*\)$/);
+            if (fn) {
+                const t = fn[1].split(/[\s,\/]+/).filter(Boolean);
+                if (t.length < 3) return null;
+                if (t.length > 4) return null;
+                const rgb = t.slice(0, 3).map(channel);
+                if (rgb.indexOf(null) !== -1) return null;
+                let a = 1;
+                if (t.length === 4) {
+                    a = alphaOf(t[3]);
+                    if (a === null) return null;
+                }
+                return { rgb: rgb, a: a };
+            }
+
+            // Named colors: an invalid string leaves fillStyle unchanged, so a
+            // name is only real if it lands the same from two different seeds.
+            if (!/^[a-z]+$/.test(s)) return null;
+            if (s === 'currentcolor') return null;
+            ctx.fillStyle = '#000000'; ctx.fillStyle = s;
+            const first = ctx.fillStyle;
+            ctx.fillStyle = '#ffffff'; ctx.fillStyle = s;
+            if (first !== ctx.fillStyle) return null;
+            if (first.charAt(0) === '#') return parseColor(first);
+            const m = first.match(/^rgba\((\d+), (\d+), (\d+), ([\d.]+)\)$/);
+            if (!m) return null;
+            return { rgb: [+m[1], +m[2], +m[3]], a: parseFloat(m[4]) };
+        }
+
+        function hex2(n) { return n.toString(16).padStart(2, '0'); }
+        function rgbHex(rgb) { return '#' + rgb.map(hex2).join(''); }
+        // Canonical text for a color: #rrggbb, or #rrggbbaa when it has alpha.
+        function colorText(c) {
+            if (c.a >= 1) return rgbHex(c.rgb);
+            return rgbHex(c.rgb) + hex2(Math.round(c.a * 255));
+        }
+
+        function over(top, bottomRgb) {
+            return top.rgb.map((v, i) => Math.round(v * top.a + bottomRgb[i] * (1 - top.a)));
         }
 
         function luminance([r, g, b]) {
@@ -368,25 +435,35 @@
             return 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b);
         }
 
-        function contrast(hexA, hexB) {
-            const lA = luminance(hexToRgb(hexA));
-            const lB = luminance(hexToRgb(hexB));
+        function contrast(rgbA, rgbB) {
+            const lA = luminance(rgbA);
+            const lB = luminance(rgbB);
             return (Math.max(lA, lB) + 0.05) / (Math.min(lA, lB) + 0.05);
         }
 
         function gradeFor(ratio) {
             if (ratio >= 7)   return { label: 'AAA', cls: 'is-aaa' };
             if (ratio >= 4.5) return { label: 'AA',  cls: 'is-aa'  };
+            if (ratio >= 3)   return { label: 'AA Large', cls: 'is-aa-large' };
             return { label: 'Fail', cls: 'is-fail' };
         }
 
-        function render(fg, bg) {
-            const ratio = contrast(fg, bg);
-            const rounded = Math.round(ratio * 100) / 100;
+        // Current colors as parsed { rgb, a } objects. The pickers only hold
+        // the opaque rgb; alpha lives here.
+        let fgC, bgC;
 
-            preview.style.background = bg;
-            preview.style.color = fg;
-            ratioEl.textContent = rounded.toFixed(2);
+        function render() {
+            // A see-through background is laid over the foreground, then a
+            // see-through foreground over that, so both always resolve.
+            const bgRgb = bgC.a < 1 ? over(bgC, fgC.rgb) : bgC.rgb;
+            const fgRgb = fgC.a < 1 ? over(fgC, bgRgb) : fgC.rgb;
+            const ratio = contrast(fgRgb, bgRgb);
+            // Truncate, never round up: 4.496 must not read as 4.50 and Fail.
+            const shown = Math.floor(ratio * 100 + 1e-9) / 100;
+
+            preview.style.background = rgbHex(bgRgb);
+            preview.style.color = rgbHex(fgRgb);
+            ratioEl.textContent = shown.toFixed(2);
 
             const g = gradeFor(ratio);
             gradeEl.textContent = g.label;
@@ -402,71 +479,105 @@
 
             // Reflect to URL — replaceState so it doesn't pollute history.
             const url = new URL(location.href);
-            url.searchParams.set('fg', fg.slice(1));
-            url.searchParams.set('bg', bg.slice(1));
+            url.searchParams.set('fg', colorText(fgC).slice(1));
+            url.searchParams.set('bg', colorText(bgC).slice(1));
             history.replaceState(null, '', url);
         }
 
-        // Pair of inputs (color picker + hex text) stays in sync, then re-renders.
-        function bindPair(colorInput, hexInput, otherColorInput) {
+        function setInvalid(hexInput, on) {
+            hexInput.classList.toggle('is-invalid', on);
+            hexInput.setAttribute('aria-invalid', on ? 'true' : 'false');
+        }
+
+        // Pair of inputs (color picker + text) stays in sync, then re-renders.
+        function bindPair(colorInput, hexInput, isFg) {
+            function store(c) { if (isFg) { fgC = c; } else { bgC = c; } }
+            function current() { return isFg ? fgC : bgC; }
             colorInput.addEventListener('input', () => {
-                hexInput.value = colorInput.value;
-                hexInput.classList.remove('is-invalid');
-                render(fgColor.value, bgColor.value);
+                const c = { rgb: parseColor(colorInput.value).rgb, a: 1 };
+                store(c);
+                hexInput.value = colorText(c);
+                setInvalid(hexInput, false);
+                render();
             });
             hexInput.addEventListener('input', () => {
-                const norm = normalizeHex(hexInput.value);
-                if (norm) {
-                    hexInput.classList.remove('is-invalid');
-                    colorInput.value = norm;
-                    render(fgColor.value, bgColor.value);
+                const c = parseColor(hexInput.value);
+                if (c) {
+                    setInvalid(hexInput, false);
+                    store(c);
+                    colorInput.value = rgbHex(c.rgb);
+                    render();
                 } else {
-                    hexInput.classList.add('is-invalid');
+                    setInvalid(hexInput, true);
                 }
             });
             hexInput.addEventListener('blur', () => {
-                // Snap text input back to the canonical 7-char form.
-                hexInput.value = colorInput.value;
-                hexInput.classList.remove('is-invalid');
+                // Snap text input back to the canonical form of the last valid color.
+                hexInput.value = colorText(current());
+                setInvalid(hexInput, false);
             });
         }
 
         function setPair(fg, bg) {
-            fgColor.value = fg; fgHex.value = fg;
-            bgColor.value = bg; bgHex.value = bg;
-            render(fg, bg);
+            fgC = fg; bgC = bg;
+            fgColor.value = rgbHex(fg.rgb); fgHex.value = colorText(fg);
+            bgColor.value = rgbHex(bg.rgb); bgHex.value = colorText(bg);
+            setInvalid(fgHex, false); setInvalid(bgHex, false);
+            render();
         }
 
-        function randomHex() {
-            return '#' + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0');
+        function randomRgb() {
+            return [0, 0, 0].map(() => Math.floor(Math.random() * 256));
+        }
+
+        // A random pair that passes AA. Most random pairs don't, so retry;
+        // if luck runs out, black or white always clears 4.5 on any background.
+        function randomPair() {
+            for (let i = 0; i < 200; i++) {
+                const f = randomRgb(), b = randomRgb();
+                if (contrast(f, b) >= 4.5) return [{ rgb: f, a: 1 }, { rgb: b, a: 1 }];
+            }
+            const b = randomRgb();
+            const f = contrast([0, 0, 0], b) >= contrast([255, 255, 255], b) ? [0, 0, 0] : [255, 255, 255];
+            return [{ rgb: f, a: 1 }, { rgb: b, a: 1 }];
         }
 
         // Initial values: URL params win, otherwise the brand defaults.
         const params = new URLSearchParams(location.search);
-        const initFg = normalizeHex(params.get('fg')) || root.dataset.defaultFg;
-        const initBg = normalizeHex(params.get('bg')) || root.dataset.defaultBg;
+        const initFg = parseColor(params.get('fg')) || parseColor(root.dataset.defaultFg);
+        const initBg = parseColor(params.get('bg')) || parseColor(root.dataset.defaultBg);
         setPair(initFg, initBg);
 
-        bindPair(fgColor, fgHex, bgColor);
-        bindPair(bgColor, bgHex, fgColor);
+        bindPair(fgColor, fgHex, true);
+        bindPair(bgColor, bgHex, false);
 
         root.querySelector('[data-action="swap"]').addEventListener('click', () => {
-            setPair(bgColor.value, fgColor.value);
+            setPair(bgC, fgC);
         });
         root.querySelector('[data-action="random"]').addEventListener('click', () => {
-            setPair(randomHex(), randomHex());
+            const pair = randomPair();
+            setPair(pair[0], pair[1]);
         });
-        root.querySelector('[data-action="copy"]').addEventListener('click', async (e) => {
-            const btn = e.currentTarget;
+
+        const copyBtn = root.querySelector('[data-action="copy"]');
+        const copyLabel = copyBtn.textContent; // captured once, so a quick second click can't save "✓ copied" as the label
+        let copyTimer = null;
+        function flashCopy(text, ok) {
+            clearTimeout(copyTimer);
+            copyBtn.textContent = text;
+            copyBtn.classList.toggle('is-copied', ok);
+            copyTimer = setTimeout(() => {
+                copyBtn.textContent = copyLabel;
+                copyBtn.classList.remove('is-copied');
+            }, 1400);
+        }
+        copyBtn.addEventListener('click', async () => {
             try {
                 await navigator.clipboard.writeText(location.href);
-                const original = btn.textContent;
-                btn.textContent = '✓ copied';
-                btn.classList.add('is-copied');
-                setTimeout(() => { btn.textContent = original; btn.classList.remove('is-copied'); }, 1400);
+                flashCopy('✓ copied', true);
             } catch (_) {
                 // Older browsers / insecure contexts: just select the URL bar mentally.
-                btn.textContent = 'copy not supported';
+                flashCopy('copy not supported', false);
             }
         });
     })();
