@@ -44,7 +44,7 @@
             <h3 class="wp-block-heading">Web Developer II at Clicks Web Design Inc.</h3>
             <!-- /wp:heading -->
             <!-- wp:paragraph {"textColor":"muted"} -->
-            <p class="has-muted-color has-text-color">Most of my work here is custom WordPress, both from-scratch themes and Divi-based ones, with the pages, functions, and widgets that go with them. Day to day that also means PHPUnit and Jest tests, ongoing maintenance on an in-house PHP CMS, reviewing the team's work before it goes to the CEO for sign-off, and the client conversations that decide what actually gets built. Mockups happen in Adobe XD, asset work in Photoshop.</p>
+            <p class="has-muted-color has-text-color">Most of my time here goes into an in-house PHP platform on Google Cloud that runs a few hundred dealer websites, and since 2017 I have written about half of its commits. I built its review syndication and Cloud Functions from scratch and wrote nearly all of its PHPUnit and Jest tests. I also keep the dealer sites themselves current across nine design generations, and I review the team's pull requests before they go to the CEO for sign-off. Custom WordPress and Divi work for direct clients fills in around that, along with the client conversations that decide what actually gets built. Mockups happen in Adobe XD, asset work in Photoshop.</p>
             <!-- /wp:paragraph -->
         </div>
         <!-- /wp:group -->
