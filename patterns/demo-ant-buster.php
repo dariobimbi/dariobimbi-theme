@@ -2138,55 +2138,41 @@ body.has-ant-buster-page {
     // Name — same shrink-then-truncate fallback as the detail panel so
     // a long kind name doesn't overflow the field-guide panel.
     var infoNameFit = fitFont(sk.name, pw - 16, 'bold __PX__px monospace', 14, 9);
-    drawTextWithShadow(infoNameFit.text, px + 8, py + 38, '#fee761', infoNameFit.font, 'start');
-    drawTextWithShadow(sk.family + ' family', px + 8, py + 54, '#c8a868', 'bold 8px monospace', 'start');
+    drawTextWithShadow(infoNameFit.text, px + 8, py + 30, '#fee761', infoNameFit.font, 'start');
+    drawTextWithShadow(sk.family + ' family', px + 8, py + 43, '#c8a868', 'bold 8px monospace', 'start');
 
-    // Stats row in a single recessed tag
-    var sy = py + 64;
-    var sh = 30;
-    drawWoodenTag(px + 2, sy, pw - 4, sh);
-    var col = (pw - 4) / 3;
-    var col1 = px + 2 + col * 0 + col / 2;
-    var col2 = px + 2 + col * 1 + col / 2;
-    var col3 = px + 2 + col * 2 + col / 2;
-    drawTextWithShadow('DMG', col1, sy + 9, '#c8a868', 'bold 7px monospace', 'center');
-    drawTextWithShadow('' + sk.damage, col1, sy + 22, '#f5e6c8', 'bold 11px monospace', 'center');
-    drawTextWithShadow('RATE', col2, sy + 9, '#c8a868', 'bold 7px monospace', 'center');
-    drawTextWithShadow('' + sk.fireRate, col2, sy + 22, '#f5e6c8', 'bold 11px monospace', 'center');
-    drawTextWithShadow('RNG', col3, sy + 9, '#c8a868', 'bold 7px monospace', 'center');
-    drawTextWithShadow('' + sk.range, col3, sy + 22, '#f5e6c8', 'bold 11px monospace', 'center');
+    // Preview row: the cannon at 2x on the left, a stacked DMG / RATE / RNG
+    // tag filling the rest of the width, so the guide reads like a spec card
+    // and the player can see what they would be building.
+    var tileY = py + 49;
+    var tileS = drawCannonPreview(ui.shopInfoKind, px + 2, tileY, 2);
+    var tagX = px + 2 + tileS + 4;
+    drawSpecTag(tagX, tileY, px + pw - 2 - tagX, tileS,
+      ['DMG', 'RATE', 'RNG'], ['' + sk.damage, '' + sk.fireRate, '' + sk.range], null,
+      'bold 7px monospace', 'bold 11px monospace');
 
-    // Description card — cream paper to match the field-guide aesthetic.
+    // Description card — cream paper sized to its text (at most three lines
+    // for every kind at this width), so the evolve list starts right under it.
     var desc = sk.description;
     if (!desc) {
       var tierLabel = sk.tier;
       if (!tierLabel) { tierLabel = 'base'; }
       desc = sk.family + ' ' + tierLabel;
     }
-    var dy = py + 102;
-    var dh = 56;
-    // Cream paper body
-    var dgrd = ctx.createLinearGradient(px + 2, dy, px + 2, dy + dh);
-    dgrd.addColorStop(0, '#fff8e8');
-    dgrd.addColorStop(1, '#f0dfb8');
-    ctx.fillStyle = dgrd;
-    ctx.fillRect(px + 2, dy, pw - 4, dh);
-    // Dark border
-    ctx.fillStyle = '#2a1810';
-    ctx.fillRect(px + 2, dy, pw - 4, 2);
-    ctx.fillRect(px + 2, dy, 2, dh);
-    ctx.fillRect(px + pw - 4, dy, 2, dh);
-    ctx.fillRect(px + 2, dy + dh - 2, pw - 4, 2);
-    // Text in dark on cream — drawn directly (not via drawTextWithShadow,
-    // which would put a dark stamp on dark text).
-    drawWrappedTextDark(desc, px + 12, dy + 10, pw - 24, '#3a2210', 'bold 9px monospace', 14);
+    var dy = tileY + tileS + 5;
+    var dh = drawPaperNote(desc, px + 2, dy, pw - 4, 'bold 9px monospace', 13);
 
     // "EVOLVES TO" header (different word than detail panel's "UPGRADES TO"
-    // so the screen reads as a different surface).
-    drawTextWithShadow('EVOLVES TO', px + 8, py + 168, '#c8a868', 'bold 8px monospace', 'start');
-
-    // Upgrade rows — cream paper cards, no cost, no affordability dim.
-    drawShopInfoEvolveCards(sk, px, pw, py + 180, 46);
+    // so the screen reads as a different surface). A kind at the end of its
+    // line says so instead of leaving the header hanging over nothing.
+    var evolveY = dy + dh + 10;
+    if (sk.upgradesTo.length > 0) {
+      drawTextWithShadow('EVOLVES TO', px + 8, evolveY, '#c8a868', 'bold 8px monospace', 'start');
+      // Upgrade rows — cream paper cards, no cost, no affordability dim.
+      drawShopInfoEvolveCards(sk, px, pw, evolveY + 8, 42);
+    } else {
+      drawTextWithShadow('FINAL FORM', px + 8, evolveY, '#c8a868', 'bold 8px monospace', 'start');
+    }
   }
 
   function drawShopInfoPanelPortrait(sk) {
@@ -2238,24 +2224,29 @@ body.has-ant-buster-page {
     ctx.fillRect(leftX + leftW - 2, colTop, 2, colH);
     ctx.fillRect(leftX, colTop + colH - 2, leftW, 2);
 
+    // Preview tile at 2x in the paper's top-left corner; name, family and
+    // the 3-stat row sit to its right, and the description runs under both.
+    var tileS = drawCannonPreview(ui.shopInfoKind, leftX + 6, colTop + 6, 2);
+    var infoX = leftX + 6 + tileS + 8;
+    var infoW = leftX + leftW - 6 - infoX;
+
     // Name (dark on cream)
-    ctx.font = 'bold 14px monospace';
-    var fittedInfoName = truncateToWidth(sk.name, leftW - 16);
+    var fittedInfoName = fitFont(sk.name, infoW, 'bold __PX__px monospace', 14, 10);
     ctx.fillStyle = '#3a2210';
     ctx.textAlign = 'start';
     ctx.textBaseline = 'middle';
-    ctx.fillText(fittedInfoName, leftX + 8, colTop + 12);
+    ctx.fillText(fittedInfoName.text, infoX, colTop + 14);
     ctx.font = 'bold 10px monospace';
     ctx.fillStyle = '#8a5a30';
-    ctx.fillText(sk.family + ' family', leftX + 8, colTop + 26);
+    ctx.fillText(sk.family + ' family', infoX, colTop + 28);
 
-    // 3-stat row inside the cream area
-    var statsY = colTop + 38;
-    var colW = (leftW - 16) / 3;
+    // 3-stat row beside the tile
+    var statsY = colTop + 42;
+    var colW = infoW / 3;
     var labels3 = ['DMG', 'RATE', 'RNG'];
     var values3 = ['' + sk.damage, '' + sk.fireRate, '' + sk.range];
     for (var sI = 0; sI < 3; sI++) {
-      var sCx = leftX + 8 + colW * sI + colW / 2;
+      var sCx = infoX + colW * sI + colW / 2;
       ctx.font = 'bold 10px monospace';
       ctx.fillStyle = '#8a5a30';
       ctx.textAlign = 'center';
@@ -2267,29 +2258,52 @@ body.has-ant-buster-page {
     ctx.textAlign = 'start';
     ctx.textBaseline = 'alphabetic';
 
-    // Description (wrapped, dark on cream)
+    // Description (wrapped, dark on cream) under the tile
     var descP = sk.description;
     if (!descP) {
       var tierLabelP = sk.tier;
       if (!tierLabelP) { tierLabelP = 'base'; }
       descP = sk.family + ' ' + tierLabelP;
     }
-    drawWrappedTextDark(descP, leftX + 8, colTop + 62, leftW - 16, '#3a2210', 'bold 10px monospace', 13);
+    drawWrappedTextDark(descP, leftX + 8, colTop + 6 + tileS + 6, leftW - 16, '#3a2210', 'bold 10px monospace', 13);
 
     // === RIGHT: EVOLVES TO header + cream evolution cards ===
-    drawTextWithShadow('EVOLVES TO', rightX + rightW / 2, colTop + 6, '#fee761', 'bold 10px monospace', 'center');
-    var evolveTop = colTop + 14;
-    var evolveH = colH - 14;
-    // Up to 3 cards, with 4px gaps. rh = (evolveH - 8) / 3 = ~39 with colH 140
-    var evolveRowH = Math.floor((evolveH - 8) / 3);
-    drawShopInfoEvolveCards(sk, rightX, rightW, evolveTop, evolveRowH);
+    // Cards are sized so three fit under the header for a base cannon; mid
+    // and final kinds have fewer and get taller cards, capped so a lone card
+    // doesn't balloon. A kind at the end of its line says so instead.
+    var evolveCount = sk.upgradesTo.length;
+    if (evolveCount > 0) {
+      drawTextWithShadow('EVOLVES TO', rightX + rightW / 2, colTop + 5, '#fee761', 'bold 10px monospace', 'center');
+      var evolveTop = colTop + 12;
+      var evolveH = colH - 12;     // 128 with colH 140
+      var evolveRowH = Math.floor((evolveH - 5 * (evolveCount - 1)) / evolveCount);
+      if (evolveRowH > 48) { evolveRowH = 48; }
+      drawShopInfoEvolveCards(sk, rightX, rightW, evolveTop, evolveRowH);
+    } else {
+      drawTextWithShadow('FINAL FORM', rightX + rightW / 2, colTop + 5, '#fee761', 'bold 10px monospace', 'center');
+    }
   }
 
   // Shared evolution-cards renderer. Renders up to 3 cream-paper cards
-  // starting at baseY, each rh tall with a 5 px gap.
+  // starting at baseY, each rh tall with a 5 px gap: a 1x preview tile on
+  // the left, then three text lines beside it (name / DMG + RATE / RNG +
+  // tier badge). The old role line went away when the tile came in; there
+  // is no width left for it beside the sprite, and the numbers are what
+  // this list is for.
   function drawShopInfoEvolveCards(sk, px, pw, baseY, rh) {
     var upgrades = sk.upgradesTo;
     if (!upgrades) { upgrades = []; }
+    // Phones get 10 px for everything here.
+    var small = 'bold 7px monospace';
+    var stat = 'bold 8px monospace';
+    var nameMin = 9;
+    var colOff = 50;
+    if (isPortrait()) {
+      small = 'bold 10px monospace';
+      stat = 'bold 10px monospace';
+      nameMin = 10;
+      colOff = 62;
+    }
     var rowY = baseY;
     for (var i = 0; i < upgrades.length; i++) {
       var uk = upgrades[i];
@@ -2308,41 +2322,37 @@ body.has-ant-buster-page {
       ctx.fillRect(px + pw - 4, rowY, 2, rh);
       ctx.fillRect(px + 2, rowY + rh - 2, pw - 4, 2);
 
-      // Top line: name + tier badge. Phones get 10 px for everything here.
-      var small = 7;
-      var stat = 8;
-      if (isPortrait()) { small = 10; stat = 10; }
-      ctx.font = 'bold ' + small + 'px monospace';
-      var tierLabel2 = udef.tier;
-      if (!tierLabel2) { tierLabel2 = 'mid'; }
-      var tierW = ctx.measureText(tierLabel2.toUpperCase()).width;
-      ctx.font = 'bold 10px monospace';
-      var fittedInfoUpgName = truncateToWidth(udef.name, pw - 28 - tierW);
+      // Preview tile, vertically centered in the card.
+      var tileS = drawCannonPreview(uk, px + 4, rowY + Math.round((rh - 34) / 2), 1);
+      var tx = px + 4 + tileS + 3;
+
+      // Three line centers: the first hugs the top border on the short
+      // portrait cards, the last sits 8 px above the bottom border.
+      var l1 = rowY + 10;
+      if (rh < 42) { l1 = rowY + 8; }
+      var l3 = rowY + rh - 8;
+      var l2 = Math.round((l1 + l3) / 2);
+
+      // Name — shrink, then truncate against the card's right padding.
+      var nameFit = fitFont(udef.name, (px + pw - 8) - tx, 'bold __PX__px monospace', 10, nameMin);
       ctx.fillStyle = '#3a2210';
       ctx.textAlign = 'start';
       ctx.textBaseline = 'middle';
-      ctx.fillText(fittedInfoUpgName, px + 12, rowY + 13);
+      ctx.fillText(nameFit.text, tx, l1);
 
-      ctx.font = 'bold ' + small + 'px monospace';
+      // DMG + RATE in two columns, then RNG with the tier badge at the far right.
+      ctx.font = stat;
+      ctx.fillStyle = '#5a3a20';
+      ctx.fillText('DMG ' + udef.damage, tx, l2);
+      ctx.fillText('RATE ' + udef.fireRate, tx + colOff, l2);
+      ctx.fillText('RNG ' + udef.range, tx, l3);
+
+      var tierLabel2 = udef.tier;
+      if (!tierLabel2) { tierLabel2 = 'mid'; }
+      ctx.font = small;
       ctx.fillStyle = '#8a5a30';
       ctx.textAlign = 'end';
-      ctx.fillText(tierLabel2.toUpperCase(), px + pw - 8, rowY + 13);
-
-      // Stats line
-      ctx.font = 'bold ' + stat + 'px monospace';
-      ctx.fillStyle = '#5a3a20';
-      ctx.textAlign = 'start';
-      ctx.fillText('DMG ' + udef.damage + '  RATE ' + udef.fireRate + '  RNG ' + udef.range, px + 10, rowY + 27);
-
-      // Role line — only render if the row is tall enough to fit a 7px text
-      // baseline at y+38 plus descenders without clipping the card's bottom
-      // border. Landscape cards (rh=46) qualify; portrait cards (rh~39) do
-      // not, so it is dropped there.
-      if (rh >= 46) {
-        ctx.font = 'bold 7px monospace';
-        ctx.fillStyle = '#7a5a40';
-        ctx.fillText(truncateToWidth(cannonRole(udef), pw - 16), px + 10, rowY + 38);
-      }
+      ctx.fillText(tierLabel2.toUpperCase(), px + pw - 8, l3);
 
       ctx.textAlign = 'start';
       ctx.textBaseline = 'alphabetic';
@@ -2851,41 +2861,43 @@ body.has-ant-buster-page {
 
     // Name — shrink to fit the panel width, then truncate at the smallest size
     // we'll allow. Long upgrade names (e.g. "Rubber Wrecking Ball") would
-    // otherwise spill past the panel's right edge.
+    // otherwise spill past the panel's right edge. Name and family sit a
+    // little higher than they used to, to pay for the preview row below.
     var detailNameFit = fitFont(sk.name, pw - 16, 'bold __PX__px monospace', 14, 9);
-    drawTextWithShadow(detailNameFit.text, px + 8, py + 32, '#fee761', detailNameFit.font, 'start');
-    drawTextWithShadow(sk.family + ' family', px + 8, py + 48, '#c8a868', 'bold 8px monospace', 'start');
+    drawTextWithShadow(detailNameFit.text, px + 8, py + 26, '#fee761', detailNameFit.font, 'start');
+    drawTextWithShadow(sk.family + ' family', px + 8, py + 39, '#c8a868', 'bold 8px monospace', 'start');
 
-    // Stats row — 4 centered columns (DMG / RATE / RNG / KILLS).
-    var sy = py + 58;
-    var sh = 30;
-    drawWoodenTag(px + 2, sy, pw - 4, sh);
-    var col = (pw - 4) / 4;
+    // Preview row: the selected cannon at 2x on the left (barrel up, so it
+    // reads as a portrait rather than a snapshot of its current heading) and
+    // a stacked DMG / RATE / RNG / KILLS tag filling the rest of the width.
+    var tileY = py + 45;
+    var tileS = drawCannonPreview(c.kind, px + 2, tileY, 2);
+    var tagX = px + 2 + tileS + 4;
     var killCount;
     if (c.kills) { killCount = c.kills; } else { killCount = 0; }
-    var labels = ['DMG', 'RATE', 'RNG', 'KILLS'];
-    var values = ['' + sk.damage, '' + sk.fireRate, '' + sk.range, '' + killCount];
-    var valColors = ['#f5e6c8', '#f5e6c8', '#f5e6c8', '#fee761'];
-    for (var i = 0; i < 4; i++) {
-      var cx = px + 2 + col * i + col / 2;
-      drawTextWithShadow(labels[i], cx, sy + 9, '#c8a868', 'bold 7px monospace', 'center');
-      drawTextWithShadow(values[i], cx, sy + 22, valColors[i], 'bold 11px monospace', 'center');
-    }
+    drawSpecTag(tagX, tileY, px + pw - 2 - tagX, tileS,
+      ['DMG', 'RATE', 'RNG', 'KILLS'],
+      ['' + sk.damage, '' + sk.fireRate, '' + sk.range, '' + killCount],
+      [null, null, null, '#fee761'],
+      'bold 7px monospace', 'bold 10px monospace');
 
-    // Targeting row + label (extra y-padding below the stats tag)
-    var afterTargetingY = drawTargetingRow(c, px + 8, py + 110);
+    // Targeting row + label, right under the preview row.
+    var afterTargetingY = drawTargetingRow(c, px + 8, tileY + tileS + 4);
 
     // Upgrade rows + sell — shared helpers so portrait can render the same.
     // A cannon at the end of its line has no upgrade rows, so its
-    // description fills that space instead of bare wood.
+    // description fills that space instead of bare wood. Three 42 px rows
+    // from here end 7 px above the sell button, so there is no slack left
+    // in this column: anything taller has to come out of the header.
     if (sk.upgradesTo.length === 0) {
-      drawPaperNote(sk.description, px + 2, afterTargetingY + 6, pw - 4, 'bold 9px monospace', 14);
+      drawPaperNote(sk.description, px + 2, afterTargetingY + 4, pw - 4, 'bold 9px monospace', 14);
     }
-    drawTowerPanelUpgrades(c, sk, px, pw, afterTargetingY + 6, /*upgRowH=*/ 42);
+    drawTowerPanelUpgrades(c, sk, px, pw, afterTargetingY + 4, /*upgRowH=*/ 42);
     drawTowerPanelSell(c, px, pw, HEIGHT - 30, /*sellH=*/ 24, /*variant=*/ 'red');
   }
 
   // A cream paper card holding a wrapped line of text, sized to the text.
+  // Returns the card's height so a caller can stack the next thing under it.
   function drawPaperNote(text, x, y, w, font, lineH) {
     ctx.font = font;
     var words = text.split(' ');
@@ -2907,11 +2919,15 @@ body.has-ant-buster-page {
     ctx.fillRect(x + w - 2, y, 2, h);
     ctx.fillRect(x, y + h - 2, w, 2);
     drawWrappedTextDark(text, x + 10, y + 7, w - 20, '#3a2210', font, lineH);
+    return h;
   }
 
   // Portrait: two-column horizontal layout in the bottom strip.
-  // STRIP_H = 180. Back button at the top, then left column (name + stats +
-  // targeting) and right column (3 upgrade rows + sell) side by side.
+  // STRIP_H = 180. Back button at the top, then left column (everything
+  // about this cannon: preview, name, stats, targeting, sell) and right
+  // column (the three upgrade rows) side by side. Sell used to live under
+  // the upgrade rows; moving it left is what gives the rows the height for
+  // a sprite tile and three lines of 10 px text.
   function drawTowerPanelPortrait(c, sk) {
     var stripY = HEIGHT - STRIP_H;
 
@@ -2933,53 +2949,58 @@ body.has-ant-buster-page {
     var rightX = 284;
     var rightW = WIDTH - rightX - 4;
 
-    // === LEFT COLUMN: name, family, stats, targeting ===
+    // === LEFT COLUMN: preview, name, family, stats, targeting, sell ===
     ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
     ctx.fillRect(leftX, colTop, leftW, colH);
     ctx.fillStyle = '#2a1810';
     ctx.fillRect(leftX, colTop, leftW, 1);
 
+    // Preview tile at 2x in the top-left; name, family and the stats tag
+    // sit to its right.
+    var tileS = drawCannonPreview(c.kind, leftX + 6, colTop + 6, 2);
+    var infoX = leftX + 6 + tileS + 8;
+    var infoW = leftX + leftW - 6 - infoX;
+
     // Name
-    var detailNameFitP = fitFont(sk.name, leftW - 16, 'bold __PX__px monospace', 14, 9);
-    drawTextWithShadow(detailNameFitP.text, leftX + 8, colTop + 12, '#fee761', detailNameFitP.font, 'start');
-    drawTextWithShadow(sk.family + ' family', leftX + 8, colTop + 26, '#c8a868', 'bold 10px monospace', 'start');
+    var detailNameFitP = fitFont(sk.name, infoW, 'bold __PX__px monospace', 14, 10);
+    drawTextWithShadow(detailNameFitP.text, infoX, colTop + 14, '#fee761', detailNameFitP.font, 'start');
+    drawTextWithShadow(sk.family + ' family', infoX, colTop + 28, '#c8a868', 'bold 10px monospace', 'start');
 
     // 4-stat row in 4 even columns (DMG / RATE / RNG / KILLS)
     var statsY = colTop + 38;
     var statsH = 30;
-    drawWoodenTag(leftX + 4, statsY, leftW - 8, statsH);
-    var colW = (leftW - 8) / 4;
+    drawWoodenTag(infoX, statsY, infoW, statsH);
+    var colW = infoW / 4;
     var killCountP;
     if (c.kills) { killCountP = c.kills; } else { killCountP = 0; }
     var labelsP = ['DMG', 'RATE', 'RNG', 'KILLS'];
     var valuesP = ['' + sk.damage, '' + sk.fireRate, '' + sk.range, '' + killCountP];
     var valColorsP = ['#f5e6c8', '#f5e6c8', '#f5e6c8', '#fee761'];
     for (var iP = 0; iP < 4; iP++) {
-      var cxP = leftX + 4 + colW * iP + colW / 2;
+      var cxP = infoX + colW * iP + colW / 2;
       drawTextWithShadow(labelsP[iP], cxP, statsY + 9, '#c8a868', 'bold 10px monospace', 'center');
       drawTextWithShadow(valuesP[iP], cxP, statsY + 22, valColorsP[iP], 'bold 11px monospace', 'center');
     }
 
-    // Targeting row — sits below the stats tag. drawTargetingRow renders
+    // Targeting row — sits below the preview tile. drawTargetingRow renders
     // 5 buttons starting at (x, y) and adds a "TARGETING X" label below them.
-    drawTargetingRow(c, leftX + 8, statsY + statsH + 8);
+    drawTargetingRow(c, leftX + 8, colTop + 80);
 
-    // === RIGHT COLUMN: upgrade rows + sell ===
-    var sellH = 20;
+    // Sell button along the bottom of the left column; its tap area runs to
+    // the bottom edge of the canvas.
+    var sellH = 22;
+    drawTowerPanelSell(c, leftX + 2, leftW - 4, colTop + colH - sellH - 2, sellH, 'red');
+    ui.sellRect.h = HEIGHT - ui.sellRect.y;
+
+    // === RIGHT COLUMN: upgrade rows ===
+    // 3 upgrade rows with 5 px gaps fill the column: 3*rh + 2*5 = colH, so
+    // rh = (colH - 10) / 3 = 48 with colH 154.
     var upgTop = colTop;
-    var upgBottom = colTop + colH - sellH - 4;
-    var upgArea = upgBottom - upgTop;     // ~130 with colH 154
-    // 3 upgrade rows with 4 px gaps = 3*rh + 2*4 = upgArea; so rh = (upgArea - 8) / 3
-    var upgRowH = Math.floor((upgArea - 8) / 3);
+    var upgRowH = Math.floor((colH - 10) / 3);
     if (sk.upgradesTo.length === 0) {
       drawPaperNote(sk.description, rightX + 2, upgTop, rightW - 4, 'bold 10px monospace', 13);
     }
     drawTowerPanelUpgrades(c, sk, rightX, rightW, upgTop, upgRowH);
-
-    // Sell button at the bottom of the right column; its tap area runs to
-    // the bottom edge of the canvas.
-    drawTowerPanelSell(c, rightX, rightW, upgBottom + 4, sellH, 'red');
-    ui.sellRect.h = HEIGHT - ui.sellRect.y;
   }
 
   // Shared upgrade-row renderer. Renders up to 3 upgrade buttons starting
@@ -3044,32 +3065,47 @@ body.has-ant-buster-page {
         drawWoodenButton(px + 2, by, pw - 4, rh, 'wood');
       }
 
-      // Top line — name on the left, cost in the middle (with coin), small ?
-      // hangtag on the far right that opens the upgrade's info panel.
-      // Truncate the name so it can't extend under the coin / cost / ? hangtag.
-      // Coin x = px + pw - 56, so the name must end before it with a small gap.
-      ctx.font = 'bold 10px monospace';
-      var fittedUpgName = truncateToWidth(udef.name, pw - 70);
-      drawTextWithShadow(fittedUpgName, px + 10, by + 11, '#fee761', 'bold 10px monospace', 'start');
-      ctx.drawImage(game.sprites.coin, px + pw - 56, by + 6);
-      var costColor;
-      if (isLocked) { costColor = '#888'; }
-      else if (canAfford) { costColor = '#fee761'; }
-      else { costColor = '#ff7070'; }
-      drawTextWithShadow('' + udef.cost, px + pw - 26, by + 11, costColor, 'bold 10px monospace', 'end');
-      // Stats line (a locked god-tier row says when it opens instead, below
-      // at full strength so it reads on touch too, where there is no hover).
-      var statFont = 'bold 8px monospace';
-      if (isPortrait()) { statFont = 'bold 10px monospace'; }
-      if (!isLocked) {
-        drawTextWithShadow('DMG ' + udef.damage + '  RATE ' + udef.fireRate + '  RNG ' + udef.range, px + 10, by + 28, '#f5e6c8', statFont, 'start');
+      // Preview tile of what you would be buying, vertically centered in the
+      // row, with three text lines beside it: name / coin + cost + DMG /
+      // RATE + RNG. The stats split across two lines because a full
+      // "DMG x  RATE y  RNG z" string does not fit beside a tile at 8 px.
+      var tileS = drawCannonPreview(uk, px + 4, by + Math.round((rh - 34) / 2), 1);
+      var tx = px + 4 + tileS + 3;
+      var l1 = by + 10;
+      var l3 = by + rh - 8;
+      var l2 = Math.round((l1 + l3) / 2);
+      var statPx = 8;
+      var nameMin = 9;
+      var colOff = 50;
+      if (isPortrait()) {
+        statPx = 10;
+        nameMin = 10;
+        colOff = 62;
       }
+      var statFont = 'bold ' + statPx + 'px monospace';
 
       // Cream paper "?" hangtag at top-right — opens info for this upgrade.
       var ihtW = 16;
       var ihtH = 16;
       var ihtX = px + pw - ihtW - 6;
       var ihtY = by + 4;
+
+      // Name — shrink, then truncate so it can't run under the "?" hangtag.
+      var upgNameFit = fitFont(udef.name, (ihtX - 3) - tx, 'bold __PX__px monospace', 10, nameMin);
+      drawTextWithShadow(upgNameFit.text, tx, l1, '#fee761', upgNameFit.font, 'start');
+      ctx.drawImage(game.sprites.coin, tx, l2 - 5);
+      var costColor;
+      if (isLocked) { costColor = '#888'; }
+      else if (canAfford) { costColor = '#fee761'; }
+      else { costColor = '#ff7070'; }
+      drawTextWithShadow('' + udef.cost, tx + 16, l2, costColor, 'bold 10px monospace', 'start');
+      // Stats (a locked god-tier row says when it opens instead, below at
+      // full strength so it reads on touch too, where there is no hover).
+      if (!isLocked) {
+        drawTextWithShadow('DMG ' + udef.damage, tx + colOff, l2, '#f5e6c8', statFont, 'start');
+        drawTextWithShadow('RATE ' + udef.fireRate, tx, l3, '#f5e6c8', statFont, 'start');
+        drawTextWithShadow('RNG ' + udef.range, tx + colOff, l3, '#f5e6c8', statFont, 'start');
+      }
       ctx.fillStyle = '#fff8e8';
       ctx.fillRect(ihtX, ihtY, ihtW, ihtH);
       ctx.fillStyle = '#f0dfb8';
@@ -3092,7 +3128,12 @@ body.has-ant-buster-page {
       ctx.restore();
 
       if (isLocked) {
-        drawTextWithShadow('UNLOCKS AFTER WAVE 15', px + 10, by + 28, '#fee761', statFont, 'start');
+        // Shrinks a size on narrow fonts rather than running into the border;
+        // portrait keeps its 10 px floor (the line fits there anyway).
+        var unlockMin = 7;
+        if (isPortrait()) { unlockMin = 10; }
+        var unlockFit = fitFont('UNLOCKS AFTER WAVE 15', (px + pw - 4) - tx, 'bold __PX__px monospace', statPx, unlockMin);
+        drawTextWithShadow(unlockFit.text, tx, l3, '#fee761', unlockFit.font, 'start');
       }
 
       ui.upgradeRects[i2] = { x: px + 2, y: by, w: pw - 4, h: rh, toKind: uk, locked: isLocked };
@@ -3110,6 +3151,93 @@ body.has-ant-buster-page {
     drawWoodenButton(sbX, sbY, sbW, sbH, variant);
     drawTextWithShadow('Sell · +' + refund, sbX + sbW / 2, sbY + sbH / 2, '#fee761', 'bold 10px monospace', 'center');
     ui.sellRect = { x: sbX, y: sbY, w: sbW, h: sbH };
+  }
+
+  // Cannon preview tile: the shop's dark inset holding a kind's base and
+  // turret at an integer scale, barrel pointing up. Shared by the detail
+  // panel, the field guide and the upgrade / evolve rows so the player sees
+  // the same silhouette everywhere, at 2x for the cannon in focus and 1x
+  // for the options. Returns the tile's outer size (32 * scale + 2).
+  function drawCannonPreview(kind, x, y, scale) {
+    var def = CANNON_KINDS[kind];
+    var size = 32 * scale + 2;
+    x = Math.round(x);
+    y = Math.round(y);
+    ctx.fillStyle = '#2a1810';
+    ctx.fillRect(x, y, size, size);
+    ctx.fillStyle = '#1a0a00';
+    ctx.fillRect(x, y, size, 1);
+    ctx.fillRect(x, y, 1, size);
+    ctx.fillRect(x + size - 1, y, 1, size);
+    ctx.fillRect(x, y + size - 1, size, 1);
+    // God tier gets a thin gold inner line, matching the gold bar on its
+    // upgrade row. Drawn under the sprite, and no glow: the base's own gold
+    // rim does the talking.
+    if (def.tier === 'god') {
+      ctx.fillStyle = '#c0a040';
+      ctx.fillRect(x + 1, y + 1, size - 2, 1);
+      ctx.fillRect(x + 1, y + 1, 1, size - 2);
+      ctx.fillRect(x + size - 2, y + 1, 1, size - 2);
+      ctx.fillRect(x + 1, y + size - 2, size - 2, 1);
+    }
+    var ox = x + 1;
+    var oy = y + 1;
+    ctx.drawImage(cannonBaseFor(kind), ox, oy, 32 * scale, 32 * scale);
+    // Same sprite choice as drawCannonTurrets: PNG art when it has loaded,
+    // else the procedural turret. 20x20 turrets sit on their breech (grid
+    // 6,0 with the barrel up); every other size is centered on the base.
+    var pngSprite = game.sprites.cannonTurretPNG[kind];
+    var pngReady = false;
+    if (pngSprite) {
+      if (pngSprite.complete) {
+        if (pngSprite.naturalWidth) { pngReady = true; }
+      }
+    }
+    var turret; var tw; var th; var gx; var gy;
+    if (pngReady) {
+      turret = pngSprite;
+      tw = pngSprite.naturalWidth;
+      th = pngSprite.naturalHeight;
+      gx = 16 - tw / 2;
+      gy = 16 - th / 2;
+    } else {
+      turret = game.sprites.turrets[kind];
+      if (!turret) { turret = game.sprites.turrets.howitzer; }
+      tw = turret.width;
+      th = turret.height;
+      if (tw === 20) {
+        gx = 6;
+        gy = 0;
+      } else {
+        gx = 16 - tw / 2;
+        gy = 16 - th / 2;
+      }
+    }
+    ctx.drawImage(turret, Math.round(ox + gx * scale), Math.round(oy + gy * scale), tw * scale, th * scale);
+    return size;
+  }
+
+  // Stacked label / value rows in a wooden tag: the spec sheet that sits
+  // beside the big preview tile. labels and values are parallel arrays;
+  // valColors is optional, per row, and defaults to parchment.
+  function drawSpecTag(x, y, w, h, labels, values, valColors, labelFont, valueFont) {
+    drawWoodenTag(x, y, w, h);
+    var rowH = (h - 2) / labels.length;
+    for (var i = 0; i < labels.length; i++) {
+      var rowTop = y + 1 + rowH * i;
+      if (i > 0) {
+        // Faint seam between rows so the stack reads as rows, not a list.
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+        ctx.fillRect(x + 3, Math.round(rowTop), w - 6, 1);
+      }
+      var cy = Math.round(rowTop + rowH / 2);
+      var vc = '#f5e6c8';
+      if (valColors) {
+        if (valColors[i]) { vc = valColors[i]; }
+      }
+      drawTextWithShadow(labels[i], x + 6, cy, '#c8a868', labelFont, 'start');
+      drawTextWithShadow(values[i], x + w - 6, cy, vc, valueFont, 'end');
+    }
   }
 
   // === Render helpers (z-order spec §3.5, layers 1–13) ===
@@ -3222,8 +3350,19 @@ body.has-ant-buster-page {
   function drawCannonBases() {
     for (var ci = 0; ci < game.cannons.length; ci++) {
       var c = game.cannons[ci];
+      ctx.globalAlpha = movedAlpha(c);
       ctx.drawImage(cannonBaseFor(c.kind), Math.round(c.x - 16), Math.round(c.y - 16));
+      ctx.globalAlpha = 1;
     }
+  }
+
+  // A cannon being dragged to a new spot (while paused) fades where it
+  // stands, so the bright ghost under the pointer reads as the same cannon.
+  function movedAlpha(c) {
+    if (c === ui.movingCannon) {
+      if (ui.moveDragging) { return 0.3; }
+    }
+    return 1;
   }
 
   // Layer 7: ants, sorted top-down by y so a lower ant draws over a higher one.
@@ -3415,6 +3554,7 @@ body.has-ant-buster-page {
           drawX = -turretSprite.width / 2; drawY = -turretSprite.height / 2;
         }
       }
+      ctx.globalAlpha = movedAlpha(c);
       ctx.drawImage(turretSprite, drawX, drawY);
       ctx.restore();
       // Plan 4 — muzzle flash. Renders for FLASH_DUR seconds after the cannon
@@ -3983,22 +4123,41 @@ body.has-ant-buster-page {
   // Layer 13a: drag preview (ghost cannon under the cursor while dragging from
   // the shop). Sits inside the overlays bucket because it is UI feedback drawn
   // above gameplay, but below pause/win/lose modals.
+  // Also draws the ghost for a placed cannon being dragged to a new spot
+  // while paused (ui.movingCannon), so drawOverlays calls it after the
+  // pause dim.
   function drawDragPreview() {
-    if (ui.armedKind === null) { return; }
     if (ui.activePointerId === null) { return; }   // hide ghost when no pointer is down (Task 3 keeps this)
-    var ok = canPlaceCannon(ui.mouseX, ui.mouseY);
-    var dragDef = CANNON_KINDS[ui.armedKind];
-    var dragTurret = game.sprites.turrets[ui.armedKind];
+    var kind = ui.armedKind;
+    var ok;
+    if (ui.movingCannon) {
+      if (!ui.moveDragging) { return; }
+      kind = ui.movingCannon.kind;
+      ok = canPlaceCannon(ui.mouseX, ui.mouseY, ui.movingCannon);
+    } else {
+      if (kind === null) { return; }
+      ok = canPlaceCannon(ui.mouseX, ui.mouseY);
+    }
+    var dragDef = CANNON_KINDS[kind];
+    var dragTurret = game.sprites.turrets[kind];
     if (!dragTurret) { dragTurret = game.sprites.turrets.howitzer; }
+    var turretDx = -10;
+    var turretDy = -16;
+    if (dragTurret.width !== 20) {
+      turretDx = -dragTurret.width / 2;
+      turretDy = -dragTurret.height / 2;
+    }
     // Ghost sprite Y offset: lift 30 game-px on touch/pen so the player can
     // see the placement tile under their finger. Range ring stays centered
     // on the real (ui.mouseX, ui.mouseY) so validity readout is accurate.
     var ghostDy = 0;
     if (ui.pointerType === 'touch') { ghostDy = -30; }
     if (ui.pointerType === 'pen') { ghostDy = -30; }
+    // A cannon you already own is drawn nearly solid; a shop ghost stays see-through.
     ctx.globalAlpha = 0.6;
-    ctx.drawImage(cannonBaseFor(ui.armedKind), Math.round(ui.mouseX - 16), Math.round(ui.mouseY - 16 + ghostDy));
-    ctx.drawImage(dragTurret, Math.round(ui.mouseX - 10), Math.round(ui.mouseY - 16 + ghostDy));
+    if (ui.movingCannon) { ctx.globalAlpha = 0.9; }
+    ctx.drawImage(cannonBaseFor(kind), Math.round(ui.mouseX - 16), Math.round(ui.mouseY - 16 + ghostDy));
+    ctx.drawImage(dragTurret, Math.round(ui.mouseX + turretDx), Math.round(ui.mouseY + turretDy + ghostDy));
     // Invalid-spot red tint over the ghost (Task 7). Drawn on top with a
     // multiply-ish blend by stacking a translucent red rect; cheap and
     // visible on small screens. Only renders when canPlaceCannon = false.
@@ -4294,26 +4453,30 @@ body.has-ant-buster-page {
     ctx.textAlign = 'start';
   }
 
+  // Pausing doubles as a time to rearrange, so the board stays visible: a
+  // light dim and a compact sign along the bottom (clear of the cake)
+  // instead of a big one in the middle. Dragging a cannon moves it; a tap
+  // on empty blanket resumes.
   function drawPauseOverlay() {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+    ctx.fillStyle = 'rgba(20, 10, 4, 0.35)';
     ctx.fillRect(0, HUD_H, PLAYFIELD_W, PLAYFIELD_H);
 
-    var signW = 220;
-    var signH = 120;
-    var signX = (PLAYFIELD_W - signW) / 2;
-    var signY = HUD_H + (PLAYFIELD_H - signH) / 2 - 10;
+    var signW = 340;
+    var signH = 62;
+    var signX = Math.round((PLAYFIELD_W - signW) / 2);
+    var signY = HUD_H + PLAYFIELD_H - signH - 8;
     drawWoodenSign(signX, signY, signW, signH);
 
-    drawTextWithShadow('HOLD UP', PLAYFIELD_W / 2, signY + 22, '#c8a868', 'bold 10px monospace', 'center');
-    drawTextWithShadow('PAUSED', PLAYFIELD_W / 2, signY + 52, '#fee761', 'bold 24px monospace', 'center');
-    var resumeHint = 'Space or click to resume';
-    if (usesTouch()) { resumeHint = 'Tap to resume'; }
-    drawTextWithShadow(resumeHint, PLAYFIELD_W / 2, signY + 78, '#f5e6c8', 'bold 10px monospace', 'center');
+    drawTextWithShadow('PAUSED', signX + 18, signY + 20, '#fee761', 'bold 18px monospace', 'start');
+    var resumeHint = 'Space or click to resume.';
+    if (usesTouch()) { resumeHint = 'Tap the blanket to resume.'; }
+    drawTextWithShadow('Drag a cannon to move it.', signX + 18, signY + 38, '#f5e6c8', 'bold 10px monospace', 'start');
+    drawTextWithShadow(resumeHint, signX + 18, signY + 51, '#f5e6c8', 'bold 10px monospace', 'start');
 
     var rrW = 100;
     var rrH = 22;
-    var rrX = PLAYFIELD_W / 2 - rrW / 2;
-    var rrY = signY + signH - 36;
+    var rrX = signX + signW - rrW - 14;
+    var rrY = signY + Math.round((signH - rrH) / 2);
     drawWoodenButton(rrX, rrY, rrW, rrH, 'red');
     drawTextWithShadow('Restart Run', rrX + rrW / 2, rrY + rrH / 2, '#fee761', 'bold 10px monospace', 'center');
     ui.restartRunRect = { x: rrX, y: rrY, w: rrW, h: rrH };
@@ -4481,11 +4644,11 @@ body.has-ant-buster-page {
     ctx.restore();
   }
 
-  // Layer 13: overlays — drag preview, wave banner, then full-screen modals.
-  // Modal order: pause first, then win/lose so terminal-state screens still
-  // win the z-order if both are somehow active in the same frame.
+  // Layer 13: overlays — wave banner, pause sign, drag preview, then
+  // full-screen modals. The drag preview sits above the pause dim so a
+  // cannon being moved while paused stays bright. Win/lose come last so
+  // terminal-state screens still win the z-order.
   function drawOverlays() {
-    drawDragPreview();
     drawBanner();
     drawWavePreview();
     drawTutorialHint();
@@ -4494,6 +4657,7 @@ body.has-ant-buster-page {
     } else {
       ui.restartRunRect = null;
     }
+    drawDragPreview();
     if (game.state === 'idle') { drawIdleOverlay(); }
     if (game.waveState === 'won') { drawWinOverlay(); }
     if (game.waveState === 'lost') { drawLoseOverlay(); }
@@ -6287,9 +6451,12 @@ body.has-ant-buster-page {
     }
   }
 
-  function cannonAt(x, y) {
+  // `ignore` (optional) skips one cannon: the one being moved, so it can be
+  // dropped a few pixels from where it already stands.
+  function cannonAt(x, y, ignore) {
     for (var i = 0; i < game.cannons.length; i++) {
       var c = game.cannons[i];
+      if (c === ignore) { continue; }
       var dx = c.x - x;
       var dy = c.y - y;
       if (dx * dx + dy * dy < 16 * 16) {
@@ -6299,18 +6466,21 @@ body.has-ant-buster-page {
     return null;
   }
 
-  function canPlaceCannon(x, y) {
+  function canPlaceCannon(x, y, ignore) {
     if (x < 16) { return false; }
     if (x > PLAYFIELD_W - 16) { return false; }
     if (y < HUD_H + 16) { return false; }
-    if (y > HEIGHT - 16) { return false; }
+    // The playfield's bottom edge, not the canvas's: in portrait the shop
+    // strip sits below it, and a drag released over the strip used to
+    // place a cannon in the shop.
+    if (y > HUD_H + PLAYFIELD_H - 16) { return false; }
     var dxCake = x - game.cake.x;
     var dyCake = y - game.cake.y;
     if (dxCake * dxCake + dyCake * dyCake < 32 * 32) { return false; }
     var dxAnt = x - game.anthill.x;
     var dyAnt = y - game.anthill.y;
     if (dxAnt * dxAnt + dyAnt * dyAnt < 24 * 24) { return false; }
-    if (cannonAt(x, y)) { return false; }
+    if (cannonAt(x, y, ignore)) { return false; }
     return true;
   }
 
@@ -7720,6 +7890,8 @@ body.has-ant-buster-page {
     ui.shopInfoFrom = null;
     ui.hintDone = false;
     ui.endedAt = 0;
+    ui.movingCannon = null;
+    ui.moveDragging = false;
     clearSave();   // any restart is a new game, so the old save goes
   }
 
@@ -7942,7 +8114,9 @@ body.has-ant-buster-page {
     hintDone: false,        // tutorial hint retires once the first cannon lands
     detailBackRect: null,   // populated by drawTowerPanel; tap to clear selectedCannon
     shopInfoFrom: null,     // 'detail' | 'list' | null — entry point for the info panel
-    detailUpgradeInfoRects: [null, null, null] // populated by drawTowerPanel; tap to drill into upgrade info
+    detailUpgradeInfoRects: [null, null, null], // populated by drawTowerPanel; tap to drill into upgrade info
+    movingCannon: null,     // placed cannon pressed while paused; see the pointer handlers
+    moveDragging: false     // true once that press has moved far enough to be a drag
   };
   ui.savedRun = readSave();
 
@@ -8090,6 +8264,18 @@ body.has-ant-buster-page {
     if (game.paused) {
       if (ui.restartRunRect) {
         if (inRect(p, ui.restartRunRect)) { resetGame(); return; }
+      }
+      // Pressing on a cannon while paused picks it up: drag to move it, or
+      // tap to select it (pointermove and pointerup finish the gesture).
+      if (inPlayfield(p)) {
+        var grabbed = cannonAt(p.x, p.y);
+        if (grabbed) {
+          ui.movingCannon = grabbed;
+          ui.moveDragging = false;
+          ui.pendingX = p.x;
+          ui.pendingY = p.y;
+          return;
+        }
       }
       // Any other tap on the paused playfield resumes, so phone players
       // aren't left looking for a Space key. The gesture ends here, so its
@@ -8335,6 +8521,17 @@ body.has-ant-buster-page {
         canvas.classList.add('ab-dragging');
       }
     }
+    // Same threshold turns a press on a cannon (while paused) into a move.
+    if (ui.movingCannon) {
+      if (!ui.moveDragging) {
+        var mdx = p.x - ui.pendingX;
+        var mdy = p.y - ui.pendingY;
+        if (mdx * mdx + mdy * mdy > 36) {
+          ui.moveDragging = true;
+          canvas.classList.add('ab-dragging');
+        }
+      }
+    }
     // Track upgrade-button hover so drawRangeCircle can preview the target's range
     // as a dashed secondary circle. Avoids and-operator for the inline-script gotcha.
     var hovered = null;
@@ -8360,6 +8557,30 @@ body.has-ant-buster-page {
     var p = canvasToGame(evt);
     ui.mouseX = p.x;
     ui.mouseY = p.y;
+    // Moving a cannon while paused: a drag drops it on a valid spot (it
+    // keeps its kills, targeting and upgrades, since it is the same cannon),
+    // an invalid spot leaves it where it was, and a tap without a drag
+    // selects it. If the game was unpaused mid-drag, the move is dropped.
+    if (ui.movingCannon) {
+      var mc = ui.movingCannon;
+      ui.movingCannon = null;
+      canvas.classList.remove('ab-dragging');
+      if (game.paused) {
+        if (ui.moveDragging) {
+          if (canPlaceCannon(p.x, p.y, mc)) {
+            mc.x = p.x;
+            mc.y = p.y;
+          }
+        } else {
+          ui.selectedCannon = mc;
+        }
+      }
+      ui.moveDragging = false;
+      canvas.releasePointerCapture(evt.pointerId);
+      ui.activePointerId = null;
+      ui.pointerType = null;
+      return;
+    }
     // Case A: Pending without motion -> Armed (tap-to-arm).
     if (ui.pendingKind !== null) {
       ui.armedKind = ui.pendingKind;
@@ -8402,8 +8623,10 @@ body.has-ant-buster-page {
     if (evt.pointerId !== ui.activePointerId) { return; }
     // OS-interrupt rule: drop Pending and the in-progress Dragging/Placing
     // gesture, but leave Armed intact so the user can finish the placement
-    // after the interruption ends.
+    // after the interruption ends. A cannon being moved stays where it was.
     ui.pendingKind = null;
+    ui.movingCannon = null;
+    ui.moveDragging = false;
     // armedKind is preserved iff this gesture started from Armed (tap-to-place).
     // In Dragging-from-shop, Pending->Dragging set armedKind, so cancel here
     // means dropping armedKind too. We distinguish by pointerType again:
