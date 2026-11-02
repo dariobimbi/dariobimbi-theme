@@ -33,9 +33,9 @@
     <!-- wp:html -->
     <div class="wx" data-default-query="Saint Charles, IL, US">
         <form class="wx-form" data-role="form" autocomplete="off">
-            <span class="wx-label">Search city, state, country</span>
+            <label class="wx-label" for="wx-query">Search city, state, country</label>
             <div class="wx-row">
-                <input type="text" class="wx-input" data-role="input" placeholder="Saint Charles, IL, US" value="Saint Charles, IL, US" spellcheck="false" required aria-label="Search city, state, country">
+                <input type="text" id="wx-query" class="wx-input" data-role="input" placeholder="Saint Charles, IL, US" value="Saint Charles, IL, US" spellcheck="false" required>
                 <button type="submit" class="wx-btn wx-btn--primary">
                     <span data-role="btn-label">Search</span>
                     <span class="wx-spin" data-role="spin" aria-hidden="true"></span>
@@ -52,6 +52,7 @@
             <button type="button" class="wx-chip" data-suggest="London, ON, CA">London, ON</button>
             <button type="button" class="wx-chip" data-suggest="Tokyo, JP">Tokyo, JP</button>
             <button type="button" class="wx-chip" data-suggest="Reykjavík, IS">Reykjavík, IS</button>
+            <button type="button" class="wx-chip wx-chip--geo" data-role="geo">Use my location</button>
         </div>
 
         <div class="wx-units" role="group" aria-label="Units">
@@ -61,7 +62,7 @@
 
         <div class="wx-result" data-role="result" aria-live="polite">
             <div class="wx-empty">
-                <div class="wx-empty-icon">⛅</div>
+                <div class="wx-empty-icon" aria-hidden="true">⛅</div>
                 <p>Loading the default forecast…</p>
             </div>
         </div>
@@ -216,6 +217,28 @@
 .demo-weather .wx-chip:hover {
     border-color: var(--wp--preset--color--primary);
     color: var(--wp--preset--color--primary-soft);
+}
+.demo-weather .wx-chip:focus-visible,
+.demo-weather .wx-unit:focus-visible,
+.demo-weather .wx-btn:focus-visible {
+    outline: 2px solid var(--wp--preset--color--primary-soft);
+    outline-offset: 2px;
+}
+.demo-weather .wx-chip[disabled] { opacity: 0.5; cursor: progress; }
+.demo-weather .wx-chip--geo {
+    border-style: dashed;
+    color: var(--wp--preset--color--foreground);
+}
+.demo-weather .wx-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
 }
 .demo-weather .wx-units {
     display: flex;
@@ -442,10 +465,17 @@
     var jsonUrl = root.querySelector('[data-role="json-url"]');
     var jsonBody= root.querySelector('[data-role="json-body"]');
 
+    var extraBtns = root.querySelectorAll('.wx-chip');   // suggestion chips + "Use my location"
+    var geoBtn  = root.querySelector('[data-role="geo"]');
+    var reqId   = 0;                // bumped per request so a slow older one can't overwrite a newer one
+
     var imperial = true;            // default Imperial (°F, mph)
     var lastPlace = null, lastForecast = null;
 
-    function convTemp(c) { return imperial ? Math.round(c * 9 / 5 + 32) : Math.round(c); }
+    function convTemp(c) {
+        var t = imperial ? Math.round(c * 9 / 5 + 32) : Math.round(c);
+        return t === 0 ? 0 : t; // Math.round(-0.4) is -0, which prints "-0°"
+    }
     function tempUnit() { return imperial ? 'F' : 'C'; }
     function convWind(kmh) { return imperial ? (Math.round(kmh * 0.621371) + ' mph') : (Math.round(kmh) + ' km/h'); }
 
@@ -480,11 +510,20 @@
         96: ['⛈️','Thunderstorm w/ hail'],
         99: ['⛈️','Severe thunderstorm']
     };
-    function wmo(code) { return WMO[code] || ['🌡️','Unknown ('+code+')']; }
+    function wmo(code, isDay) {
+        var w = WMO[code] || ['🌡️','Unknown ('+code+')'];
+        // Clear and mainly-clear get a moon after dark (is_day is 0 at night).
+        if (isDay === 0) {
+            if (code === 0) return ['🌙', w[1]];
+            if (code === 1) return ['🌙', w[1]];
+        }
+        return w;
+    }
 
-    /* US state two-letter codes → full name. Open-Meteo returns admin1 as a
-       full name ("Illinois"), but users typically type "IL". This lets either
-       work. Includes DC + the five inhabited US territories. */
+    /* US state and Canadian province two-letter codes → full name. Open-Meteo
+       returns admin1 as a full name ("Illinois"), but users typically type
+       "IL" or "ON". This lets either work. Includes DC + the five inhabited
+       US territories. No code is shared between the two countries. */
     var US_STATES = {
         al:'alabama', ak:'alaska', az:'arizona', ar:'arkansas', ca:'california',
         co:'colorado', ct:'connecticut', de:'delaware', fl:'florida', ga:'georgia',
@@ -497,7 +536,11 @@
         sd:'south dakota', tn:'tennessee', tx:'texas', ut:'utah', vt:'vermont',
         va:'virginia', wa:'washington', wv:'west virginia', wi:'wisconsin', wy:'wyoming',
         dc:'district of columbia', pr:'puerto rico', vi:'u.s. virgin islands',
-        gu:'guam', as:'american samoa', mp:'northern mariana islands'
+        gu:'guam', as:'american samoa', mp:'northern mariana islands',
+        ab:'alberta', bc:'british columbia', mb:'manitoba', nb:'new brunswick',
+        nl:'newfoundland and labrador', ns:'nova scotia', nt:'northwest territories',
+        nu:'nunavut', on:'ontario', pe:'prince edward island', qc:'quebec',
+        sk:'saskatchewan', yt:'yukon'
     };
 
     /* "City, ST, CC" → { city, region, country }. Any of the trailing parts
@@ -512,32 +555,50 @@
         };
     }
 
+    /* Geocoder results whose admin1 / country agree with the user-supplied
+       filters (either may be empty, meaning "any"). */
+    function matchPlaces(results, region, country) {
+        var stateFull = US_STATES[region] || region; // "il" -> "illinois", "on" -> "ontario"
+        var hits = [];
+        for (var i = 0; i < results.length; i++) {
+            var r = results[i];
+            if (region) {
+                var a = (r.admin1 || '').toLowerCase();
+                // accept either the typed value or its expanded state/province name
+                if (a !== region) if (a !== stateFull) continue;
+            }
+            if (country) {
+                var c1 = (r.country || '').toLowerCase();
+                var c2 = (r.country_code || '').toLowerCase();
+                if (c1 !== country) if (c2 !== country) continue;
+            }
+            hits.push(r);
+        }
+        return hits;
+    }
+
+    /* First populated place (feature code PPL*) in a list, or null. The
+       geocoder also returns dams, parks and fields with the same name. */
+    function firstTown(hits) {
+        for (var i = 0; i < hits.length; i++) {
+            if (/^PPL/.test(hits[i].feature_code || '')) return hits[i];
+        }
+        return null;
+    }
+
     /* From a list of geocoder results, pick the one whose admin1 / country
-       agrees with the user-supplied filters. Falls back to the top result
-       if nothing matches — better than failing outright on a slight mismatch. */
+       agrees with the user-supplied filters, preferring real towns. Falls back
+       to a country-only match, then the top result, if nothing matches. */
     function pickResult(results, region, country) {
         if (!results) return null;
         if (!results.length) return null;
         if (!region) if (!country) return results[0];
 
-        var stateFull = US_STATES[region] || region; // "il" -> "illinois"
-
-        function matches(r) {
-            if (region) {
-                var a = (r.admin1 || '').toLowerCase();
-                // accept either the typed value or its expanded US state name
-                if (a !== region) if (a !== stateFull) return false;
-            }
-            if (country) {
-                var c1 = (r.country || '').toLowerCase();
-                var c2 = (r.country_code || '').toLowerCase();
-                if (c1 !== country) if (c2 !== country) return false;
-            }
-            return true;
-        }
-
-        for (var i = 0; i < results.length; i++) {
-            if (matches(results[i])) return results[i];
+        var hits = matchPlaces(results, region, country);
+        if (hits.length) return firstTown(hits) || hits[0];
+        if (country) {
+            var byCountry = matchPlaces(results, '', country);
+            if (byCountry.length) return firstTown(byCountry) || byCountry[0];
         }
         return results[0]; // graceful fallback
     }
@@ -545,8 +606,8 @@
     /* Tiny JSON syntax highlighter — wraps strings/numbers/booleans/keys/null
        in spans for the .jk/.js/.jn/.jb/.jl rules above. */
     function escapeHtml(s) {
-        // NOTE: avoid literal "&" in source — WordPress's content filter
-        // encodes ampersands inside <script> blocks to "&#038;" which would
+        // NOTE: avoid a literal ampersand in source. WordPress's content filter
+        // encodes ampersands inside <script> blocks to "#038;" entities, which would
         // corrupt the regex character class. & is the same code point
         // but no literal ampersand sits in the file.
         var AMP = '&';
@@ -576,6 +637,7 @@
 
     function setLoading(on) {
         btn.disabled = !!on;
+        Array.prototype.forEach.call(extraBtns, function (b) { b.disabled = !!on; });
         btn.dataset.loading = on ? '1' : '0';
         btnLbl.textContent = on ? 'Loading…' : 'Search';
     }
@@ -592,9 +654,9 @@
     function render(place, fc) {
         lastPlace = place; lastForecast = fc;
         var c = fc.current;
-        var cur = wmo(c.weather_code);
+        var cur = wmo(c.weather_code, c.is_day);
         var html = '<div class="wx-now">'
-            + '<div class="wx-now-icon">' + cur[0] + '</div>'
+            + '<div class="wx-now-icon" aria-hidden="true">' + cur[0] + '</div>'
             + '<div class="wx-now-body">'
                 + '<h3 class="wx-now-city">' + escapeHtml(place.name) + '</h3>'
                 + '<p class="wx-now-region">' + escapeHtml([place.admin1, place.country].filter(Boolean).join(', ')) + '</p>'
@@ -614,7 +676,8 @@
             var dw = wmo(d.weather_code[i]);
             html += '<div class="wx-day">'
                 + '<p class="wx-day-name">' + (i === 0 ? 'Today' : fmtDay(d.time[i])) + '</p>'
-                + '<div class="wx-day-icon">' + dw[0] + '</div>'
+                + '<div class="wx-day-icon" aria-hidden="true">' + dw[0] + '</div>'
+                + '<span class="wx-sr">' + dw[1] + '</span>'
                 + '<div class="wx-day-temps">'
                     + '<span class="hi">' + convTemp(d.temperature_2m_max[i]) + '°</span>'
                     + '<span class="lo">' + convTemp(d.temperature_2m_min[i]) + '°</span>'
@@ -626,45 +689,132 @@
         result.innerHTML = html;
     }
 
+    /* fetch + JSON with a 10 s timeout. */
+    async function getJson(url, label) {
+        var ctl = new AbortController();
+        var timer = setTimeout(function () { ctl.abort(); }, 10000);
+        try {
+            var res = await fetch(url, { signal: ctl.signal });
+            if (!res.ok) throw new Error(label + ' returned ' + res.status);
+            return await res.json();
+        } finally {
+            clearTimeout(timer);
+        }
+    }
+
+    function friendlyError(err) {
+        if (err) {
+            if (err.name === 'AbortError') return 'The weather service took too long to answer. Give it another try in a moment.';
+            if (err instanceof TypeError) return 'Could not reach the weather service. Check your connection and try again.';
+            if (err.message) return err.message;
+        }
+        return 'Something went wrong fetching the forecast.';
+    }
+
+    function fail(err) {
+        var msg = friendlyError(err);
+        lastPlace = null; lastForecast = null; // so the unit toggle can't redraw an old forecast over the error
+        showError(msg);
+        jsonUrl.textContent = '·';
+        jsonBody.innerHTML  = '// ' + escapeHtml(msg);
+    }
+
+    function beginRequest() {
+        reqId++;
+        setLoading(true);
+        return reqId;
+    }
+
+    async function geocode(name) {
+        var geoUrl = 'https://geocoding-api.open-meteo.com/v1/search?count=100&language=en&format=json&name=' + encodeURIComponent(name);
+        var gJson = await getJson(geoUrl, 'Geocoding API');
+        return gJson.results || [];
+    }
+
+    async function loadForecast(place, id) {
+        var fxUrl = 'https://api.open-meteo.com/v1/forecast'
+            + '?latitude='  + place.latitude
+            + '&longitude=' + place.longitude
+            + '&timezone=auto'
+            + '&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m'
+            + '&daily=weather_code,temperature_2m_max,temperature_2m_min';
+        var fJson = await getJson(fxUrl, 'Forecast API');
+        if (id !== reqId) return; // a newer request has taken over
+
+        render(place, fJson);
+        jsonUrl.textContent = fxUrl;
+        jsonBody.innerHTML  = hilite(fJson);
+    }
+
     async function search(query) {
         if (!query) return;
-        setLoading(true);
+        var id = beginRequest();
         try {
             // 1. Parse + geocode. We send only the city to the geocoder
             //    (Open-Meteo's /search doesn't accept state or country params)
-            //    then pick the best of up to 10 candidates client-side.
+            //    then pick the best of up to 100 candidates client-side.
+            //    (10 was too few: Illinois isn't in the first 10 "Saint Charles".)
             var q = parseQuery(query);
             if (!q.city) throw new Error('Type a city name to search.');
-            var geoUrl = 'https://geocoding-api.open-meteo.com/v1/search?count=10&language=en&format=json&name=' + encodeURIComponent(q.city);
-            var gRes = await fetch(geoUrl);
-            if (!gRes.ok) throw new Error('Geocoding API returned ' + gRes.status);
-            var gJson = await gRes.json();
-            if (!gJson.results) throw new Error('No place matched "' + q.city + '". Try a different spelling?');
-            if (!gJson.results.length) throw new Error('No place matched "' + q.city + '". Try a different spelling?');
-            var place = pickResult(gJson.results, q.region, q.country);
+            var results = await geocode(q.city);
+            if (id !== reqId) return;
+            if (!results.length) throw new Error('No place matched "' + q.city + '". Try a different spelling?');
+            var place = pickResult(results, q.region, q.country);
             if (!place) throw new Error('No match for "' + query + '".');
 
-            // 2. Forecast
-            var fxUrl = 'https://api.open-meteo.com/v1/forecast'
-                + '?latitude='  + place.latitude
-                + '&longitude=' + place.longitude
-                + '&timezone=auto'
-                + '&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m'
-                + '&daily=weather_code,temperature_2m_max,temperature_2m_min';
-            var fRes = await fetch(fxUrl);
-            if (!fRes.ok) throw new Error('Forecast API returned ' + fRes.status);
-            var fJson = await fRes.json();
+            // The geocoder lists Saint Charles, IL only as a dam and a ball
+            // field, because the city itself is filed as "St. Charles".
+            // If we landed on a non-town, retry with the abbreviation.
+            if (!firstTown([place])) {
+                if (/^saint\s/i.test(q.city)) {
+                    var alt = await geocode('St. ' + q.city.replace(/^saint\s+/i, ''));
+                    if (id !== reqId) return;
+                    var altTown = firstTown(matchPlaces(alt, q.region, q.country));
+                    if (altTown) place = altTown;
+                }
+            }
 
-            render(place, fJson);
-            jsonUrl.textContent = fxUrl;
-            jsonBody.innerHTML  = hilite(fJson);
+            // 2. Forecast
+            await loadForecast(place, id);
         } catch (err) {
-            showError(err.message || 'Something went wrong fetching the forecast.');
-            jsonUrl.textContent = '·';
-            jsonBody.innerHTML  = '// ' + escapeHtml(err.message || 'error');
+            if (id !== reqId) return;
+            fail(err);
         } finally {
-            setLoading(false);
+            if (id === reqId) setLoading(false);
         }
+    }
+
+    /* "Use my location": the browser hands us coordinates, so the forecast
+       call needs no geocoding. Open-Meteo has no reverse geocoder, so the
+       card is labeled "Your location" with the coordinates under it. */
+    function useMyLocation() {
+        if (!navigator.geolocation) {
+            showError('This browser cannot share your location. Try searching for a city instead.');
+            return;
+        }
+        if (!window.isSecureContext) {
+            showError('Your browser only shares location on secure (https) pages. Try searching for a city instead.');
+            return;
+        }
+        var id = beginRequest();
+        navigator.geolocation.getCurrentPosition(function (pos) {
+            if (id !== reqId) return;
+            var lat = pos.coords.latitude, lon = pos.coords.longitude;
+            var place = { name: 'Your location', admin1: '', country: lat.toFixed(2) + ', ' + lon.toFixed(2), latitude: lat, longitude: lon };
+            loadForecast(place, id).catch(function (err) {
+                if (id !== reqId) return;
+                fail(err);
+            }).then(function () {
+                if (id === reqId) setLoading(false);
+            });
+        }, function (err) {
+            if (id !== reqId) return;
+            var msg = 'Could not get your location. Try searching for a city instead.';
+            if (err.code === 1) msg = 'Location access is blocked. You can allow it in your browser settings, or search for a city instead.';
+            if (err.code === 3) msg = 'Finding your location took too long. Try again, or search for a city instead.';
+            fail(new Error(msg));
+            setLoading(false);
+        }, { timeout: 10000, maximumAge: 300000 });
     }
 
     var unitBtns = root.querySelectorAll('[data-role="unit"]');
@@ -686,6 +836,8 @@
         e.preventDefault();
         search(input.value.trim());
     });
+
+    geoBtn.addEventListener('click', useMyLocation);
 
     root.querySelectorAll('[data-suggest]').forEach(function (chip) {
         chip.addEventListener('click', function () {

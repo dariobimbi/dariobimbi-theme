@@ -38,11 +38,11 @@
         <!-- View 1: dex grid -->
         <section class="pdex-view pdex-view--dex" data-view-id="dex" aria-label="Pokédex grid">
             <div class="pdex-controls">
-                <div class="pdex-gen-tabs" role="tablist" aria-label="Generation"></div>
+                <div class="pdex-gen-tabs" role="group" aria-label="Generation"></div>
                 <input type="search" class="pdex-search" placeholder="Search all 1025 Pokémon by name…" aria-label="Search Pokémon by name" />
             </div>
             <div class="pdex-status" role="status" aria-live="polite"></div>
-            <div class="pdex-grid pdex-grid--dex" role="tabpanel"></div>
+            <div class="pdex-grid pdex-grid--dex"></div>
         </section>
 
         <!-- View 2: selected Pokémon's cards -->
@@ -58,7 +58,6 @@
                     <select data-control="sort">
                         <option value="release-desc">Release date · Newest first</option>
                         <option value="release-asc">Release date · Oldest first</option>
-                        <option value="trending">Trending · Hot right now</option>
                         <option value="price-desc">Price · High to low</option>
                         <option value="price-asc">Price · Low to high</option>
                         <option value="rarity-desc">Rarity · High to low</option>
@@ -301,10 +300,14 @@ body:has(.demo-pokedex) {
     transition: background 200ms, border-color 200ms;
 }
 
-.demo-pokedex .pdex-gen-tab[aria-selected="true"] {
+.demo-pokedex .pdex-gen-tab[aria-pressed="true"] {
     background: linear-gradient(135deg, var(--pdex-primary) 0%, var(--pdex-accent) 100%);
     color: #fff;
     border-color: transparent;
+}
+
+.demo-pokedex .pdex-gen-tab:disabled {
+    cursor: default;
 }
 
 .demo-pokedex .pdex-gen-tab:focus-visible {
@@ -336,6 +339,11 @@ body:has(.demo-pokedex) {
     width: 96px;
     height: 96px;
     object-fit: contain;
+    image-rendering: pixelated;
+}
+
+/* Fallback official artwork is smooth, not pixel art. */
+.demo-pokedex .pdex-tile-sprite.is-art {
     image-rendering: auto;
 }
 
@@ -681,6 +689,8 @@ body:has(.demo-pokedex) {
 @media (prefers-reduced-motion: reduce) {
     .demo-pokedex .pdex-acc-body { animation: none; }
     .demo-pokedex .pdex-acc-chevron { transition: none; }
+    .demo-pokedex .pdex-ambient .pdex-icon { animation: none; }
+    .demo-pokedex .pdex-skeleton { animation: none; }
 }
 
 /* Pricing block — promoted to right under the title, treated as the headline. */
@@ -803,22 +813,6 @@ body:has(.demo-pokedex) {
     color: var(--pdex-muted);
     margin-top: 0.25rem;
 }
-
-.demo-pokedex .pdex-sparkline {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
-}
-
-.demo-pokedex .pdex-sparkline svg {
-    width: 90px;
-    height: 30px;
-}
-
-.demo-pokedex .pdex-sparkline-arrow.up   { color: #10b981; }
-.demo-pokedex .pdex-sparkline-arrow.down { color: #ef4444; }
-.demo-pokedex .pdex-sparkline-arrow.flat { color: var(--pdex-muted); }
 
 .demo-pokedex .pdex-modal-tcg-link {
     grid-column: 1 / -1;
@@ -998,7 +992,7 @@ body:has(.demo-pokedex) {
     border-color: var(--type-accent, var(--pdex-border));
 }
 
-.demo-pokedex[data-view="cards"] .pdex-gen-tab[aria-selected="true"],
+.demo-pokedex[data-view="cards"] .pdex-gen-tab[aria-pressed="true"],
 .demo-pokedex[data-view="cards"] .pdex-back:focus-visible {
     outline-color: var(--type-accent, var(--pdex-primary));
 }
@@ -1067,7 +1061,7 @@ body:has(.demo-pokedex) {
     var CARD_TYPE_SLUGS = CARD_TYPES.map(function (t) { return t.slug; });
 
     function applyParamsToFilters(params, current) {
-        var allowedSorts = ['release-desc', 'release-asc', 'rarity-desc', 'set-number', 'price-desc', 'price-asc', 'trending'];
+        var allowedSorts = ['release-desc', 'release-asc', 'rarity-desc', 'set-number', 'price-desc', 'price-asc'];
         var cardType = typeof params.cardType === 'string' ? params.cardType : '';
         if (cardType && CARD_TYPE_SLUGS.indexOf(cardType) === -1) cardType = '';
         return {
@@ -1087,17 +1081,6 @@ body:has(.demo-pokedex) {
     function cardMarketPrice(c) {
         var t = c.tcgplayer && pickBestTcgVariant(c.tcgplayer.prices);
         return t ? t.price : null;
-    }
-    // Momentum score from Cardmarket: how much the 1-day avg price moved
-    // versus the 30-day avg, expressed as a fraction. Positive = rising,
-    // negative = falling. Returns null when Cardmarket has no usable history.
-    function cardMomentum(c) {
-        var p = c.cardmarket && c.cardmarket.prices;
-        if (!p) return null;
-        var recent = typeof p.avg1 === 'number' ? p.avg1 : (typeof p.trendPrice === 'number' ? p.trendPrice : null);
-        var baseline = typeof p.avg30 === 'number' ? p.avg30 : null;
-        if (recent === null || baseline === null || baseline === 0) return null;
-        return (recent - baseline) / baseline;
     }
     function getVisibleCards() {
         if (!state.cardData) return [];
@@ -1133,14 +1116,6 @@ body:has(.demo-pokedex) {
                     if (pa === null) return 1;
                     if (pb === null) return -1;
                     return f.sort === 'price-desc' ? pb - pa : pa - pb;
-                case 'trending':
-                    // Hottest momentum first. Cards without Cardmarket history
-                    // drop to the bottom rather than being treated as flat.
-                    var ma = cardMomentum(a), mb = cardMomentum(b);
-                    if (ma === null && mb === null) return 0;
-                    if (ma === null) return 1;
-                    if (mb === null) return -1;
-                    return mb - ma;
                 case 'release-desc':
                 default:
                     return (b.set.releaseDate || '').localeCompare(a.set.releaseDate || '');
@@ -1336,7 +1311,7 @@ body:has(.demo-pokedex) {
             var variants = c.tcgplayer ? getAllTcgVariants(c.tcgplayer.prices) : [];
             var tcg = variants.length ? variants[0] : null;
             var tcgUrl = c.tcgplayer && c.tcgplayer.url;
-            var priceText = tcg ? '$' + tcg.price.toFixed(2) : '—';
+            var priceText = tcg ? '$' + tcg.price.toFixed(2) : '·';
             var variantBadge = variants.length > 1
                 ? '<span class="pdex-card-variants" title="This card has ' + variants.length + ' priced printings">+' + (variants.length - 1) + '</span>'
                 : '';
@@ -1359,6 +1334,11 @@ body:has(.demo-pokedex) {
 
     function spriteUrl(id) {
         return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/' + id + '.png';
+    }
+
+    // Small sprite for grid tiles (the full artwork PNG is ~144 KB each).
+    function tileSpriteUrl(id) {
+        return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/' + id + '.png';
     }
 
     function escapeHtml(str) {
@@ -1396,7 +1376,7 @@ body:has(.demo-pokedex) {
             var name = getDisplayName(p.name);
             return ''
                 + '<a class="pdex-tile" href="#' + escapeHtml(p.name) + '" data-pokemon="' + escapeHtml(p.name) + '">'
-                +     '<img class="pdex-tile-sprite" src="' + spriteUrl(p.id) + '" alt="' + escapeHtml(name) + ' official artwork" loading="lazy" decoding="async" onerror="this.style.visibility=\'hidden\'" />'
+                +     '<img class="pdex-tile-sprite" src="' + tileSpriteUrl(p.id) + '" alt="' + escapeHtml(name) + ' sprite" loading="lazy" decoding="async" data-fallback="' + spriteUrl(p.id) + '" onerror="if(this.dataset.fallback){this.src=this.dataset.fallback;this.removeAttribute(\'data-fallback\');this.classList.add(\'is-art\');}else{this.style.visibility=\'hidden\';}" />'
                 +     '<span class="pdex-tile-num">#' + num + '</span>'
                 +     '<span class="pdex-tile-name">' + name + '</span>'
                 + '</a>';
@@ -1412,10 +1392,12 @@ body:has(.demo-pokedex) {
         var allCards = [];
 
         function fetchPage(page) {
-            return fetchJSON(API.TCG_CARDS(queryName, page), { tcgKey: true })
+            return fetchJSON(API.TCG_CARDS(queryName, page), { tcgKey: true, retries: 3, timeout: 20000 })
                 .then(function (resp) {
                     allCards = allCards.concat(resp.data || []);
                     var fetched = (resp.page * resp.pageSize);
+                    // Stop paging once the user has moved on to another Pokémon.
+                    if (state.selectedPokemon !== rawName) return allCards;
                     if (fetched < resp.totalCount) return fetchPage(page + 1);
                     return allCards;
                 });
@@ -1496,19 +1478,43 @@ body:has(.demo-pokedex) {
         var headers = {};
         if (options.tcgKey && API.TCG_KEY) headers['X-Api-Key'] = API.TCG_KEY;
 
-        return fetch(url, { headers: headers })
-            .then(function (res) {
-                if (!res.ok) {
-                    var err = new Error(res.status === 429 ? 'Rate limited' : 'HTTP ' + res.status);
-                    err.code = res.status;
+        var maxAttempts = options.retries || 1;
+        var timeoutMs = options.timeout || 0;
+
+        function attempt(n) {
+            var controller = new AbortController();
+            var timer = timeoutMs ? setTimeout(function () { controller.abort(); }, timeoutMs) : null;
+            return fetch(url, { headers: headers, signal: controller.signal })
+                .then(function (res) {
+                    if (!res.ok) {
+                        var err = new Error(res.status === 429 ? 'Rate limited' : 'HTTP ' + res.status);
+                        err.code = res.status;
+                        throw err;
+                    }
+                    return res.json();
+                })
+                .then(function (data) {
+                    if (timer) clearTimeout(timer);
+                    return data;
+                }, function (err) {
+                    if (timer) clearTimeout(timer);
+                    // 5xx, timeouts and network errors get another go with backoff.
+                    // 429 and other 4xx surface right away (429 has its own handler).
+                    var retryable = !err.code || err.code >= 500;
+                    if (retryable) {
+                        if (n < maxAttempts) {
+                            return new Promise(function (resolve) { setTimeout(resolve, 800 * n); })
+                                .then(function () { return attempt(n + 1); });
+                        }
+                    }
                     throw err;
-                }
-                return res.json();
-            })
-            .then(function (data) {
-                if (options.cache !== false) cacheSet(url, data);
-                return data;
-            });
+                });
+        }
+
+        return attempt(1).then(function (data) {
+            if (options.cache !== false) cacheSet(url, data);
+            return data;
+        });
     }
 
     function fetchPokemonList() {
@@ -1545,7 +1551,10 @@ body:has(.demo-pokedex) {
             if (keys.length) {
                 var sp = new URLSearchParams();
                 keys.forEach(function (k) {
-                    if (route.params[k] !== '' && route.params[k] != null) sp.set(k, route.params[k]);
+                    var v = route.params[k];
+                    if (v != null) {
+                        if (v !== '') sp.set(k, v);
+                    }
                 });
                 var s = sp.toString();
                 if (s) hash += '?' + s;
@@ -1583,7 +1592,10 @@ body:has(.demo-pokedex) {
         var s = router.parse();
         showView(s.view);
 
-        if (s.view === 'cards' && s.name) {
+        var showCards = false;
+        if (s.view === 'cards') showCards = !!s.name;
+
+        if (showCards) {
             state.selectedPokemon = s.name;
             // Note: cardRetries reset only on a NEW selection, not on retry re-entries
             // (the retry path calls applyRouteFromHash() which would otherwise zero the counter).
@@ -1661,7 +1673,9 @@ body:has(.demo-pokedex) {
                         cardStatus.textContent = 'Still rate-limited by the TCG API. Refresh to try again.';
                         return;
                     }
-                    cardStatus.textContent = 'Couldn\'t reach the Pokémon TCG API.';
+                    cardStatus.innerHTML = 'The card service is having a rough moment and didn\'t answer. '
+                        + '<button type="button" class="pdex-retry" data-action="retry-cards">Try again</button>';
+                    cardGrid.innerHTML = '';
                     console.error(err);
                 });
         } else {
@@ -1797,38 +1811,20 @@ body:has(.demo-pokedex) {
         return name.replace(/([A-Z])/g, ' $1').replace(/^./, function (c) { return c.toUpperCase(); }).trim();
     }
 
-    function buildSparkline(points) {
-        var valid = points.filter(function (p) { return typeof p === 'number' && isFinite(p); });
-        if (valid.length < 2) return null;
-        var min = Math.min.apply(null, valid), max = Math.max.apply(null, valid);
-        var range = max - min || 1;
-        var width = 90, height = 30, pad = 2;
-        var step = (width - pad * 2) / (points.length - 1);
-        var coords = [];
-        points.forEach(function (p, i) {
-            if (typeof p !== 'number' || !isFinite(p)) return;
-            var x = pad + i * step;
-            var y = height - pad - ((p - min) / range) * (height - pad * 2);
-            coords.push([x, y]);
-        });
-        if (coords.length < 2) return null;
-        var d = 'M' + coords.map(function (c) { return c[0].toFixed(1) + ',' + c[1].toFixed(1); }).join(' L');
-        return '<svg viewBox="0 0 ' + width + ' ' + height + '" aria-hidden="true">'
-            + '<path d="' + d + '" fill="none" stroke="currentColor" stroke-width="1.5" />'
-            + '</svg>';
-    }
-
-    function trendArrow(start, end) {
-        if (typeof start !== 'number' || typeof end !== 'number') return { cls: 'flat', glyph: '·' };
-        var diff = end - start;
-        if (Math.abs(diff) / (start || 1) < 0.02) return { cls: 'flat', glyph: '→' };
-        return diff > 0 ? { cls: 'up', glyph: '↑' } : { cls: 'down', glyph: '↓' };
+    // TCGplayer's updatedAt looks like '2026/10/15'. Cardmarket's feed stopped
+    // updating in July 2026, so only the TCGplayer date is shown.
+    function formatPriceDate(raw) {
+        var m = /^(\d{4})\/(\d{2})\/(\d{2})$/.exec(raw || '');
+        if (!m) return '';
+        var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        var month = months[parseInt(m[2], 10) - 1];
+        if (!month) return '';
+        return month + ' ' + parseInt(m[3], 10) + ', ' + m[1];
     }
 
     function renderPricing(card) {
         var variants = card.tcgplayer ? getAllTcgVariants(card.tcgplayer.prices) : [];
         var tcg = variants.length ? variants[0] : null;
-        var cm = card.cardmarket && card.cardmarket.prices;
         var tcgUrl = card.tcgplayer && card.tcgplayer.url;
 
         var html = '';
@@ -1862,25 +1858,10 @@ body:has(.demo-pokedex) {
                 html += '<p class="pdex-price-range">Low $' + tcg.low.toFixed(2) + ' · Mid $' + (tcg.mid || 0).toFixed(2) + ' · High $' + (tcg.high || 0).toFixed(2) + '</p>';
             }
 
+            var asOf = formatPriceDate(card.tcgplayer.updatedAt);
+            if (asOf) html += '<p class="pdex-price-range">Prices as of ' + asOf + '</p>';
+
             html += '</div>';
-        }
-
-        if (cm && (cm.trendPrice || cm.avg30 || cm.avg7 || cm.avg1)) {
-            var points = [cm.avg30, cm.avg7, cm.avg1, cm.trendPrice];
-            var sparkline = buildSparkline(points);
-            var firstValid = points.find(function (p) { return typeof p === 'number'; });
-            var lastValid = [].concat(points).reverse().find(function (p) { return typeof p === 'number'; });
-            var arrow = trendArrow(firstValid, lastValid);
-
-            html += ''
-                + '<div class="pdex-price-block">'
-                +     '<h4>Cardmarket (EUR)</h4>'
-                +     '<p class="pdex-price-headline">€' + (typeof cm.trendPrice === 'number' ? cm.trendPrice.toFixed(2) : '·') + '</p>'
-                +     '<p class="pdex-price-variant">Trend price</p>'
-                +     (sparkline
-                        ? '<div class="pdex-sparkline" title="Cardmarket 30-day trend">' + sparkline + '<span class="pdex-sparkline-arrow ' + arrow.cls + '">' + arrow.glyph + '</span></div>'
-                        : '<p class="pdex-price-range" title="Cardmarket has no recent trade history for this card">No recent trade history</p>')
-                + '</div>';
         }
 
         if (!html) {
@@ -1904,7 +1885,7 @@ body:has(.demo-pokedex) {
         else if (event.key === 'ArrowLeft') { event.preventDefault(); modal.prev(); }
         else if (event.key === 'Tab') {
             // Focus trap
-            var focusables = modal.el.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+            var focusables = modal.el.querySelectorAll('button, [href], input, select, textarea, summary, [tabindex]:not([tabindex="-1"])');
             if (!focusables.length) return;
             var first = focusables[0], last = focusables[focusables.length - 1];
             if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
@@ -1937,6 +1918,8 @@ body:has(.demo-pokedex) {
             modal.open(parseInt(card.dataset.cardIndex, 10));
             return;
         }
+        var retryBtn = event.target.closest('[data-action="retry-cards"]');
+        if (retryBtn) { state.cardRetries = 0; applyRouteFromHash(); return; }
         var closeBtn = event.target.closest('[data-action="close-modal"]');
         if (closeBtn) { modal.close(); return; }
         var prevBtn = event.target.closest('[data-action="prev-card"]');
@@ -1947,6 +1930,8 @@ body:has(.demo-pokedex) {
 
     ROOT.addEventListener('keydown', function (event) {
         if (event.key !== 'Enter' && event.key !== ' ') return;
+        // Let the nested TCGplayer link handle its own keys.
+        if (event.target.closest('a')) return;
         var card = event.target.closest('[data-card-index]');
         if (card) { event.preventDefault(); modal.open(parseInt(card.dataset.cardIndex, 10)); }
     });
@@ -1982,8 +1967,8 @@ body:has(.demo-pokedex) {
             var btn = document.createElement('button');
             btn.type = 'button';
             btn.className = 'pdex-gen-tab';
-            btn.setAttribute('role', 'tab');
-            btn.setAttribute('aria-selected', String(g.id === state.activeGen));
+            btn.setAttribute('aria-pressed', String(g.id === state.activeGen));
+            btn.disabled = !!state.searchTerm;
             btn.dataset.gen = String(g.id);
             btn.textContent = g.label;
             tablist.appendChild(btn);
@@ -2004,6 +1989,9 @@ body:has(.demo-pokedex) {
             if (!tab) return;
             var gen = parseInt(tab.dataset.gen, 10);
             setActiveGen(gen);
+            // renderGenTabs rebuilt the buttons, so put keyboard focus back.
+            var again = tablistEl.querySelector('[data-gen="' + gen + '"]');
+            if (again) again.focus();
         });
         tablistEl.addEventListener('keydown', function (event) {
             if (['ArrowLeft','ArrowRight'].indexOf(event.key) === -1) return;
@@ -2046,12 +2034,34 @@ body:has(.demo-pokedex) {
         'tapu-fini':  { display: 'Tapu Fini',   tcg: 'Tapu Fini' }
     };
 
+    // The dex list uses PokéAPI's default-form names (mimikyu-disguised,
+    // zygarde-50). Both the display name and the TCG query want the species
+    // name, so map each form back to its base. Hash routes keep the raw name.
+    var FORM_BASE = {
+        'deoxys-normal': 'deoxys', 'wormadam-plant': 'wormadam', 'giratina-altered': 'giratina',
+        'shaymin-land': 'shaymin', 'basculin-red-striped': 'basculin', 'darmanitan-standard': 'darmanitan',
+        'frillish-male': 'frillish', 'jellicent-male': 'jellicent', 'tornadus-incarnate': 'tornadus',
+        'thundurus-incarnate': 'thundurus', 'landorus-incarnate': 'landorus', 'keldeo-ordinary': 'keldeo',
+        'meloetta-aria': 'meloetta', 'pyroar-male': 'pyroar', 'meowstic-male': 'meowstic',
+        'aegislash-shield': 'aegislash', 'pumpkaboo-average': 'pumpkaboo', 'gourgeist-average': 'gourgeist',
+        'zygarde-50': 'zygarde', 'oricorio-baile': 'oricorio', 'lycanroc-midday': 'lycanroc',
+        'wishiwashi-solo': 'wishiwashi', 'minior-red-meteor': 'minior', 'mimikyu-disguised': 'mimikyu',
+        'toxtricity-amped': 'toxtricity', 'eiscue-ice': 'eiscue', 'indeedee-male': 'indeedee',
+        'morpeko-full-belly': 'morpeko', 'urshifu-single-strike': 'urshifu', 'basculegion-male': 'basculegion',
+        'enamorus-incarnate': 'enamorus', 'oinkologne-male': 'oinkologne', 'maushold-family-of-four': 'maushold',
+        'squawkabilly-green-plumage': 'squawkabilly', 'palafin-zero': 'palafin', 'tatsugiri-curly': 'tatsugiri',
+        'dudunsparce-two-segment': 'dudunsparce'
+    };
+
     function getDisplayName(rawName) {
+        if (typeof FORM_BASE !== 'undefined') {
+            if (FORM_BASE[rawName]) rawName = FORM_BASE[rawName];
+        }
         // NAME_MAP is `var`-declared lower in the file; on the very first
         // applyRouteFromHash() call it is still `undefined`. Guard against
         // the TypeError so a fresh page load with #pokemon-name boots cleanly.
-        // Avoid && in the condition because WordPress sometimes HTML-encodes
-        // it inside inline scripts, breaking the parser.
+        // Nested ifs instead of a logical AND: WordPress HTML-encodes ampersands
+        // that land between a `<` and the next `>` in inline scripts.
         if (typeof NAME_MAP !== 'undefined') {
             if (NAME_MAP[rawName]) return NAME_MAP[rawName].display;
         }
@@ -2073,6 +2083,7 @@ body:has(.demo-pokedex) {
         var tablist = ROOT.querySelector('.pdex-gen-tabs');
         tablist.style.opacity = state.searchTerm ? '0.4' : '';
         tablist.style.pointerEvents = state.searchTerm ? 'none' : '';
+        Array.prototype.forEach.call(tablist.querySelectorAll('button'), function (b) { b.disabled = !!state.searchTerm; });
         renderDexGrid();
     }
 
@@ -2156,6 +2167,10 @@ body:has(.demo-pokedex) {
         console.assert(getDisplayName('tapu-koko') === 'Tapu Koko', 'getDisplayName: tapu-koko');
         console.assert(getDisplayName('porygon-z') === 'Porygon-Z', 'getDisplayName: porygon-z');
         console.assert(getDisplayName('ho-oh') === 'Ho-Oh', 'getDisplayName: ho-oh');
+        console.assert(getDisplayName('deoxys-normal') === 'Deoxys', 'getDisplayName: deoxys-normal');
+        console.assert(getDisplayName('mimikyu-disguised') === 'Mimikyu', 'getDisplayName: mimikyu-disguised');
+        console.assert(getTcgQueryName('zygarde-50') === 'Zygarde', 'getTcgQueryName: zygarde-50');
+        console.assert(getTcgQueryName('urshifu-single-strike') === 'Urshifu', 'getTcgQueryName: urshifu-single-strike');
         console.assert(getTcgQueryName('mr-mime') === 'Mr. Mime', 'getTcgQueryName: mr-mime');
         console.assert(getTcgQueryName('bulbasaur') === 'Bulbasaur', 'getTcgQueryName fallthrough');
         console.assert(genForId(1) === 1, 'genForId Gen 1 start');

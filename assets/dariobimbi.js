@@ -4,8 +4,6 @@
  * Modules:
  *   - scrollReveal:  fade + slide cards in as they enter the viewport.
  *   - cardTilt:      cursor-following 3D tilt on .dario-card hover.
- *   - liveEditor:    syntax-highlighted CSS playground with a Shadow DOM
- *                    preview; hand-rolled tokenizer (no Prism/CodeMirror).
  *
  * Everything is opt-in via DOM presence, motion-aware, and touch-aware.
  */
@@ -134,111 +132,6 @@
     }
 
     /* ====================================================
-       Live editor — CSS playground with Shadow DOM preview
-       ==================================================== */
-
-    // Single regex with named capture groups picks the first matching token type.
-    var TOKEN_RE = /(?<comment>\/\*[\s\S]*?\*\/)|(?<string>"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|(?<variable>--[\w-]+)|(?<color>#[0-9a-fA-F]{3,8}\b)|(?<func>\b[a-zA-Z][\w-]*(?=\s*\())|(?<number>\b\d+(?:\.\d+)?(?:px|em|rem|%|vh|vw|s|ms|deg|fr)?\b)|(?<prop>\b[a-zA-Z-][\w-]*(?=\s*:(?!\/)))|(?<brace>[{}])/g;
-
-    function escapeHtml(s) {
-        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    }
-
-    function highlightCss(src) {
-        return escapeHtml(src).replace(TOKEN_RE, function (match, _c, _s, _v, _col, _f, _n, _p, _b, _offset, _full, groups) {
-            // older browsers may not pass groups; fall back to checking match shape
-            var g = groups || {};
-            if (g.comment  || match.indexOf('/*') === 0) return '<span class="t-comment">'  + match + '</span>';
-            if (g.string   || match.charAt(0) === '"' || match.charAt(0) === "'") return '<span class="t-string">' + match + '</span>';
-            if (g.variable || match.indexOf('--') === 0) return '<span class="t-variable">' + match + '</span>';
-            if (g.color    || match.charAt(0) === '#') {
-                return '<span class="t-color"><span class="t-swatch" style="background:' + match + '"></span>' + match + '</span>';
-            }
-            if (g.number   || /^\d/.test(match))      return '<span class="t-number">'   + match + '</span>';
-            if (g.brace    || match === '{' || match === '}') return '<span class="t-brace">' + match + '</span>';
-            // Funcs and properties both look like bare identifiers; without
-            // groups we can't tell. Default to property — close enough for the demo.
-            if (g.func)  return '<span class="t-func">'     + match + '</span>';
-            return '<span class="t-property">' + match + '</span>';
-        });
-    }
-
-    var PREVIEW_HTML =
-        '<style id="user-style"></style>' +
-        '<style>' +
-        ':host { display:block; height:100%; }' +
-        'body, .demo-mount { margin:0; height:100%; display:flex; align-items:center; justify-content:center; }' +
-        '</style>' +
-        '<div class="demo-mount">' +
-        '<div class="demo">' +
-        '<span class="tag">live</span>' +
-        '<h4>Hello from the preview pane.</h4>' +
-        '<p>Every keystroke in the editor re-applies this CSS in real time. The panel runs in a Shadow DOM, so styles stay sandboxed.</p>' +
-        '</div>' +
-        '</div>';
-
-    function initLiveEditor() {
-        document.querySelectorAll('[data-cp]').forEach(function (root) {
-            var input   = root.querySelector('[data-input]');
-            var code    = root.querySelector('[data-highlight]');
-            var preWrap = input && input.closest('.codepen-editorWrap');
-            var mount   = root.querySelector('[data-preview]');
-            if (!input || !code || !mount || !preWrap) return;
-
-            var shadow = mount.attachShadow ? mount.attachShadow({ mode: 'open' }) : null;
-            if (!shadow) return; // very old browser; bail silently
-            shadow.innerHTML = PREVIEW_HTML;
-            var styleEl = shadow.getElementById('user-style');
-
-            function update() {
-                var value = input.value;
-                code.innerHTML = highlightCss(value);
-                if (styleEl) styleEl.textContent = value;
-            }
-
-            input.addEventListener('input', update);
-
-            // Keep the highlight scrolled in lockstep with the textarea.
-            input.addEventListener('scroll', function () {
-                var pre = preWrap.querySelector('.codepen-highlight');
-                if (pre) {
-                    pre.scrollTop  = input.scrollTop;
-                    pre.scrollLeft = input.scrollLeft;
-                }
-            });
-
-            // Tab inserts two spaces instead of moving focus, EXCEPT
-            // immediately after Esc — which lets keyboard users escape
-            // the editor (WCAG 2.1.2 No Keyboard Trap). Same pattern as
-            // CodePen / CodeMirror / Monaco.
-            var escArmed = false;
-            input.addEventListener('keydown', function (e) {
-                if (e.key === 'Escape') {
-                    escArmed = true;
-                    return;
-                }
-                if (e.key === 'Tab') {
-                    if (escArmed) {
-                        escArmed = false;
-                        return; // allow the browser to move focus
-                    }
-                    e.preventDefault();
-                    var s  = input.selectionStart;
-                    var en = input.selectionEnd;
-                    input.value = input.value.slice(0, s) + '  ' + input.value.slice(en);
-                    input.selectionStart = input.selectionEnd = s + 2;
-                    update();
-                    return;
-                }
-                escArmed = false; // any other key cancels the escape arm
-            });
-            input.addEventListener('blur', function () { escArmed = false; });
-
-            update();
-        });
-    }
-
-    /* ====================================================
        Side-rail section nav — scroll-spy
        ====================================================
        For each rail link, find its target section heading. On scroll
@@ -301,7 +194,6 @@
     ready(function () {
         initScrollReveal();
         initCardTilt();
-        initLiveEditor();
         initSideRail();
     });
 })();

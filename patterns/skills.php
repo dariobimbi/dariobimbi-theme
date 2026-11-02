@@ -7,10 +7,10 @@
  */
 
 $groups = [
-    [ 'label' => 'Web',                'tone' => 'is-primary', 'items' => [ 'WordPress', 'PHP', 'JavaScript', 'TypeScript', 'HTML', 'CSS', 'Sass', 'Divi', 'Responsive design' ] ],
+    [ 'label' => 'Web',                'tone' => 'is-primary', 'items' => [ 'WordPress', 'PHP', 'JavaScript', 'TypeScript', 'HTML', 'CSS', 'Sass', 'Divi', 'Block themes / theme.json', 'Responsive design' ] ],
     [ 'label' => 'Apps & Frameworks',  'tone' => 'is-accent',  'items' => [ 'Angular', 'Flutter', 'Node.js', 'Unity3D', 'C#', 'Custom PHP CMS' ] ],
-    [ 'label' => 'APIs & Data',        'tone' => 'is-primary', 'items' => [ 'REST APIs', 'MySQL', 'Firestore', 'Google Cloud' ] ],
-    [ 'label' => 'Craft & Tools',      'tone' => 'is-hot',     'items' => [ 'Git', 'GitHub', 'PHPUnit', 'Jest', 'SEO', 'Accessibility', 'Core Web Vitals', 'Code review', 'Adobe XD', 'Photoshop' ] ],
+    [ 'label' => 'APIs & Data',        'tone' => 'is-primary', 'items' => [ 'REST APIs', 'WordPress REST API', 'MySQL', 'Firestore', 'Google Cloud' ] ],
+    [ 'label' => 'Craft & Tools',      'tone' => 'is-hot',     'items' => [ 'Git', 'GitHub', 'PHPUnit', 'Jest', 'SEO', 'Accessibility', 'Core Web Vitals', 'Code review', 'WP-CLI', 'Playwright', 'Photoshop' ] ],
 ];
 
 // Cert data lives in inc/seo.php (DARIOBIMBI_CERTS) so the JSON-LD reads the same list.

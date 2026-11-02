@@ -99,7 +99,7 @@
 
             </aside>
 
-            <main class="dcb-main">
+            <div class="dcb-main">
                 <div class="dcb-toolbar">
                     <input type="search" class="dcb-card-search" placeholder="Search by name…" aria-label="Search cards by name" />
                     <button type="button" class="dcb-filter-trigger" aria-expanded="false" aria-controls="dcb-filter-sheet">
@@ -117,12 +117,14 @@
 
                 <p class="dcb-status" role="status" aria-live="polite">Pick a set to start browsing.</p>
 
+                <p class="dcb-filter-note" hidden></p>
+
                 <div class="dcb-grid"></div>
 
                 <div class="dcb-load-more" hidden>
                     <button type="button" class="dcb-load-more-btn">Load more</button>
                 </div>
-            </main>
+            </div>
 
         </div>
 
@@ -200,6 +202,8 @@ body:has(.demo-card-browser) {
    exactly the kind of ambient motion users with vestibular sensitivities
    ask sites to turn off. */
 @media (prefers-reduced-motion: reduce) {
+    html:has(.demo-card-browser),
+    body.has-card-browser-page,
     body:has(.demo-card-browser) {
         animation: none;
     }
@@ -628,7 +632,8 @@ body:has(.demo-card-browser) .site-nav-trigger--link:focus-visible {
     text-align: center;
 }
 
-.demo-card-browser .dcb-load-more-btn {
+.demo-card-browser .dcb-load-more-btn,
+.demo-card-browser .dcb-retry {
     background: var(--dcb-surface);
     color: var(--dcb-fg);
     border: 1px solid var(--dcb-subtle);
@@ -638,8 +643,20 @@ body:has(.demo-card-browser) .site-nav-trigger--link:focus-visible {
     font: inherit;
 }
 
-.demo-card-browser .dcb-load-more-btn:hover {
+.demo-card-browser .dcb-load-more-btn:hover,
+.demo-card-browser .dcb-retry:hover {
     border-color: var(--dcb-primary);
+}
+
+.demo-card-browser .dcb-error p,
+.demo-card-browser .dcb-set-loading p {
+    margin: 0 0 0.75rem;
+}
+
+.demo-card-browser .dcb-filter-note {
+    color: var(--dcb-muted);
+    margin: -0.5rem 0 1rem;
+    font-size: 0.85rem;
 }
 
 .demo-card-browser .dcb-modal {
@@ -1044,8 +1061,26 @@ body:has(.demo-card-browser) .site-nav-trigger--link:focus-visible {
         priceMax: null,
         searchTerm: '',
         sort: 'default',
-        setSearch: ''
+        setSearch: '',
+        // Request counters: a response that comes back after a newer request
+        // started (old set, old language) is dropped instead of merged in.
+        setsReq: 0,
+        cardsReq: 0,
+        setsError: '',
+        cardsError: '',
+        staleSets: false,
+        staleCards: false
     };
+
+    // Sorts JustTCG can do for us across the whole set. The rest of the
+    // sort options (and every filter) only see the cards loaded so far.
+    var SERVER_SORTS = {
+        'price-desc': { orderBy: 'price', order: 'desc' },
+        'price-asc': { orderBy: 'price', order: 'asc' },
+        'trend-desc': { orderBy: '7d', order: 'desc' }
+    };
+    var SORT_VALUES = ['default', 'price-desc', 'price-asc', 'trend-desc', 'name-asc'];
+    var SET_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,99}$/;
 
     /* ===== Helpers ===== */
 
@@ -1137,8 +1172,8 @@ body:has(.demo-card-browser) .site-nav-trigger--link:focus-visible {
     function api(path, params) {
         var qs = new URLSearchParams();
         Object.keys(params || {}).forEach(function (k) {
-            // Avoid the && operator inside inline scripts: WordPress's content
-            // filters HTML-encode it to &#038;&#038;, which the JS parser
+            // Avoid the logical AND operator inside inline scripts: WordPress's
+            // content filters HTML-encode its ampersands, which the JS parser
             // chokes on. Use nested ifs instead. See CLAUDE.md "Inline
             // <script> gotchas inside pattern PHP" for the full story.
             if (params[k] !== '') {
@@ -1148,47 +1183,138 @@ body:has(.demo-card-browser) .site-nav-trigger--link:focus-visible {
         var url = PROXY_BASE + path + (qs.toString() ? '?' + qs.toString() : '');
         return fetch(url, { credentials: 'same-origin' })
             .then(function (r) {
-                return r.json().then(function (json) {
+                return r.json().catch(function () { return null; }).then(function (json) {
+                    if (r.status >= 400) {
+                        var msg = '';
+                        if (json) {
+                            if (typeof json.error === 'string') msg = json.error;
+                            else if (typeof json.message === 'string') msg = json.message;
+                        }
+                        var err = new Error(msg || 'The server answered with an error (' + r.status + ').');
+                        err.status = r.status;
+                        throw err;
+                    }
                     return { status: r.status, body: json };
                 });
             });
     }
 
+    function updateStaleBanner() {
+        ROOT.querySelector('.dcb-stale').hidden = !(state.staleSets || state.staleCards);
+    }
+
+    // The "key not configured" 503 gets its own banner. Returns true when
+    // the error was that one so callers can skip the generic message.
+    function isConfigError(err) {
+        var isKeyMsg = err.message.indexOf('JUSTTCG_API_KEY') !== -1;
+        if (err.status === 503) {
+            if (isKeyMsg) {
+                ROOT.querySelector('.dcb-config-error').hidden = false;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function errorText(err) {
+        if (!err) return '';
+        return err.message || '';
+    }
+
+    function updateHash() {
+        var sp = new URLSearchParams();
+        if (state.selectedSetId) sp.set('set', state.selectedSetId);
+        var langs = Object.keys(state.languages).filter(function (g) { return state.languages[g]; });
+        if (langs.join(',') !== 'pokemon') sp.set('lang', langs.join(','));
+        if (state.sort !== 'default') sp.set('sort', state.sort);
+        var s = sp.toString();
+        var next = s ? '#' + s : '';
+        if (next === location.hash) return;
+        try {
+            history.replaceState(null, '', next || location.pathname + location.search);
+        } catch (e) { /* sandboxed frames can refuse; the demo works without it */ }
+    }
+
+    function readHash() {
+        var raw = (location.hash || '').replace(/^#/, '');
+        if (!raw) return;
+        var sp = new URLSearchParams(raw);
+        var set = sp.get('set');
+        if (set) {
+            if (SET_ID_PATTERN.test(set)) state.selectedSetId = set;
+        }
+        var lang = sp.get('lang');
+        if (lang) {
+            var wanted = {};
+            var any = false;
+            lang.split(',').forEach(function (g) {
+                if (Object.prototype.hasOwnProperty.call(state.languages, g)) {
+                    wanted[g] = true;
+                    any = true;
+                }
+            });
+            if (any) {
+                Object.keys(state.languages).forEach(function (g) { state.languages[g] = !!wanted[g]; });
+            }
+        }
+        var sort = sp.get('sort');
+        if (sort) {
+            if (SORT_VALUES.indexOf(sort) !== -1) state.sort = sort;
+        }
+        // Reflect the restored state in the controls.
+        var boxes = ROOT.querySelectorAll('input[name="dcb-lang"]');
+        for (var i = 0; i < boxes.length; i++) boxes[i].checked = !!state.languages[boxes[i].value];
+        ROOT.querySelector('.dcb-sort').value = state.sort;
+    }
+
     function loadSets() {
+        var req = ++state.setsReq;
         var games = Object.keys(state.languages).filter(function (g) { return state.languages[g]; });
         if (!games.length) {
             state.sets = { pokemon: [], 'pokemon-japan': [] };
+            state.setsError = '';
+            state.staleSets = false;
+            updateStaleBanner();
             renderSetList();
             return Promise.resolve();
         }
+        var failures = [];
         var promises = games.map(function (g) {
             return api('/sets', { game: g }).then(function (resp) {
                 var body = resp.body || {};
-                var errMsg = typeof body.error === 'string' ? body.error : '';
-                if (resp.status === 503) {
-                    if (errMsg.indexOf('JUSTTCG_API_KEY') !== -1) {
-                        ROOT.querySelector('.dcb-config-error').hidden = false;
-                        return [];
-                    }
-                }
-                if (body._dariobimbi_stale) {
-                    ROOT.querySelector('.dcb-stale').hidden = false;
-                }
-                return body.data || [];
+                return {
+                    data: Array.isArray(body.data) ? body.data : [],
+                    stale: !!body._dariobimbi_stale
+                };
+            }).catch(function (err) {
+                var notSetUp = isConfigError(err);
+                failures.push(notSetUp ? 'The card feed is not set up yet.' : errorText(err));
+                return { data: [], stale: false, failed: true };
             });
         });
         return Promise.all(promises).then(function (results) {
+            if (req !== state.setsReq) return;
+            var anyStale = false;
             games.forEach(function (g, i) {
-                state.sets[g] = results[i];
+                state.sets[g] = results[i].data;
+                if (results[i].stale) anyStale = true;
             });
+            state.staleSets = anyStale;
+            updateStaleBanner();
+            state.setsError = failures.length ? failures[0] || 'Something went wrong.' : '';
             renderSetList();
         });
     }
 
     function loadCards(reset) {
+        // Any older request still in flight is out of date from here on.
+        var req = ++state.cardsReq;
+        state.cardsError = '';
         if (!state.selectedSetId) {
+            state.loading = false;
             state.cards = [];
             state.hasMore = false;
+            updateHash();
             renderGrid();
             return Promise.resolve();
         }
@@ -1197,7 +1323,11 @@ body:has(.demo-card-browser) .site-nav-trigger--link:focus-visible {
             state.cards = [];
         }
         var setEntry = findSetById(state.selectedSetId);
-        if (!setEntry) return Promise.resolve();
+        if (!setEntry) {
+            state.loading = false;
+            return Promise.resolve();
+        }
+        updateHash();
 
         state.loading = true;
         renderStatus();
@@ -1206,18 +1336,25 @@ body:has(.demo-card-browser) .site-nav-trigger--link:focus-visible {
             renderSkeletons();
         }
 
-        return api('/cards', {
+        var params = {
             game: setEntry.game_id,
             set: setEntry.id,
             offset: state.offset,
             limit: 20
-        }).then(function (resp) {
+        };
+        var serverSort = SERVER_SORTS[state.sort];
+        if (serverSort) {
+            params.orderBy = serverSort.orderBy;
+            params.order = serverSort.order;
+        }
+
+        return api('/cards', params).then(function (resp) {
+            if (req !== state.cardsReq) return;
             state.loading = false;
             var body = resp.body || {};
-            if (body._dariobimbi_stale) {
-                ROOT.querySelector('.dcb-stale').hidden = false;
-            }
-            var data = body.data || [];
+            state.staleCards = !!body._dariobimbi_stale;
+            updateStaleBanner();
+            var data = Array.isArray(body.data) ? body.data : [];
             var meta = body.meta || {};
             state.cards = state.cards.concat(data);
             state.offset = (meta.offset || 0) + (meta.limit || data.length);
@@ -1229,9 +1366,16 @@ body:has(.demo-card-browser) .site-nav-trigger--link:focus-visible {
             renderGrid();
             renderStatus();
         }).catch(function (err) {
+            if (req !== state.cardsReq) return;
             state.loading = false;
-            var errMsg = err ? err.message : '';
-            renderStatus('Could not load cards. ' + (errMsg || ''));
+            if (isConfigError(err)) {
+                state.cardsError = 'The card feed is not set up yet.';
+            } else {
+                state.cardsError = errorText(err) || 'Something went wrong.';
+            }
+            // renderGrid clears the skeleton tiles and shows the retry.
+            renderGrid();
+            renderStatus();
         });
     }
 
@@ -1257,7 +1401,11 @@ body:has(.demo-card-browser) .site-nav-trigger--link:focus-visible {
         });
 
         if (!combined.length) {
-            listEl.innerHTML = '<p class="dcb-set-loading">No sets available for the selected languages.</p>';
+            if (state.setsError) {
+                listEl.innerHTML = setsErrorHtml();
+            } else {
+                listEl.innerHTML = '<p class="dcb-set-loading">No sets available for the selected languages.</p>';
+            }
             return;
         }
 
@@ -1287,6 +1435,12 @@ body:has(.demo-card-browser) .site-nav-trigger--link:focus-visible {
         // Prefer the newest English set with at least one sealed product
         // (matches the Collectr aesthetic this demo riffs on); fall back
         // to plain newest if none of the visible sets have sealed.
+        // A set restored from the URL may not exist (or not in these
+        // languages); fall back to the default pick rather than a blank grid.
+        if (state.selectedSetId) {
+            var stillListed = combined.some(function (s) { return s.id === state.selectedSetId; });
+            if (!stillListed) state.selectedSetId = null;
+        }
         if (!state.selectedSetId) {
             if (combined.length) {
                 var defaultSet = combined.find(function (s) {
@@ -1307,7 +1461,14 @@ body:has(.demo-card-browser) .site-nav-trigger--link:focus-visible {
                 +     '<span class="dcb-set-meta">' + escapeHtml(year) + '</span>'
                 +     langTag
                 + '</label>';
-        }).join('');
+        }).join('') + (state.setsError ? setsErrorHtml() : '');
+    }
+
+    function setsErrorHtml() {
+        return '<div class="dcb-set-loading dcb-error" role="alert">'
+            + '<p>The sets would not load. ' + escapeHtml(state.setsError) + '</p>'
+            + '<button type="button" class="dcb-retry" data-action="retry-sets">Try again</button>'
+            + '</div>';
     }
 
     function renderSkeletons() {
@@ -1457,7 +1618,9 @@ body:has(.demo-card-browser) .site-nav-trigger--link:focus-visible {
             list = list.filter(function (c) { return (c.name || '').toLowerCase().indexOf(term) !== -1; });
         }
 
-        list.sort(function (a, b) {
+        // Price and trend sorts already came back in order from the server for
+        // the whole set; re-sorting the loaded cards here would shuffle pages.
+        if (!SERVER_SORTS[state.sort]) list.sort(function (a, b) {
             switch (state.sort) {
                 case 'price-desc': {
                     var pa = lowestPrice(a), pb = lowestPrice(b);
@@ -1508,7 +1671,11 @@ body:has(.demo-card-browser) .site-nav-trigger--link:focus-visible {
 
         if (!cards.length) {
             if (state.loading) return;
-            grid.innerHTML = '<p class="dcb-empty">No items match the current filters. Try clearing one of the filters or picking a different set.</p>';
+            if (state.cardsError) {
+                grid.innerHTML = cardsErrorHtml();
+            } else {
+                grid.innerHTML = '<p class="dcb-empty">No items match the current filters. Try clearing one of the filters or picking a different set.</p>';
+            }
             ROOT.querySelector('.dcb-load-more').hidden = true;
             return;
         }
@@ -1548,9 +1715,16 @@ body:has(.demo-card-browser) .site-nav-trigger--link:focus-visible {
                 +         '<span class="dcb-tile-trend ' + trendCls + '">' + escapeHtml(trendText) + '</span>'
                 +     '</div>'
                 + '</button>';
-        }).join('');
+        }).join('') + (state.cardsError ? cardsErrorHtml() : '');
 
         ROOT.querySelector('.dcb-load-more').hidden = !state.hasMore;
+    }
+
+    function cardsErrorHtml() {
+        return '<div class="dcb-empty dcb-error" role="alert">'
+            + '<p>The cards would not load. ' + escapeHtml(state.cardsError) + '</p>'
+            + '<button type="button" class="dcb-retry" data-action="retry-cards">Try again</button>'
+            + '</div>';
     }
 
     function renderStatus(message) {
@@ -1558,12 +1732,31 @@ body:has(.demo-card-browser) .site-nav-trigger--link:focus-visible {
         if (message) { status.textContent = message; return; }
         if (state.loading) { status.textContent = 'Loading…'; return; }
         if (!state.selectedSetId) { status.textContent = 'Pick a set to start browsing.'; return; }
+        if (state.cardsError) { status.textContent = 'Could not load cards.'; updateFilterNote(); return; }
         var setEntry = findSetById(state.selectedSetId);
         var visible = getVisibleCards().length;
         var setName = setEntry ? setEntry.name : '';
         status.textContent = visible + ' of ' + state.cards.length + ' shown'
             + (state.cards.length < state.total ? ' (' + state.total + ' total in set)' : '')
             + (setName ? ' · ' + setName : '');
+        updateFilterNote();
+    }
+
+    // Price sorts run on the server, but every filter, the name search and
+    // the A to Z sort only see the cards loaded so far. Say so while more
+    // cards are still waiting behind "Load more".
+    function updateFilterNote() {
+        var note = ROOT.querySelector('.dcb-filter-note');
+        var narrowing = countActiveFilters() > 0;
+        if (state.searchTerm) narrowing = true;
+        if (state.sort === 'name-asc') narrowing = true;
+        var show = narrowing;
+        if (!state.hasMore) show = false;
+        if (state.cardsError) show = false;
+        note.hidden = !show;
+        if (show) {
+            note.textContent = 'Filters, name search and A to Z sorting only apply to the ' + state.cards.length + ' cards loaded so far. Load more to include the rest of the set.';
+        }
     }
 
     /* ===== Filter drawer (mobile) ===== */
@@ -1626,8 +1819,10 @@ body:has(.demo-card-browser) .site-nav-trigger--link:focus-visible {
             modal.el.hidden = true;
             document.body.style.overflow = '';
             if (modal.previousFocus) {
-                if (typeof modal.previousFocus.focus === 'function') {
-                    modal.previousFocus.focus();
+                if (document.body.contains(modal.previousFocus)) {
+                    if (typeof modal.previousFocus.focus === 'function') {
+                        modal.previousFocus.focus();
+                    }
                 }
             }
         },
@@ -1681,10 +1876,9 @@ body:has(.demo-card-browser) .site-nav-trigger--link:focus-visible {
     };
 
     /* Bottom-sheet filter drawer. Reuses the sidebar markup wholesale —
-       only its skin (CSS) and open/close state are new. Focus + Esc
-       handling mirror the card modal's level (focus the close control on
-       open, return focus to the trigger on close), kept consistent on
-       purpose rather than building a heavier trap on one surface only. */
+       only its skin (CSS) and open/close state are new. Like the card modal
+       it moves focus in on open, traps Tab while open, and returns focus
+       to the trigger on close. */
     var drawer = {
         sidebar: ROOT.querySelector('.dcb-sidebar'),
         backdrop: ROOT.querySelector('.dcb-drawer-backdrop'),
@@ -1696,6 +1890,8 @@ body:has(.demo-card-browser) .site-nav-trigger--link:focus-visible {
             drawer.isOpen = true;
             drawer.backdrop.hidden = false;
             drawer.sidebar.classList.add('is-open');
+            drawer.sidebar.setAttribute('role', 'dialog');
+            drawer.sidebar.setAttribute('aria-modal', 'true');
             if (drawer.trigger) drawer.trigger.setAttribute('aria-expanded', 'true');
             document.body.style.overflow = 'hidden';
             var closeBtn = ROOT.querySelector('.dcb-sheet-close');
@@ -1706,6 +1902,8 @@ body:has(.demo-card-browser) .site-nav-trigger--link:focus-visible {
             if (!drawer.isOpen) return;
             drawer.isOpen = false;
             drawer.sidebar.classList.remove('is-open');
+            drawer.sidebar.removeAttribute('role');
+            drawer.sidebar.removeAttribute('aria-modal');
             drawer.backdrop.hidden = true;
             document.body.style.overflow = '';
             if (drawer.trigger) {
@@ -1734,6 +1932,39 @@ body:has(.demo-card-browser) .site-nav-trigger--link:focus-visible {
             + '</svg>';
     }
 
+    /* ===== Focus trap ===== */
+
+    // Keeps Tab and Shift+Tab inside an open overlay. Only visible, enabled
+    // controls count, so the hidden Rarity / Condition / Printing fieldsets
+    // don't become dead stops.
+    function trapTab(e, container) {
+        var nodes = container.querySelectorAll('a[href], button, input, select, textarea, summary, [tabindex]');
+        var list = [];
+        for (var i = 0; i < nodes.length; i++) {
+            var el = nodes[i];
+            if (el.disabled) continue;
+            if (el.getAttribute('tabindex') === '-1') continue;
+            if (el.getClientRects().length === 0) continue;
+            list.push(el);
+        }
+        if (!list.length) return;
+        var first = list[0];
+        var last = list[list.length - 1];
+        var active = document.activeElement;
+        if (!container.contains(active)) {
+            e.preventDefault();
+            first.focus();
+        } else if (e.shiftKey) {
+            if (active === first) {
+                e.preventDefault();
+                last.focus();
+            }
+        } else if (active === last) {
+            e.preventDefault();
+            first.focus();
+        }
+    }
+
     /* ===== Wiring ===== */
 
     ROOT.addEventListener('change', function (e) {
@@ -1746,6 +1977,7 @@ body:has(.demo-card-browser) .site-nav-trigger--link:focus-visible {
         } else if (target.name === 'dcb-lang') {
             state.languages[target.value] = target.checked;
             state.selectedSetId = null;
+            updateHash();
             loadSets().then(function () { return loadCards(true); });
         } else if (target.name === 'dcb-set') {
             state.selectedSetId = target.value;
@@ -1783,9 +2015,26 @@ body:has(.demo-card-browser) .site-nav-trigger--link:focus-visible {
         renderStatus();
     }, 150));
 
-    ROOT.querySelector('.dcb-sort').addEventListener('change', function (e) {
-        state.sort = e.target.value;
+    // Moving to or from a server-side sort means a different page order, so
+    // reload the set from the start. A to Z and Default sort what is loaded.
+    function applySort(next) {
+        var before = state.sort;
+        state.sort = next;
+        updateHash();
+        var changedOrder = false;
+        if (SERVER_SORTS[before] !== SERVER_SORTS[next]) changedOrder = true;
+        if (changedOrder) {
+            if (state.selectedSetId) {
+                loadCards(true);
+                return;
+            }
+        }
         renderGrid();
+        renderStatus();
+    }
+
+    ROOT.querySelector('.dcb-sort').addEventListener('change', function (e) {
+        applySort(e.target.value);
     });
 
     ROOT.querySelector('.dcb-price-min').addEventListener('input', debounce(function (e) {
@@ -1810,7 +2059,7 @@ body:has(.demo-card-browser) .site-nav-trigger--link:focus-visible {
         state.priceMin = null;
         state.priceMax = null;
         state.searchTerm = '';
-        state.sort = 'default';
+        var prevSort = state.sort;
         ROOT.querySelector('input[name="dcb-mode"][value="all"]').checked = true;
         ROOT.querySelector('.dcb-card-search').value = '';
         ROOT.querySelector('.dcb-sort').value = 'default';
@@ -1818,8 +2067,12 @@ body:has(.demo-card-browser) .site-nav-trigger--link:focus-visible {
         ROOT.querySelector('.dcb-price-max').value = '';
         var unchecks = ROOT.querySelectorAll('input[name="dcb-rarity"], input[name="dcb-condition"], input[name="dcb-printing"]');
         for (var i = 0; i < unchecks.length; i++) unchecks[i].checked = false;
-        renderGrid();
-        renderStatus();
+        if (prevSort === 'default') {
+            renderGrid();
+            renderStatus();
+        } else {
+            applySort('default');
+        }
     });
 
     ROOT.querySelector('.dcb-load-more-btn').addEventListener('click', function () {
@@ -1830,6 +2083,16 @@ body:has(.demo-card-browser) .site-nav-trigger--link:focus-visible {
         var tile = e.target.closest('[data-card-index]');
         if (tile) {
             modal.open(parseInt(tile.dataset.cardIndex, 10));
+            return;
+        }
+        if (e.target.closest('[data-action="retry-sets"]')) {
+            loadSets().then(function () {
+                if (state.selectedSetId) return loadCards(true);
+            });
+            return;
+        }
+        if (e.target.closest('[data-action="retry-cards"]')) {
+            loadCards(state.cards.length === 0);
             return;
         }
         if (e.target.closest('.dcb-filter-trigger')) {
@@ -1848,6 +2111,14 @@ body:has(.demo-card-browser) .site-nav-trigger--link:focus-visible {
     // Esc closes whichever overlay is open — modal takes priority since it
     // can be opened from within nothing else, then the filter sheet.
     document.addEventListener('keydown', function (e) {
+        if (e.key === 'Tab') {
+            if (!modal.el.hidden) {
+                trapTab(e, modal.el.querySelector('.dcb-modal-content'));
+            } else if (drawer.isOpen) {
+                trapTab(e, drawer.sidebar);
+            }
+            return;
+        }
         if (e.key !== 'Escape') return;
         if (!modal.el.hidden) {
             e.preventDefault();
@@ -1871,6 +2142,7 @@ body:has(.demo-card-browser) .site-nav-trigger--link:focus-visible {
 
     /* ===== Bootstrap ===== */
 
+    readHash();
     loadSets().then(function () {
         if (state.selectedSetId) return loadCards(true);
     });

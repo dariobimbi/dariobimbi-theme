@@ -26,12 +26,7 @@ $project_children  = $projects
 /* --- Demos parent + children ----------------------------------------- */
 $demos          = get_page_by_path( 'demos' );
 $demos_url      = $demos ? get_permalink( $demos ) : home_url( '/demos/' );
-$demo_children  = $demos
-    ? get_pages( [
-        'parent'      => $demos->ID,
-        'sort_column' => 'menu_order,post_title',
-    ] )
-    : [];
+$demo_children  = dariobimbi_demo_children(); // meta order first, see inc/demos.php
 
 /* Bucket demo children by shared category (web / game / ported) so the
    dropdown groupings always match the /demos/ hub. The categorization and the
@@ -56,13 +51,13 @@ foreach ( $demo_children as $child ) {
                 <span>Projects</span>
                 <span class="site-nav-chevron" aria-hidden="true">▾</span>
             </summary>
-            <ul class="site-nav-menu" role="menu">
-                <li role="none">
-                    <a href="<?php echo esc_url( $projects_url ); ?>" role="menuitem" class="site-nav-menu-overview">All projects →</a>
+            <ul class="site-nav-menu">
+                <li>
+                    <a href="<?php echo esc_url( $projects_url ); ?>" class="site-nav-menu-overview">All projects →</a>
                 </li>
                 <?php foreach ( $project_children as $child ) : ?>
-                    <li role="none">
-                        <a href="<?php echo esc_url( get_permalink( $child ) ); ?>" role="menuitem"><?php echo esc_html( get_the_title( $child ) ); ?></a>
+                    <li>
+                        <a href="<?php echo esc_url( get_permalink( $child ) ); ?>"><?php echo esc_html( get_the_title( $child ) ); ?></a>
                     </li>
                 <?php endforeach; ?>
             </ul>
@@ -78,16 +73,16 @@ foreach ( $demo_children as $child ) {
                 <span>Demos</span>
                 <span class="site-nav-chevron" aria-hidden="true">▾</span>
             </summary>
-            <ul class="site-nav-menu" role="menu">
-                <li role="none">
-                    <a href="<?php echo esc_url( $demos_url ); ?>" role="menuitem" class="site-nav-menu-overview">All demos →</a>
+            <ul class="site-nav-menu">
+                <li>
+                    <a href="<?php echo esc_url( $demos_url ); ?>" class="site-nav-menu-overview">All demos →</a>
                 </li>
                 <?php foreach ( $nav_sections as $cat => $section_title ) : ?>
                     <?php if ( empty( $nav_buckets[ $cat ] ) ) continue; ?>
-                    <li role="none" class="site-nav-menu-heading"><?php echo esc_html( $section_title ); ?></li>
+                    <li class="site-nav-menu-heading"><?php echo esc_html( $section_title ); ?></li>
                     <?php foreach ( $nav_buckets[ $cat ] as $child ) : ?>
-                        <li role="none">
-                            <a href="<?php echo esc_url( get_permalink( $child ) ); ?>" role="menuitem"><?php echo esc_html( get_the_title( $child ) ); ?></a>
+                        <li>
+                            <a href="<?php echo esc_url( get_permalink( $child ) ); ?>"><?php echo esc_html( get_the_title( $child ) ); ?></a>
                         </li>
                     <?php endforeach; ?>
                 <?php endforeach; ?>

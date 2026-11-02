@@ -31,7 +31,7 @@
     <!-- wp:html -->
     <div class="av">
         <div class="av-stage">
-            <canvas class="av-canvas" data-role="canvas" width="900" height="360"></canvas>
+            <canvas class="av-canvas" data-role="canvas" width="900" height="360" role="img" aria-label="Live visualization of the audio signal, drawn as bars, a waveform, or a ring."></canvas>
             <div class="av-stage-overlay" data-role="overlay">
                 <div class="av-stage-msg">
                     <div class="av-stage-icon">🎛️</div>
@@ -39,15 +39,16 @@
                     <p class="av-stage-sub">(Browsers require a user click before audio can play.)</p>
                 </div>
             </div>
+            <p class="av-sr" role="status" aria-live="polite" data-role="live"></p>
         </div>
 
         <div class="av-controls">
             <div class="av-row">
                 <button type="button" class="av-btn av-btn--primary" data-action="toggle">▶ Start</button>
-                <div class="av-mode" role="tablist" aria-label="Visualization style">
-                    <button type="button" class="av-mode-btn is-on" data-mode="bars" role="tab">Bars</button>
-                    <button type="button" class="av-mode-btn"       data-mode="wave" role="tab">Wave</button>
-                    <button type="button" class="av-mode-btn"       data-mode="ring" role="tab">Ring</button>
+                <div class="av-mode" role="group" aria-label="Visualization style">
+                    <button type="button" class="av-mode-btn is-on" data-mode="bars" aria-pressed="true">Bars</button>
+                    <button type="button" class="av-mode-btn"       data-mode="wave" aria-pressed="false">Wave</button>
+                    <button type="button" class="av-mode-btn"       data-mode="ring" aria-pressed="false">Ring</button>
                 </div>
             </div>
 
@@ -62,12 +63,13 @@
                         <span>Microphone</span>
                     </label>
                 </div>
+                <p class="av-hint">Microphone audio stays in your browser. It isn't recorded or sent anywhere.</p>
             </div>
 
             <div class="av-row av-row--osc" data-role="osc-controls">
                 <div class="av-knob">
-                    <label>Wave</label>
-                    <select data-role="osc-type">
+                    <label for="av-osc-type">Wave</label>
+                    <select id="av-osc-type" data-role="osc-type">
                         <option value="sine">sine</option>
                         <option value="square">square</option>
                         <option value="sawtooth">saw</option>
@@ -75,12 +77,12 @@
                     </select>
                 </div>
                 <div class="av-knob av-knob--wide">
-                    <label>Frequency <span data-role="freq-out">220</span> Hz</label>
-                    <input type="range" min="60" max="1200" step="1" value="220" data-role="freq">
+                    <label for="av-freq">Frequency <span data-role="freq-out">220</span> Hz</label>
+                    <input id="av-freq" type="range" min="60" max="1200" step="1" value="220" data-role="freq">
                 </div>
                 <div class="av-knob av-knob--wide">
-                    <label>Volume <span data-role="vol-out">0.30</span></label>
-                    <input type="range" min="0" max="1" step="0.01" value="0.30" data-role="vol">
+                    <label for="av-vol">Volume <span data-role="vol-out">0.30</span></label>
+                    <input id="av-vol" type="range" min="0" max="1" step="0.01" value="0.30" data-role="vol">
                 </div>
             </div>
 
@@ -173,6 +175,7 @@
     min-width: 130px;
 }
 .demo-audio .av-btn:hover { filter: brightness(1.1); }
+.demo-audio .av-btn:disabled { opacity: 0.6; cursor: progress; filter: none; }
 
 .demo-audio .av-mode {
     display: inline-flex;
@@ -241,6 +244,19 @@
     accent-color: var(--wp--preset--color--accent);
 }
 
+/* Visually hidden, still announced. Mirrors the status overlay for screen readers. */
+.demo-audio .av-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
 .demo-audio .av-hint {
     font-size: 0.85rem;
     color: var(--wp--preset--color--muted);
@@ -266,12 +282,14 @@
     var vol     = root.querySelector('[data-role="vol"]');
     var volOut  = root.querySelector('[data-role="vol-out"]');
     var hint    = root.querySelector('[data-role="hint"]');
+    var live    = root.querySelector('[data-role="live"]');
 
     var ctx, analyser, gain, osc, micStream, micNode;
     var freqData, timeData;
     var raf = 0;
     var mode = 'bars';
     var running = false;
+    var starting = false;
     var source = 'osc';
 
     /* Canvas resize: redraw at the device pixel ratio so bars stay crisp on
@@ -316,8 +334,14 @@
 
     async function startMic() {
         ensureCtx();
+        if (!navigator.mediaDevices) throw new Error('Your browser only offers the microphone on secure (https) pages, and this one is not.');
+        if (!navigator.mediaDevices.getUserMedia) throw new Error('This browser does not support microphone input.');
         try {
-            micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            // Echo cancellation, noise suppression and auto gain are for phone calls.
+            // They would flatten the whistles and claps this demo is meant to show.
+            micStream = await navigator.mediaDevices.getUserMedia({
+                audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+            });
         } catch (err) {
             throw new Error('Microphone access was denied or unavailable.');
         }
@@ -335,6 +359,14 @@
     }
 
     async function start() {
+        // Starting takes a moment (the mic permission prompt can sit open),
+        // and running is only true afterwards, so guard the gap.
+        if (starting) return;
+        if (running) return;
+        starting = true;
+        var hadFocus = document.activeElement === toggle;
+        toggle.disabled = true;
+        srcRad.forEach(function (r) { r.disabled = true; });
         try {
             ensureCtx();
             if (ctx.state === 'suspended') await ctx.resume();
@@ -343,12 +375,27 @@
             overlay.hidden = true;
             toggle.textContent = '■ Stop';
             running = true;
+            setLive('Audio started.');
             loop();
         } catch (err) {
+            stopOscillator();
+            stopMic();
             overlay.hidden = false;
             overlay.querySelector('.av-stage-msg').innerHTML =
                 '<div class="av-stage-icon">⚠️</div><p>' + err.message + '</p>';
+            setLive(err.message);
         }
+        starting = false;
+        toggle.disabled = false;
+        srcRad.forEach(function (r) { r.disabled = false; });
+        if (hadFocus) toggle.focus();
+    }
+
+    /* Mirror state changes into the hidden live region. Clearing first makes
+       a repeated message announce again. */
+    function setLive(msg) {
+        live.textContent = '';
+        live.textContent = msg;
     }
 
     function stop() {
@@ -363,10 +410,11 @@
             + '<p>Press <strong>Start</strong> to fire up the AudioContext.</p>'
             + '<p class="av-stage-sub">(Browsers require a user click before audio can play.)</p>';
         ctx2d.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+        setLive('Audio stopped.');
     }
 
     /* --- Drawing routines, one per mode. All read from analyser fresh. --- */
-    /* brand-fidelity — visualizer spectrum, intentional */
+    /* brand-fidelity — visualizer spectrum, warm ramp (deep pink to Sticky Yellow) intentional, do not tokenize */
     function drawBars() {
         analyser.getByteFrequencyData(freqData);
         var w = canvas.clientWidth, h = canvas.clientHeight;
@@ -374,14 +422,15 @@
         // Use ~half the FFT bins (roughly 0–11kHz at 44.1k) — gives nicer spread.
         var bins = Math.floor(freqData.length * 0.6);
         var bw = w / bins;
+        // One gradient for the whole frame: loud bars reach the yellow end.
+        var grad = ctx2d.createLinearGradient(0, h, 0, 0);
+        grad.addColorStop(0,   '#e11d48');
+        grad.addColorStop(0.6, '#f43f5e');
+        grad.addColorStop(1,   '#facc15');
+        ctx2d.fillStyle = grad;
         for (var i = 0; i < bins; i++) {
             var v = freqData[i] / 255;
             var bh = v * h;
-            var grad = ctx2d.createLinearGradient(0, h, 0, h - bh);
-            grad.addColorStop(0,   '#3b82f6');
-            grad.addColorStop(0.6, '#a855f7');
-            grad.addColorStop(1,   '#f43f5e');
-            ctx2d.fillStyle = grad;
             ctx2d.fillRect(i * bw + 1, h - bh, Math.max(1, bw - 1.5), bh);
         }
     }
@@ -392,11 +441,11 @@
         ctx2d.clearRect(0, 0, w, h);
         ctx2d.lineWidth = 2;
         var grad = ctx2d.createLinearGradient(0, 0, w, 0);
-        grad.addColorStop(0,   '#60a5fa');
-        grad.addColorStop(0.5, '#c084fc');
-        grad.addColorStop(1,   '#fb7185');
+        grad.addColorStop(0,   '#e11d48');
+        grad.addColorStop(0.5, '#f43f5e');
+        grad.addColorStop(1,   '#facc15');
         ctx2d.strokeStyle = grad;
-        ctx2d.shadowColor = 'rgba(168,85,247,0.55)';
+        ctx2d.shadowColor = 'rgba(244,63,94,0.55)';
         ctx2d.shadowBlur  = 12;
         ctx2d.beginPath();
         var step = w / timeData.length;
@@ -425,7 +474,7 @@
             var x2 = cx + Math.cos(angle) * len;
             var y2 = cy + Math.sin(angle) * len;
             ctx2d.lineWidth = 3;
-            ctx2d.strokeStyle = 'hsl(' + (210 + i * 1.6) + ', 90%, ' + (55 + v * 25) + '%)';
+            ctx2d.strokeStyle = 'hsl(' + ((350 + i * 0.65) % 360) + ', 90%, ' + (55 + v * 25) + '%)';
             ctx2d.beginPath();
             ctx2d.moveTo(x1, y1);
             ctx2d.lineTo(x2, y2);
@@ -449,7 +498,9 @@
     modeBtns.forEach(function (b) {
         b.addEventListener('click', function () {
             modeBtns.forEach(function (x) { x.classList.remove('is-on'); });
+            modeBtns.forEach(function (x) { x.setAttribute('aria-pressed', 'false'); });
             b.classList.add('is-on');
+            b.setAttribute('aria-pressed', 'true');
             mode = b.dataset.mode;
         });
     });

@@ -23,7 +23,7 @@
 
   <!-- wp:html -->
   <div class="ab-stage">
-    <canvas id="ab-canvas" data-role="canvas" aria-label="Ant Buster game canvas" width="1280" height="720"></canvas>
+    <canvas id="ab-canvas" data-role="canvas" tabindex="0" aria-label="Ant Buster game canvas. Press Space to pause, Enter to send the next wave, and 1, 2 or 3 to change the speed." width="1280" height="720"></canvas>
   </div>
   <!-- /wp:html -->
 
@@ -68,6 +68,11 @@ body.has-ant-buster-page {
 
 .demo-ant-buster #ab-canvas.ab-dragging {
   cursor: grabbing;
+}
+
+.demo-ant-buster #ab-canvas:focus-visible {
+  outline: 3px solid var(--wp--preset--color--highlight);
+  outline-offset: 3px;
 }
 
 @media (max-width: 1000px) {
@@ -120,6 +125,18 @@ body.has-ant-buster-page {
     // but keeps the function safe to call during boot).
     if (window.innerHeight >= window.innerWidth) { return true; }
     return false;
+  }
+
+  // True when the visitor asked their OS for less motion. Gates screenshake,
+  // the lose-sign jitter, the blinking disabled-cannon sparks and the oversized
+  // god-tier muzzle flash.
+  var reducedMotionQuery = null;
+  if (window.matchMedia) {
+    reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+  }
+  function prefersReducedMotion() {
+    if (!reducedMotionQuery) { return false; }
+    return reducedMotionQuery.matches;
   }
 
   // Mutates the layout constants and resizes the backing canvas. Called once
@@ -225,17 +242,6 @@ body.has-ant-buster-page {
     rubber: '#ff77a8'
   };
 
-  // === DEBUG MODE ===
-  // Captured once at parse time from the URL. ?debug=1 enables the T hotkey
-  // (cycles spawning each ant kind at the anthill). The check uses a plain
-  // regex — splitting case avoids the `||` operator, which gets HTML-encoded
-  // inside inline scripts in this theme.
-  var DEBUG = /[?&]debug=1/.test(location.search);
-  var DEBUG_KINDS = ['worker', 'carrier', 'scout', 'soldier', 'tank',
-                     'splitter', 'mini_splitter', 'phase', 'bomber',
-                     'queen', 'king'];
-  var debugCycleIdx = 0;
-
   // === GAME STATE ===
   // Two flag layers, intentionally kept separate (Plan 2 Task 5):
   //   game.state     — 'idle' | 'playing'   (top-level: has the player started?)
@@ -244,8 +250,8 @@ body.has-ant-buster-page {
   // state machine. The render and input layers read whichever flag is relevant.
   var game = {
     state: 'idle',            // 'idle' | 'playing'
-    time: 0,                  // seconds since game start (real-time, ignores speed multiplier)
-    simTime: 0,               // simulated seconds (scales with game.speed); used for slice timeout
+    time: 0,                  // simulated seconds since game start; the speed button runs update() extra times per tick, so this advances with it
+    simTime: 0,               // kept in step with time; used for slice timeout
     accumulator: 0,           // for fixed-timestep
     cake: { x: 352, y: 80, slices: 8, lost: 0 },
     anthill: { x: 40, y: 300 },
@@ -267,11 +273,12 @@ body.has-ant-buster-page {
     screenshake: { magnitude: 0, decay: 0 },
     paused: false,
     speed: 1,
-    // Plan 4 — wave-15 god-tier unlock state. In-session only (no
-    // localStorage). godTierUnlocked flips true when wave 15 clears;
-    // godTierUnlockPulseStart stamps game.time so the selected-tower
-    // panel can render a 0.5s golden halo flash on T2 finals' god-tier
-    // upgrade buttons. Both reset on game-over → restart.
+    // Plan 4 — wave-15 god-tier unlock state. godTierUnlocked flips true
+    // when wave 15 clears and rides along in the wave-clear save (saveRun,
+    // localStorage, wrapped in try/catch). godTierUnlockPulseStart stamps
+    // game.time so the selected-tower panel can render a 0.5s golden halo
+    // flash on T2 finals' god-tier upgrade buttons. Both reset on game-over
+    // → restart.
     godTierUnlocked: false,
     godTierUnlockPulseStart: 0
   };
@@ -2412,6 +2419,12 @@ body.has-ant-buster-page {
     }
     if (game.gold < udef.cost) { return; }
     game.gold = game.gold - udef.cost;
+    applyUpgrade(c, toKind);
+  }
+
+  // The state change of an upgrade, minus the gold. upgradeCannon pays for it;
+  // restoreRun replays a saved kindHistory through it for free.
+  function applyUpgrade(c, toKind) {
     c.kind = toKind;
     c.kindHistory.push(toKind);
   }
@@ -2988,8 +3001,8 @@ body.has-ant-buster-page {
       ctx.translate(Math.round(c.x), Math.round(c.y));
       ctx.rotate(c.heading + Math.PI / 2);
       // Try the PNG sprite first; fall back to procedural if missing, broken,
-      // or still loading. Nested ifs (no && chains) per the CLAUDE.md note about
-      // WordPress occasionally HTML-encoding && inside inline scripts.
+      // or still loading. Nested ifs (no logical AND chains) per the CLAUDE.md
+      // note about WordPress HTML-encoding ampersands inside inline scripts.
       var pngSprite = game.sprites.cannonTurretPNG[c.kind];
       var pngReady = false;
       if (pngSprite) {
@@ -3019,6 +3032,7 @@ body.has-ant-buster-page {
           if (dtSinceFire < FLASH_DUR) {
             var fAlpha = 1 - dtSinceFire / FLASH_DUR;
             var fScale = def.flashScale ? def.flashScale : 1.0;
+            if (prefersReducedMotion()) { fScale = 1.0; }
             var fRadius = 6 * fScale;
             // Barrel tip is ~16px in front of cannon center along heading.
             var tipDist = 14;
@@ -3039,7 +3053,10 @@ body.has-ant-buster-page {
         }
       }
       if (c.disabled) {
-        if (Math.floor(game.time * 6) % 2 === 0) {
+        // Steady (no 3 Hz blink) when the visitor prefers reduced motion.
+        var sparkOn = Math.floor(game.time * 6) % 2 === 0;
+        if (prefersReducedMotion()) { sparkOn = true; }
+        if (sparkOn) {
           ctx.fillStyle = '#ff5040';
           ctx.fillRect(c.x - 1, c.y - 16, 2, 2);
           ctx.fillRect(c.x + 3, c.y - 14, 2, 2);
@@ -3484,8 +3501,7 @@ body.has-ant-buster-page {
     }
 
     drawWoodenTag(ui.speedRect.x, ui.speedRect.y, ui.speedRect.w, ui.speedRect.h);
-    var speedLabel;
-    if (game.speed === 2) { speedLabel = '2x'; } else { speedLabel = '1x'; }
+    var speedLabel = game.speed + 'x';
     drawTextWithShadow(speedLabel, ui.speedRect.x + ui.speedRect.w / 2, ui.speedRect.y + ui.speedRect.h / 2, '#fee761', 'bold 11px monospace', 'center');
   }
 
@@ -3643,22 +3659,48 @@ body.has-ant-buster-page {
       lx = lx + lw;
     }
 
-    // PLAY button — green wooden.
+    // PLAY button — green wooden. With a saved run it becomes NEW GAME and
+    // slides left to make room for a Continue button beside it.
     var btnW = 110;
     var btnH = 30;
+    var contW = 160;
+    var btnGap = 8;
     var btnX = WIDTH / 2 - btnW / 2;
     var btnY = signY + signH - 50;
+    var hasSave = !!ui.savedRun;
+    if (hasSave) { btnX = WIDTH / 2 - (btnW + btnGap + contW) / 2; }
     drawWoodenButton(btnX, btnY, btnW, btnH, 'green');
-    drawTextWithShadow('PLAY', btnX + btnW / 2, btnY + btnH / 2, '#1a1a0a', 'bold 16px monospace', 'center');
+    if (hasSave) {
+      drawTextWithShadow('NEW GAME', btnX + btnW / 2, btnY + btnH / 2, '#1a1a0a', 'bold 12px monospace', 'center');
+    } else {
+      drawTextWithShadow('PLAY', btnX + btnW / 2, btnY + btnH / 2, '#1a1a0a', 'bold 16px monospace', 'center');
+    }
 
-    // Track the click target for tap-to-start.
+    // Track the click targets for tap-to-start and tap-to-continue.
     ui.idlePlayRect = { x: btnX, y: btnY, w: btnW, h: btnH };
+    if (hasSave) {
+      var contX = btnX + btnW + btnGap;
+      drawWoodenButton(contX, btnY, contW, btnH, 'green');
+      drawTextWithShadow('CONTINUE WAVE ' + (ui.savedRun.waveIndex + 1), contX + contW / 2, btnY + btnH / 2, '#1a1a0a', 'bold 12px monospace', 'center');
+      ui.idleContinueRect = { x: contX, y: btnY, w: contW, h: btnH };
+    } else {
+      ui.idleContinueRect = null;
+    }
   }
 
   function drawTutorialHint() {
     if (game.state !== 'playing') { return; }
-    if (game.time >= 4) { return; }
-    if (game.cannons.length !== 0) { return; }
+    if (ui.hintDone) { return; }
+    // The hint stays until the first cannon lands, then retires for the run.
+    if (game.cannons.length !== 0) { ui.hintDone = true; return; }
+    // Step aside while a cannon is being dragged or armed so it never covers the drop spot.
+    if (ui.armedKind !== null) { return; }
+    var hintLine1 = 'Drag a cannon from the shop';
+    var hintLine2 = 'onto the picnic blanket to start';
+    if (usesTouch()) {
+      hintLine1 = 'Tap a cannon in the shop,';
+      hintLine2 = 'then tap the blanket to place it';
+    }
     var w = 220;
     var h = 64;
     var x = 60;
@@ -3685,8 +3727,8 @@ body.has-ant-buster-page {
     ctx.font = 'bold 10px monospace';
     ctx.fillStyle = '#4a3220';
     ctx.textAlign = 'center';
-    ctx.fillText('Drag a cannon from the shop', 0, -6);
-    ctx.fillText('onto the picnic blanket to start', 0, 10);
+    ctx.fillText(hintLine1, 0, -6);
+    ctx.fillText(hintLine2, 0, 10);
     ctx.restore();
     ctx.textAlign = 'start';
   }
@@ -3759,17 +3801,21 @@ body.has-ant-buster-page {
 
     drawTextWithShadow('8 SLICES LOST', PLAYFIELD_W / 2, signY + 24, '#ff8a8a', 'bold 10px monospace', 'center');
 
-    // Title with subtle horizontal jitter (1 px @ ~3 Hz).
-    var jx;
-    var p = (game.time * 6) % 2;
-    if (p < 1) { jx = 1; } else { jx = -1; }
+    // Title with subtle horizontal jitter (1 px @ ~3 Hz), skipped for reduced motion.
+    var jx = 0;
+    if (!prefersReducedMotion()) {
+      var p = (game.time * 6) % 2;
+      if (p < 1) { jx = 1; } else { jx = -1; }
+    }
     ctx.save();
     ctx.shadowBlur = 14;
     ctx.shadowColor = 'rgba(255, 80, 80, 0.5)';
     drawTextWithShadow('THE ANTS WIN', PLAYFIELD_W / 2 + jx, signY + 70, '#ff5050', 'bold 32px monospace', 'center');
     ctx.restore();
 
-    drawTextWithShadow('Click to try again', PLAYFIELD_W / 2, signY + signH - 22, '#ffaaaa', 'bold 10px monospace', 'center');
+    if (restartReady()) {
+      drawTextWithShadow('Click to try again', PLAYFIELD_W / 2, signY + signH - 22, '#ffaaaa', 'bold 10px monospace', 'center');
+    }
   }
 
   function drawWinOverlay() {
@@ -3828,7 +3874,9 @@ body.has-ant-buster-page {
     ctx.shadowColor = 'rgba(254, 231, 97, 0.6)';
     drawTextWithShadow('VICTORY', PLAYFIELD_W / 2, signY + 70, '#fff8a0', 'bold 40px monospace', 'center');
     ctx.restore();
-    drawTextWithShadow('Click to restart', PLAYFIELD_W / 2, signY + signH - 22, '#f5e6c8', 'bold 10px monospace', 'center');
+    if (restartReady()) {
+      drawTextWithShadow('Click to restart', PLAYFIELD_W / 2, signY + signH - 22, '#f5e6c8', 'bold 10px monospace', 'center');
+    }
   }
 
   // Layer 13: overlays — drag preview, wave banner, then full-screen modals.
@@ -3853,11 +3901,14 @@ body.has-ant-buster-page {
   // land in a clearly-named slot rather than accreting inline.
   function render() {
     // Screenshake (Plan 3 — Shockwave). Translate the canvas by a small
-    // random offset whose magnitude decays in update(). The drawBackground()
-    // call below repaints the whole 320x180 view each frame, so the shake's
-    // 1-3 px translate doesn't leave ghosted pixels at the edges.
+    // random offset whose magnitude decays in frame() on the wall clock. The
+    // drawBackground() call below repaints the whole view each frame, so the
+    // shake's 1-3 px translate doesn't leave ghosted pixels at the edges.
+    // Skipped entirely for visitors who prefer reduced motion.
     var shaking = false;
-    if (game.screenshake.magnitude > 0) {
+    var shakeOn = game.screenshake.magnitude > 0;
+    if (prefersReducedMotion()) { shakeOn = false; }
+    if (shakeOn) {
       var sx = (Math.random() * 2 - 1) * game.screenshake.magnitude;
       var sy = (Math.random() * 2 - 1) * game.screenshake.magnitude;
       ctx.save();
@@ -4282,7 +4333,9 @@ body.has-ant-buster-page {
 
   // Apply a status effect to an ant. Refresh rule: if the ant already has this kind active,
   // the resulting entry takes the LONGER expiry and the HIGHER magnitude (nested ifs only).
-  function applyStatus(ant, kindKey, magnitude, duration, source) {
+  // sourceCannon (optional) is stamped on the effect so a burn or poison tick
+  // that finishes an ant can credit the cannon that lit it.
+  function applyStatus(ant, kindKey, magnitude, duration, source, sourceCannon) {
     var k = ANT_KINDS[ant.kind];
     if (kindKey === 'slow') {
       var slowResist = k.slowResist;
@@ -4297,7 +4350,11 @@ body.has-ant-buster-page {
       if (existing.magnitude > magnitude) { magnitude = existing.magnitude; }
       if (existing.expiresAt > newExpiry) { newExpiry = existing.expiresAt; }
     }
-    ant.effects[kindKey] = { magnitude: magnitude, expiresAt: newExpiry, source: source };
+    var credit = sourceCannon;
+    if (!credit) {
+      if (existing) { credit = existing.sourceCannon; }
+    }
+    ant.effects[kindKey] = { magnitude: magnitude, expiresAt: newExpiry, source: source, sourceCannon: credit };
     var def = STATUS_KINDS[kindKey];
     if (def.onApply) { def.onApply(ant, magnitude); }
   }
@@ -4322,7 +4379,7 @@ body.has-ant-buster-page {
     }
   }
 
-  // Plan 6: Particle tick. Caller passes real-time dt (NOT simDt) so the burst
+  // Plan 6: Particle tick. frame() passes real elapsed time so the burst
   // always lasts 0.18s wall-time regardless of game speed. Reverse iteration
   // so splice(i, 1) doesn't break the index — same convention as
   // updateProjectiles and the slices loop elsewhere in this file.
@@ -4540,6 +4597,18 @@ body.has-ant-buster-page {
       var defT = STATUS_KINDS[ek];
       if (defT.perTick) { defT.perTick(ant, ant.effects[ek], dt); }
     }
+    // Burn and poison only drain hp, so finish the kill here. Credit goes to
+    // whichever cannon lit the effect; killAnt takes null when none did.
+    if (ant.hp <= 0) {
+      var dotKiller = null;
+      for (ek in ant.effects) {
+        if (STATUS_KINDS[ek].perTick) {
+          if (ant.effects[ek].sourceCannon) { dotKiller = ant.effects[ek].sourceCannon; }
+        }
+      }
+      killAnt(ant, dotKiller);
+      return;
+    }
     // Expire effects whose timer has run out. Collect keys first to avoid mutating the
     // object during iteration.
     var keys = [];
@@ -4639,7 +4708,7 @@ body.has-ant-buster-page {
           a.deliveredAt = game.time;   // mark delivery so drawAnts skips the splat sprite
           a.deathTime = 0;             // pruneAnts drops this on the next frame
           if (game.cake.lost >= 8) {
-            game.waveState = 'lost';
+            endRun('lost');
           }
         }
       } else {
@@ -5583,7 +5652,14 @@ body.has-ant-buster-page {
     if (game.gold < def.cost) { return false; }
     if (!canPlaceCannon(x, y)) { return false; }
     game.gold -= def.cost;
-    game.cannons.push({
+    game.cannons.push(buildCannon(kindKey, x, y));
+    return true;
+  }
+
+  // Fresh cannon record. Shared by placeCannon and restoreRun so a restored
+  // cannon starts with exactly the same derived fields as a placed one.
+  function buildCannon(kindKey, x, y) {
+    return {
       kind: kindKey,
       kindHistory: [kindKey],   // base kind included per spec SYS-2
       x: x,
@@ -5595,8 +5671,7 @@ body.has-ant-buster-page {
       disabled: false,
       disabledUntil: 0,
       targetingMode: 'closest'  // Plan 7 — per-cannon targeting dial
-    });
-    return true;
+    };
   }
 
   function findTarget(cannon) {
@@ -5685,7 +5760,7 @@ body.has-ant-buster-page {
       applyDamage(a, def.coneDot.tickDamage * dt, !!def.armorPierce, cannon);
       if (def.coneDot.statusOnTick) {
         var s = def.coneDot.statusOnTick;
-        applyStatus(a, s.kind, s.magnitude, s.duration, 'cone');
+        applyStatus(a, s.kind, s.magnitude, s.duration, 'cone', cannon);
       }
       if (a.hp <= 0) { killAnt(a, cannon); }
     }
@@ -5746,7 +5821,7 @@ body.has-ant-buster-page {
         }
         if (def.beam.statusOnTick) {
           var sb = def.beam.statusOnTick;
-          applyStatus(btarget, sb.kind, sb.magnitude, sb.duration, 'beam');
+          applyStatus(btarget, sb.kind, sb.magnitude, sb.duration, 'beam', c);
         }
         // Plan 4 — MP-O beam line-pierce (Solar Lance). Extends the standard
         // beam tick: after the primary damage lands, damage up to beamPierce
@@ -6268,7 +6343,7 @@ body.has-ant-buster-page {
           if (!Array.isArray(slist)) { slist = [slist]; }
           for (var si = 0; si < slist.length; si++) {
             var s = slist[si];
-            applyStatus(a, s.kind, s.magnitude, s.duration, 'splash');
+            applyStatus(a, s.kind, s.magnitude, s.duration, 'splash', sourceCannon);
             // Tag-after-apply for damageAmp / spreads (mirrors the
             // projectile-collision pathway in updateProjectiles).
             if (s.damageAmp) {
@@ -6470,7 +6545,7 @@ body.has-ant-buster-page {
             if (!Array.isArray(slist)) { slist = [slist]; }
             for (var si = 0; si < slist.length; si++) {
               var s = slist[si];
-              applyStatus(a, s.kind, s.magnitude, s.duration, 'projectile');
+              applyStatus(a, s.kind, s.magnitude, s.duration, 'projectile', p.sourceCannon);
               // Tag-after-apply pattern: extra fields (Cryo's damageAmp,
               // Plague's spreads) live on the cannon's statusOnHit config and
               // get stamped onto the just-applied effect here, so applyStatus
@@ -6498,7 +6573,7 @@ body.has-ant-buster-page {
               if (!Array.isArray(sflist)) { sflist = [sflist]; }
               for (var sfi = 0; sfi < sflist.length; sfi++) {
                 var sfe = sflist[sfi];
-                applyStatus(a, sfe.kind, sfe.magnitude, sfe.duration, 'first-hit');
+                applyStatus(a, sfe.kind, sfe.magnitude, sfe.duration, 'first-hit', p.sourceCannon);
               }
             }
           }
@@ -6857,11 +6932,12 @@ body.has-ant-buster-page {
             }
           }
           if (game.waveIndex + 1 >= WAVES.length) {
-            game.waveState = 'won';
+            endRun('won');
           } else {
             game.waveIndex = game.waveIndex + 1;
             game.waveState = 'prep';
             game.prepRemaining = wavePrepDuration(WAVES[game.waveIndex]);
+            saveRun();
           }
         }
       }
@@ -6878,9 +6954,11 @@ body.has-ant-buster-page {
     game.cannons = [];
     game.projectiles = [];
     game.effects = [];
+    game.lightningBolts = [];   // bolts expire against game.time, which just reset to 0
+    game.accumulator = 0;
     game.spawnJobs = [];
     game.slices = [];
-    // game.shatterParticles is ephemeral; do not persist if Save State is added later.
+    // game.shatterParticles is ephemeral and is not part of the saved run.
     game.shatterParticles = [];
     game.gold = 150;
     game.waveIndex = 0;
@@ -6918,6 +6996,167 @@ body.has-ant-buster-page {
     ui.sellRect = null;
     ui.targetingRects = [];   // Plan 7 — clear targeting hit-test rects on restart
     ui.shopRects = [];
+    ui.shopMode = 'list';
+    ui.shopInfoKind = null;
+    ui.shopInfoFrom = null;
+    ui.hintDone = false;
+    ui.endedAt = 0;
+    clearSave();   // any restart is a new game, so the old save goes
+  }
+
+  // Wave end (won or lost). Stamps the time so the result screen can ignore
+  // taps for a moment, and drops the save since the run is over.
+  function endRun(result) {
+    game.waveState = result;
+    ui.endedAt = performance.now();
+    clearSave();
+  }
+
+  // True once the win/lose screen has been up long enough that a tap on it was
+  // meant, not a panicked one from the last second of play.
+  function restartReady() {
+    return performance.now() - ui.endedAt >= 1000;
+  }
+
+  // === SAVE AND RESUME ===
+  // One run is about 20 minutes, so the state at each wave clear is written to
+  // localStorage. Every storage access is wrapped in try/catch: private
+  // windows and blocked site data throw, and the game just plays without it.
+  // Saved: waveIndex (the wave about to start), gold, cake, godTierUnlocked and
+  // each cannon's kind chain, spot, targeting mode and kills. Everything else
+  // is derived and rebuilt on restore.
+  var SAVE_KEY = 'dariobimbi-ant-buster-run';
+  var SAVE_VERSION = 1;
+  var SAVE_TARGETING = ['closest', 'first', 'last', 'strongest', 'weakest'];
+
+  function clearSave() {
+    ui.savedRun = null;
+    try { window.localStorage.removeItem(SAVE_KEY); } catch (err) { }
+  }
+
+  function saveRun() {
+    var cannons = [];
+    for (var i = 0; i < game.cannons.length; i++) {
+      var c = game.cannons[i];
+      cannons.push({
+        kind: c.kind,
+        kindHistory: c.kindHistory.slice(),
+        x: c.x,
+        y: c.y,
+        targetingMode: c.targetingMode,
+        kills: c.kills
+      });
+    }
+    // Slices lying on the ground at wave clear walk back to the cake on their
+    // own, so they count as slices here.
+    var slices = game.cake.slices + game.slices.length;
+    if (slices > 8) { slices = 8; }
+    var data = {
+      v: SAVE_VERSION,
+      waveIndex: game.waveIndex,
+      gold: game.gold,
+      cakeSlices: slices,
+      cakeLost: game.cake.lost,
+      godTierUnlocked: game.godTierUnlocked,
+      cannons: cannons
+    };
+    try { window.localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch (err) { }
+  }
+
+  function isCount(n, max) {
+    if (typeof n !== 'number') { return false; }
+    if (n !== Math.floor(n)) { return false; }
+    if (n < 0) { return false; }
+    if (n > max) { return false; }
+    return true;
+  }
+
+  // Returns a validated save object, or null for a missing, corrupt or
+  // old-version save (which is also removed).
+  function readSave() {
+    var raw = null;
+    try { raw = window.localStorage.getItem(SAVE_KEY); } catch (err) { return null; }
+    if (!raw) { return null; }
+    var d = null;
+    try { d = JSON.parse(raw); } catch (err2) { d = null; }
+    var ok = validateSave(d);
+    if (!ok) {
+      clearSave();
+      return null;
+    }
+    return d;
+  }
+
+  function validateSave(d) {
+    if (!d) { return false; }
+    if (typeof d !== 'object') { return false; }
+    if (d.v !== SAVE_VERSION) { return false; }
+    if (!isCount(d.waveIndex, WAVES.length - 1)) { return false; }
+    if (!isCount(d.gold, 1000000)) { return false; }
+    if (!isCount(d.cakeSlices, 8)) { return false; }
+    if (!isCount(d.cakeLost, 7)) { return false; }
+    if (typeof d.godTierUnlocked !== 'boolean') { return false; }
+    if (!Array.isArray(d.cannons)) { return false; }
+    if (d.cannons.length > 80) { return false; }
+    for (var i = 0; i < d.cannons.length; i++) {
+      var c = d.cannons[i];
+      if (!c) { return false; }
+      if (typeof c !== 'object') { return false; }
+      if (!Array.isArray(c.kindHistory)) { return false; }
+      if (c.kindHistory.length === 0) { return false; }
+      if (c.kindHistory.length > 6) { return false; }
+      for (var h = 0; h < c.kindHistory.length; h++) {
+        if (typeof c.kindHistory[h] !== 'string') { return false; }
+        if (!CANNON_KINDS.hasOwnProperty(c.kindHistory[h])) { return false; }
+      }
+      if (c.kind !== c.kindHistory[c.kindHistory.length - 1]) { return false; }
+      if (typeof c.x !== 'number') { return false; }
+      if (typeof c.y !== 'number') { return false; }
+      if (!isFinite(c.x)) { return false; }
+      if (!isFinite(c.y)) { return false; }
+      if (SAVE_TARGETING.indexOf(c.targetingMode) === -1) { return false; }
+      if (!isCount(c.kills, 1000000)) { return false; }
+    }
+    return true;
+  }
+
+  function startNewRun() {
+    clearSave();
+    game.state = 'playing';
+  }
+
+  // Rebuilds a run from a validated save. Cannons go through buildCannon and
+  // applyUpgrade, the same two steps placement and upgrades use. A cannon that
+  // no longer fits the current layout (portrait vs landscape) is skipped and
+  // its full cost goes back to the player.
+  function continueRun() {
+    var s = ui.savedRun;
+    if (!s) { startNewRun(); return; }
+    resetGame();
+    game.state = 'playing';
+    game.waveIndex = s.waveIndex;
+    game.prepRemaining = wavePrepDuration(WAVES[s.waveIndex]);
+    game.gold = s.gold;
+    game.cake.slices = s.cakeSlices;
+    game.cake.lost = s.cakeLost;
+    game.godTierUnlocked = s.godTierUnlocked;
+    for (var i = 0; i < s.cannons.length; i++) {
+      var sc = s.cannons[i];
+      if (!canPlaceCannon(sc.x, sc.y)) {
+        for (var r = 0; r < sc.kindHistory.length; r++) {
+          game.gold = game.gold + CANNON_KINDS[sc.kindHistory[r]].cost;
+        }
+        continue;
+      }
+      var c = buildCannon(sc.kindHistory[0], sc.x, sc.y);
+      for (var u = 1; u < sc.kindHistory.length; u++) {
+        applyUpgrade(c, sc.kindHistory[u]);
+      }
+      c.targetingMode = sc.targetingMode;
+      c.kills = sc.kills;
+      game.cannons.push(c);
+    }
+    saveRun();
   }
 
   // === INPUT ===
@@ -6944,10 +7183,56 @@ body.has-ant-buster-page {
     shopInfoKind: null,     // selected kind when shopMode === 'info' (Task 10)
     shopInfoRects: [],      // populated by drawShop; one rect per "?" hangtag
     idlePlayRect: null,
+    idleContinueRect: null, // populated on the idle splash when a saved run exists
+    savedRun: null,         // validated save from localStorage (idle splash only)
+    lastPointerType: null,  // sticks after pointerup; picks touch vs mouse wording
+    endedAt: 0,             // performance.now() when the run ended; guards instant restart
+    hintDone: false,        // tutorial hint retires once the first cannon lands
     detailBackRect: null,   // populated by drawTowerPanel; tap to clear selectedCannon
     shopInfoFrom: null,     // 'detail' | 'list' | null — entry point for the info panel
     detailUpgradeInfoRects: [null, null, null] // populated by drawTowerPanel; tap to drill into upgrade info
   };
+  ui.savedRun = readSave();
+
+  // True when the last pointer was a finger, or before any pointer has been
+  // seen when the device's primary pointer is coarse.
+  function usesTouch() {
+    if (ui.lastPointerType === 'touch') { return true; }
+    if (ui.lastPointerType === null) {
+      if (window.matchMedia) { return window.matchMedia('(pointer: coarse)').matches; }
+    }
+    return false;
+  }
+
+  // Hit areas for the HUD pause and speed buttons. The art stays 22 px wide
+  // (about 16 CSS px on a phone), so the touch target is padded out toward
+  // 44 CSS px. Padding is capped by the neighbours: pause and speed split the
+  // gap between them, speed stops short of Send Next, and the bottom edge
+  // reaches only 6 px into the playfield (a cannon's own hit circle starts
+  // right at the HUD line).
+  function hudHitRects() {
+    var scale = 1;
+    var box = canvas.getBoundingClientRect();
+    if (box.width > 0) { scale = box.width / WIDTH; }
+    var need = 44 / scale;
+    var pr = ui.pauseRect;
+    var sr = ui.speedRect;
+    var mid = (pr.x + pr.w + sr.x) / 2;
+    var rightLimit = PLAYFIELD_W;
+    if (isPortrait()) { rightLimit = WIDTH; }
+    if (ui.sendNextRect) { rightLimit = (sr.x + sr.w + ui.sendNextRect.x) / 2; }
+    var bottom = HUD_H + 6;
+    var p0 = pr.x - (need - pr.w) / 2;
+    if (p0 > mid - need) { p0 = mid - need; }
+    if (p0 < 0) { p0 = 0; }
+    var s1 = sr.x + sr.w + (need - sr.w) / 2;
+    if (s1 < mid + need) { s1 = mid + need; }
+    if (s1 > rightLimit) { s1 = rightLimit; }
+    return {
+      pause: { x: p0, y: 0, w: mid - p0, h: bottom },
+      speed: { x: mid, y: 0, w: s1 - mid, h: bottom }
+    };
+  }
 
   function canvasToGame(evt) {
     var rect = canvas.getBoundingClientRect();
@@ -6993,9 +7278,13 @@ body.has-ant-buster-page {
 
   canvas.addEventListener('pointerdown', function (evt) {
     if (ui.activePointerId !== null) { return; }   // single-pointer lock
+    // Mouse and touch players get the keyboard shortcuts too once they have
+    // clicked the game; the keydown handler only listens while the canvas has focus.
+    canvas.focus({ preventScroll: true });
     canvas.setPointerCapture(evt.pointerId);
     ui.activePointerId = evt.pointerId;
     ui.pointerType = evt.pointerType;
+    ui.lastPointerType = evt.pointerType;
     var p = canvasToGame(evt);
     ui.mouseX = p.x;
     ui.mouseY = p.y;
@@ -7054,15 +7343,39 @@ body.has-ant-buster-page {
     // HUD pause + speed widgets — always live during 'playing' state. Tested before
     // any other hit-test in case the playfield ever extends under them.
     if (game.state === 'playing') {
-      if (inRect(p, ui.pauseRect)) { game.paused = !game.paused; return; }
-      if (inRect(p, ui.speedRect)) {
-        if (game.speed === 1) { game.speed = 2; } else { game.speed = 1; }
+      var hudHit = hudHitRects();
+      if (inRect(p, hudHit.pause)) { game.paused = !game.paused; return; }
+      if (inRect(p, hudHit.speed)) {
+        game.speed = game.speed + 1;
+        if (game.speed > 3) { game.speed = 1; }
         return;
       }
     }
-    if (game.waveState === 'won') { resetGame(); return; }
-    if (game.waveState === 'lost') { resetGame(); return; }
-    if (game.state === 'idle') { game.state = 'playing'; return; }
+    // The first second of a result screen ignores taps so a panicked tap at
+    // the end of a run does not skip it.
+    if (game.waveState === 'won') {
+      if (restartReady()) { resetGame(); }
+      return;
+    }
+    if (game.waveState === 'lost') {
+      if (restartReady()) { resetGame(); }
+      return;
+    }
+    if (game.state === 'idle') {
+      // With a save on file only the two buttons act, so a stray tap near
+      // Continue cannot wipe the run by starting a new game.
+      if (ui.savedRun) {
+        if (ui.idleContinueRect) {
+          if (inRect(p, ui.idleContinueRect)) { continueRun(); return; }
+        }
+        if (ui.idlePlayRect) {
+          if (inRect(p, ui.idlePlayRect)) { startNewRun(); }
+        }
+        return;
+      }
+      startNewRun();
+      return;
+    }
     if (game.waveState === 'prep') {
       if (ui.sendNextRect) {
         var r = ui.sendNextRect;
@@ -7359,9 +7672,10 @@ body.has-ant-buster-page {
   });
 
   // === UPDATE ===
-  // Speed toggle (1×/2×) scales sim time for ants and projectiles only. game.time
-  // advances on real dt so the wave-intro banner and prep countdown animate at
-  // wall-clock speed regardless of speed setting (spec §UI-5).
+  // Speed (1x/2x/3x) runs update() that many times per fixed step, always at
+  // FIXED_DT, so movement, cooldowns, status timers, the spawner and game.time
+  // all advance together and a faster game plays the same game, only sooner.
+  // The wave banner and prep countdown ride game.time, so they speed up too.
   // Tick transient visual effects (e.g. Bomber AoE flash). Each entry has its own
   // `t` (elapsed) and `life` (total seconds); when `t` reaches `life` the entry is
   // dropped. New entries are pushed by gameplay hooks like ANT_KINDS.bomber.onDeath.
@@ -7401,21 +7715,10 @@ body.has-ant-buster-page {
     if (game.state !== 'playing') { return; }
     if (game.waveState === 'won') { return; }
     if (game.waveState === 'lost') { return; }
-    // Screenshake decay (Plan 3 — Shockwave). Decay runs in real time on dt
-    // (not simDt) so 2x speed doesn't drain the shake faster than the eye sees it.
-    if (game.screenshake.magnitude > 0) {
-      game.screenshake.magnitude = game.screenshake.magnitude - game.screenshake.decay * dt;
-      if (game.screenshake.magnitude < 0) { game.screenshake.magnitude = 0; }
-    }
-    updateShatterParticles(dt);
     game.time += dt;
-    var simDt = dt * game.speed;
-    // Plan 4 Task 26 — simulated-time accumulator. Slice timeout (and any
-    // future age-based mechanic that should "feel" the speed multiplier)
-    // reads game.simTime so an 8-second slice still ages 8 simulated seconds
-    // at 0.5x or 2x speed. game.time stays on the real-world clock for
-    // screenshake decay and unlock-pulse animations.
-    game.simTime = game.simTime + simDt;
+    // Plan 4 Task 26 — slice timeout reads game.simTime. Speed now runs whole
+    // fixed steps, so it matches game.time.
+    game.simTime = game.simTime + dt;
     updateWaveState(dt);
     // Periodic spawn jobs (Plan 3 Task 31 — King's worker drip). Each job
     // fires on its own interval and is owned by an ant; jobs whose owners
@@ -7439,10 +7742,10 @@ body.has-ant-buster-page {
       if (keep) { keptJobs.push(game.spawnJobs[jj]); }
     }
     game.spawnJobs = keptJobs;
-    updateAnts(simDt);
-    updateCannons(simDt);
-    updateProjectiles(simDt);
-    updateEffects(simDt);
+    updateAnts(dt);
+    updateCannons(dt);
+    updateProjectiles(dt);
+    updateEffects(dt);
     // Tesla lightning bolts decay against game.time (already advanced above).
     // Each bolt lives ~0.15s; expired bolts are filtered out before render.
     var keptBolts = [];
@@ -7452,7 +7755,7 @@ body.has-ant-buster-page {
       }
     }
     game.lightningBolts = keptBolts;
-    updateSlices(simDt);
+    updateSlices(dt);
     checkPickupsAndDeliveries();
     pruneAnts();
   }
@@ -7463,9 +7766,17 @@ body.has-ant-buster-page {
     var elapsed = (now - lastTime) / 1000;
     lastTime = now;
     if (elapsed > 0.25) { elapsed = 0.25; }   // clamp to avoid spiral-of-death
+    // Screenshake and shatter particles run on the wall clock, outside
+    // update(), so they settle on the pause, win and lose screens and last the
+    // same time at any speed.
+    if (game.screenshake.magnitude > 0) {
+      game.screenshake.magnitude = game.screenshake.magnitude - game.screenshake.decay * elapsed;
+      if (game.screenshake.magnitude < 0) { game.screenshake.magnitude = 0; }
+    }
+    updateShatterParticles(elapsed);
     game.accumulator += elapsed;
     while (game.accumulator >= FIXED_DT) {
-      update(FIXED_DT);
+      for (var st = 0; st < game.speed; st++) { update(FIXED_DT); }
       game.accumulator -= FIXED_DT;
     }
     render();
@@ -7473,28 +7784,70 @@ body.has-ant-buster-page {
   }
   requestAnimationFrame(frame);
 
-  // Keybinds:
-  //   Enter — skip prep window (same as Send-Next button)
-  //   Space — toggle pause (preventDefault so the page doesn't scroll)
-  //   1 / 2 — set speed to 1× / 2×
-  window.addEventListener('keydown', function (e) {
+  // Keybinds. Listens on the canvas, so they only work while the game has
+  // focus (click it, or Tab to it), and page keys like Space still scroll the
+  // page everywhere else. preventDefault only fires for keys the game uses.
+  //   Enter  — skip the prep window (same as Send Next); starts or continues
+  //            from the splash; restarts from a result screen
+  //   Space  — toggle pause while playing
+  //   N      — new game from the splash when a save exists
+  //   1/2/3  — set speed
+  //   Escape — close the info panel, drop an armed cannon, deselect
+  canvas.addEventListener('keydown', function (e) {
+    if (e.ctrlKey) { return; }
+    if (e.metaKey) { return; }
+    if (e.altKey) { return; }
+    if (game.state === 'idle') {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (ui.savedRun) { continueRun(); } else { startNewRun(); }
+        return;
+      }
+      if (e.key === 'n') {
+        e.preventDefault();
+        startNewRun();
+        return;
+      }
+      if (e.key === 'N') {
+        e.preventDefault();
+        startNewRun();
+        return;
+      }
+      return;
+    }
+    if (game.waveState === 'won') {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (restartReady()) { resetGame(); }
+      }
+      return;
+    }
+    if (game.waveState === 'lost') {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (restartReady()) { resetGame(); }
+      }
+      return;
+    }
     if (e.key === 'Enter') {
+      e.preventDefault();
+      if (e.repeat) { return; }
       if (game.waveState === 'prep') {
-        if (game.state === 'playing') {
-          var bonus = Math.floor(game.prepRemaining / 2);
-          game.gold = game.gold + bonus;
-          game.prepRemaining = 0;
-        }
+        var bonus = Math.floor(game.prepRemaining / 2);
+        game.gold = game.gold + bonus;
+        game.prepRemaining = 0;
       }
       return;
     }
     if (e.key === ' ') {
       e.preventDefault();
+      if (e.repeat) { return; }
       game.paused = !game.paused;
       return;
     }
     if (e.key === '1') { game.speed = 1; return; }
     if (e.key === '2') { game.speed = 2; return; }
+    if (e.key === '3') { game.speed = 3; return; }
     if (e.key === 'Escape') {
       if (ui.shopMode === 'info') {
         ui.shopMode = 'list';
@@ -7511,74 +7864,6 @@ body.has-ant-buster-page {
       ui.selectedCannon = null;
       return;
     }
-    if (DEBUG) {
-      if (e.key === 't') {
-        var dk = DEBUG_KINDS[debugCycleIdx % DEBUG_KINDS.length];
-        spawnAntAt(dk, game.anthill.x, game.anthill.y);
-        debugCycleIdx = debugCycleIdx + 1;
-        return;
-      }
-      if (e.key === 'T') {
-        var dk2 = DEBUG_KINDS[debugCycleIdx % DEBUG_KINDS.length];
-        spawnAntAt(dk2, game.anthill.x, game.anthill.y);
-        debugCycleIdx = debugCycleIdx + 1;
-        return;
-      }
-      // Plan 4 — ?debug=1 G: toggle godTierUnlocked. When toggling true,
-      // also stamps godTierUnlockPulseStart so the panel-button pulse fires
-      // for visual testing. Branched two ifs to avoid the inline-script
-      // and-operator (CLAUDE.md note on || encoding).
-      var keyG = false;
-      if (e.key === 'g') { keyG = true; }
-      if (e.key === 'G') { keyG = true; }
-      if (keyG) {
-        game.godTierUnlocked = !game.godTierUnlocked;
-        if (game.godTierUnlocked) {
-          game.godTierUnlockPulseStart = game.time;
-        }
-        return;
-      }
-      // Plan 4 — ?debug=1 W: soft-reset to wave 16 prep with god-tier
-      // already unlocked. Skips the 15-wave grind so King-fight tuning
-      // (post-implementation playtest, spec §9) doesn't require a 20-min
-      // run-up every iteration. Field names align with resetGame.
-      var keyW = false;
-      if (e.key === 'w') { keyW = true; }
-      if (e.key === 'W') { keyW = true; }
-      if (keyW) {
-        game.ants = [];
-        game.projectiles = [];
-        game.lightningBolts = [];
-        game.effects = [];
-        game.spawnJobs = [];
-        game.waveIndex = 15;
-        game.waveState = 'prep';
-        game.prepRemaining = wavePrepDuration(WAVES[game.waveIndex]);
-        game.godTierUnlocked = true;
-        game.godTierUnlockPulseStart = game.time;
-        return;
-      }
-    }
   });
-
-  // Expose game for debugging from devtools console
-  window.__ab = game;
-  window.__abCannonKinds = CANNON_KINDS;
-  window.__abAntKinds = ANT_KINDS;
-  window.__abUi = ui;
-  window.__abStatusKinds = STATUS_KINDS;
-  window.__abApplyStatus = applyStatus;
-  window.__abApplyDamage = applyDamage;
-  window.__abWaves = WAVES;
-  // Plan 4: read/write the god-tier unlock state. Pass a boolean to set,
-  // omit to read. Used by the ?debug=1 G hotkey (Task 23) and Playwright
-  // tests that don't want to grind 15 waves to access the gated tier.
-  window.__abGodTierUnlocked = function (v) {
-    if (typeof v === 'boolean') {
-      game.godTierUnlocked = v;
-      if (v) { game.godTierUnlockPulseStart = game.time; }
-    }
-    return game.godTierUnlocked;
-  };
 })();
 </script>

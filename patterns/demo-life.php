@@ -22,30 +22,30 @@
     <!-- /wp:heading -->
 
     <!-- wp:paragraph {"textColor":"muted","style":{"typography":{"lineHeight":"1.55"},"spacing":{"margin":{"bottom":"var:preset|spacing|40"}}}} -->
-    <p class="has-muted-color has-text-color" style="line-height:1.55;margin-bottom:var(--wp--preset--spacing--40)">Conway's three rules (under-population kills a cell, over-population kills a cell, and exactly three live neighbours births a new one) produce a surprising amount of structure out of almost nothing. The edges of the grid wrap around, so it is really a torus, which means gliders that fly off the right side come back in on the left. Click or drag on the grid to toggle cells, or drop in a classic pattern to start with.</p>
+    <p class="has-muted-color has-text-color" style="line-height:1.55;margin-bottom:var(--wp--preset--spacing--40)">Conway's three rules (under-population kills a cell, over-population kills a cell, and exactly three live neighbors births a new one) produce a surprising amount of structure out of almost nothing. The edges of the grid wrap around, so it is really a torus, which means gliders that fly off the right side come back in on the left. Click or drag on the grid to toggle cells, or drop in a classic pattern to start with.</p>
     <!-- /wp:paragraph -->
 
     <!-- wp:html -->
     <div class="gl">
         <div class="gl-stage">
-            <canvas class="gl-canvas" data-role="canvas" width="900" height="500"></canvas>
+            <canvas class="gl-canvas" data-role="canvas" width="900" height="500" role="img" aria-label="Game of Life grid. Live cells are drawn in warm colors that shift from pink toward yellow as they age. Click or drag to toggle cells."></canvas>
         </div>
 
         <div class="gl-controls">
             <div class="gl-row">
-                <button type="button" class="gl-btn gl-btn--primary" data-action="toggle">▶ Play</button>
+                <button type="button" class="gl-btn gl-btn--primary" data-action="toggle" aria-pressed="false">▶ Play</button>
                 <button type="button" class="gl-btn" data-action="step">⏭ Step</button>
                 <button type="button" class="gl-btn" data-action="random">🎲 Random</button>
                 <button type="button" class="gl-btn" data-action="clear">⌫ Clear</button>
             </div>
             <div class="gl-row">
                 <div class="gl-knob gl-knob--wide">
-                    <label>Speed <span data-role="speed-out">12</span> gen/s</label>
-                    <input type="range" min="1" max="60" step="1" value="12" data-role="speed">
+                    <label for="gl-speed">Speed <span data-role="speed-out">12</span> gen/s</label>
+                    <input id="gl-speed" type="range" min="1" max="60" step="1" value="12" data-role="speed">
                 </div>
                 <div class="gl-knob gl-knob--wide">
-                    <label>Cell size <span data-role="cell-out">10</span> px</label>
-                    <input type="range" min="4" max="22" step="1" value="10" data-role="cell">
+                    <label for="gl-cell">Cell size <span data-role="cell-out">10</span> px</label>
+                    <input id="gl-cell" type="range" min="4" max="22" step="1" value="10" data-role="cell">
                 </div>
             </div>
 
@@ -72,6 +72,12 @@
 
 <!-- wp:html -->
 <style>
+.demo-life {
+    --gl-stage: #14110d;
+    --gl-accent: #f43f5e;
+    --gl-accent-2: #e11d48;
+}
+
 .demo-life .gl {
     margin-top: 1rem;
     background: var(--wp--preset--color--surface);
@@ -81,7 +87,7 @@
 }
 
 .demo-life .gl-stage {
-    background: #14110d;
+    background: var(--gl-stage);
     border: 1px solid var(--wp--preset--color--subtle);
     border-radius: 12px;
     overflow: hidden;
@@ -92,6 +98,7 @@
     width: 100%;
     height: 100%;
     cursor: crosshair;
+    touch-action: none;
 }
 
 .demo-life .gl-controls {
@@ -118,7 +125,7 @@
     transition: filter .15s ease, border-color .15s ease;
 }
 .demo-life .gl-btn--primary {
-    background: linear-gradient(135deg, #f43f5e, #e11d48);
+    background: linear-gradient(135deg, var(--gl-accent), var(--gl-accent-2));
     border-color: transparent;
     color: #fff;
     min-width: 120px;
@@ -213,27 +220,43 @@
     var generation = 0;
     var population = 0;
     var running = false;
+    var stageColor = '#14110d';
 
     function fitGrid() {
         var dpr = window.devicePixelRatio || 1;
         var rect = canvas.getBoundingClientRect();
-        canvas.width  = Math.round(rect.width  * dpr);
-        canvas.height = Math.round(rect.height * dpr);
+        var pw = Math.round(rect.width  * dpr);
+        var ph = Math.round(rect.height * dpr);
+        // Assigning width/height clears the bitmap, so only do it on a real change.
+        if (canvas.width !== pw) canvas.width = pw;
+        if (canvas.height !== ph) canvas.height = ph;
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        stageColor = getComputedStyle(root).getPropertyValue('--gl-stage').trim() || stageColor;
         CELL = parseInt(cellIn.value, 10);
-        W = Math.max(8, Math.floor(rect.width  / CELL));
-        H = Math.max(8, Math.floor(rect.height / CELL));
-        var newGrid = new Uint8Array(W * H);
-        var newNext = new Uint8Array(W * H);
-        // Try to preserve existing cells by copying overlap region.
+        var nw = Math.max(8, Math.floor(rect.width  / CELL));
+        var nh = Math.max(8, Math.floor(rect.height / CELL));
+        // Same cell dimensions (the mobile URL bar collapsing fires resize): keep the grid.
         if (grid) {
-            var ow = Math.min(W, Math.floor(canvas.clientWidth / CELL));
-            // Easier: just clear on resize. Patterns may be re-dropped.
+            if (nw === W) {
+                if (nh === H) { draw(); return; }
+            }
         }
+        var newGrid = new Uint8Array(nw * nh);
+        var newNext = new Uint8Array(nw * nh);
+        // Copy the overlapping region so a resize keeps what the user drew.
+        if (grid) {
+            var cw = Math.min(W, nw);
+            var ch = Math.min(H, nh);
+            for (var y = 0; y < ch; y++) {
+                newGrid.set(grid.subarray(y * W, y * W + cw), y * nw);
+            }
+        }
+        W = nw;
+        H = nh;
         grid = newGrid;
         next = newNext;
         dimsOut.textContent = W + ' × ' + H;
-        recountAndDraw();
+        draw();
     }
 
     function idx(x, y) { return y * W + x; }
@@ -270,7 +293,7 @@
 
     function draw() {
         var w = canvas.clientWidth, h = canvas.clientHeight;
-        ctx.fillStyle = '#14110d';
+        ctx.fillStyle = stageColor;
         ctx.fillRect(0, 0, w, h);
         // Subtle grid lines when cells are big enough to see them.
         if (CELL >= 8) {
@@ -293,10 +316,10 @@
                 var v = grid[y * W + x];
                 if (!v) continue;
                 population++;
-                // Color by age: young = blue, mature = purple, old = pink/yellow.
+                // Color by age: young = Dragon Pink, mature = orange, old = gold.
                 // Cap perceived age around 30 generations so glow saturates.
                 var t = Math.min(1, v / 30);
-                var hue = 215 - t * 175; // 215 (blue) → 40 (gold)
+                var hue = (345 + t * 65) % 360; // 345 (pink) → 50 (gold)
                 var light = 55 + t * 10;
                 ctx.fillStyle = 'hsl(' + hue + ', 80%, ' + light + '%)';
                 ctx.fillRect(x * CELL + 1, y * CELL + 1, CELL - 2, CELL - 2);
@@ -304,10 +327,6 @@
         }
         genOut.textContent = generation;
         popOut.textContent = population;
-    }
-
-    function recountAndDraw() {
-        draw();
     }
 
     /* --- Pattern library, expressed as relative [x,y] offsets. They're
@@ -369,10 +388,27 @@
         draw();
     }
 
-    /* --- Main loop, throttled to "speed" generations per second --- */
+    /* Does the pattern fit the grid with a cell of room around it? The Gosper
+       gun is 36 wide and would wrap onto itself on a phone-sized grid. */
+    function patternFits(name) {
+        var p = patterns[name];
+        var maxX = 0, maxY = 0;
+        for (var i = 0; i < p.length; i++) {
+            if (p[i][0] > maxX) maxX = p[i][0];
+            if (p[i][1] > maxY) maxY = p[i][1];
+        }
+        return maxX + 3 <= W ? maxY + 3 <= H : false;
+    }
+
+    /* --- Main loop, throttled to "speed" generations per second ---
+       `running` is what the user asked for. `onScreen` and `looping` only
+       decide whether the rAF loop is actually spinning right now. */
     var lastTick = 0;
+    var onScreen = true;
+    var looping = false;
     function loop(now) {
-        if (!running) return;
+        if (!running) { looping = false; return; }
+        if (!onScreen) { looping = false; return; }
         var interval = 1000 / parseInt(spdIn.value, 10);
         if (now - lastTick >= interval) {
             step();
@@ -381,16 +417,33 @@
         }
         requestAnimationFrame(loop);
     }
+    function kick() {
+        if (looping) return;
+        if (!running) return;
+        if (!onScreen) return;
+        looping = true;
+        lastTick = 0;
+        requestAnimationFrame(loop);
+    }
 
     function play() {
         running = true;
         btnTog.textContent = '⏸ Pause';
-        lastTick = 0;
-        requestAnimationFrame(loop);
+        btnTog.setAttribute('aria-pressed', 'true');
+        kick();
     }
     function pause() {
         running = false;
         btnTog.textContent = '▶ Play';
+        btnTog.setAttribute('aria-pressed', 'false');
+    }
+
+    /* Stop burning CPU while the canvas is scrolled out of view. */
+    if ('IntersectionObserver' in window) {
+        new IntersectionObserver(function (entries) {
+            onScreen = entries[entries.length - 1].isIntersecting;
+            if (onScreen) kick();
+        }).observe(canvas);
     }
 
     /* --- Click + drag to toggle cells --- */
@@ -443,13 +496,22 @@
         fitGrid();
     });
 
-    window.addEventListener('resize', fitGrid);
+    // Debounced: the mobile URL bar collapsing and window drags fire resize in bursts.
+    var resizeTimer = 0;
+    window.addEventListener('resize', function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(fitGrid, 150);
+    });
 
-    /* Boot: a glider gun is the most recognisable Life pattern, and it
-       keeps producing new gliders forever — gives the page life on landing. */
+    /* Boot: a glider gun is the most recognizable Life pattern, and it
+       keeps producing new gliders forever, which gives the page life on landing.
+       On a grid too narrow for it, an R-pentomino keeps busy on its own. */
     fitGrid();
-    dropPattern('gosper');
-    play();
+    dropPattern(patternFits('gosper') ? 'gosper' : 'rpentomino');
+    // NOTE: no double-ampersand operators in inline scripts, WordPress encodes them.
+    var reduceMotion = false;
+    if (window.matchMedia) reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!reduceMotion) play();
 })();
 </script>
 <!-- /wp:html -->

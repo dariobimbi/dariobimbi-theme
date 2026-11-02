@@ -29,12 +29,12 @@
     <div class="sr">
         <div class="sr-controls">
             <div class="sr-knob sr-knob--wide">
-                <label>Array size <span data-role="size-out">60</span></label>
-                <input type="range" min="20" max="180" step="2" value="60" data-role="size">
+                <label for="sr-size">Array size <span data-role="size-out">60</span></label>
+                <input id="sr-size" type="range" min="20" max="180" step="2" value="60" data-role="size">
             </div>
             <div class="sr-knob sr-knob--wide">
-                <label>Speed <span data-role="speed-out">8</span> ops/frame</label>
-                <input type="range" min="1" max="40" step="1" value="8" data-role="speed">
+                <label for="sr-speed">Speed <span data-role="speed-out">8</span> ops/frame</label>
+                <input id="sr-speed" type="range" min="1" max="40" step="1" value="8" data-role="speed">
             </div>
             <div class="sr-actions">
                 <button type="button" class="sr-btn"            data-action="shuffle">⤴ Shuffle</button>
@@ -53,7 +53,7 @@
                     <h3>Bubble</h3>
                     <span class="sr-complexity">O(n²)</span>
                 </header>
-                <canvas data-canvas width="500" height="200"></canvas>
+                <canvas data-canvas width="500" height="200" role="img" aria-label="Bubble sort: bars showing the array as it gets sorted."></canvas>
                 <footer>
                     <span class="sr-stat">cmp <strong data-stat="cmp">0</strong></span>
                     <span class="sr-stat">swap <strong data-stat="swap">0</strong></span>
@@ -65,7 +65,7 @@
                     <h3>Insertion</h3>
                     <span class="sr-complexity">O(n²)</span>
                 </header>
-                <canvas data-canvas width="500" height="200"></canvas>
+                <canvas data-canvas width="500" height="200" role="img" aria-label="Insertion sort: bars showing the array as it gets sorted."></canvas>
                 <footer>
                     <span class="sr-stat">cmp <strong data-stat="cmp">0</strong></span>
                     <span class="sr-stat">swap <strong data-stat="swap">0</strong></span>
@@ -77,7 +77,7 @@
                     <h3>Merge</h3>
                     <span class="sr-complexity">O(n log n)</span>
                 </header>
-                <canvas data-canvas width="500" height="200"></canvas>
+                <canvas data-canvas width="500" height="200" role="img" aria-label="Merge sort: bars showing the array as it gets sorted."></canvas>
                 <footer>
                     <span class="sr-stat">cmp <strong data-stat="cmp">0</strong></span>
                     <span class="sr-stat">swap <strong data-stat="swap">0</strong></span>
@@ -89,7 +89,7 @@
                     <h3>Quick</h3>
                     <span class="sr-complexity">O(n log n) avg</span>
                 </header>
-                <canvas data-canvas width="500" height="200"></canvas>
+                <canvas data-canvas width="500" height="200" role="img" aria-label="Quick sort: bars showing the array as it gets sorted."></canvas>
                 <footer>
                     <span class="sr-stat">cmp <strong data-stat="cmp">0</strong></span>
                     <span class="sr-stat">swap <strong data-stat="swap">0</strong></span>
@@ -173,12 +173,23 @@
     transform: translateY(-1px);
 }
 .demo-sort .sr-btn:active { transform: translateY(0); }
+.demo-sort .sr-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+}
+.demo-sort .sr-btn:disabled:hover {
+    border-color: var(--wp--preset--color--subtle);
+    color: var(--wp--preset--color--foreground);
+    transform: none;
+}
+.demo-sort .sr-knob input[type="range"]:disabled { opacity: 0.45; cursor: not-allowed; }
 .demo-sort .sr-btn:focus-visible {
     outline: 2px solid var(--wp--preset--color--primary-soft);
     outline-offset: 3px;
 }
 
-/* Race/Stop toggle. Same button, different state via data-state. */
+/* Race/Pause/Resume toggle. Same button, different state via data-state. */
 .demo-sort .sr-btn--go {
     display: inline-flex;
     align-items: center;
@@ -333,13 +344,17 @@
     var toggle   = root.querySelector('[data-action="toggle"]');
     var togIcon  = toggle.querySelector('.sr-btn-icon');
     var togLabel = toggle.querySelector('.sr-btn-label');
+    var shuffleBtn = root.querySelector('[data-action="shuffle"]');
 
     function setToggle(state) {
-        // state: 'idle' (shows ▶ Race) | 'running' (shows ■ Stop)
+        // state: 'idle' (shows ▶ Race) | 'running' (shows ❚❚ Pause) | 'paused' (shows ▶ Resume)
         toggle.dataset.state  = state;
-        togIcon.textContent   = state === 'running' ? '■' : '▶';
-        togLabel.textContent  = state === 'running' ? 'Stop' : 'Race';
-        toggle.setAttribute('aria-label', state === 'running' ? 'Stop race' : 'Start race');
+        togIcon.textContent   = state === 'running' ? '❚❚' : '▶';
+        togLabel.textContent  = state === 'running' ? 'Pause' : state === 'paused' ? 'Resume' : 'Race';
+        toggle.setAttribute('aria-label', state === 'running' ? 'Pause race' : state === 'paused' ? 'Resume race' : 'Start race');
+        // Size and Shuffle reset the arrays, so they only make sense off-track.
+        sizeIn.disabled     = state === 'running';
+        shuffleBtn.disabled = state === 'running';
     }
 
     var panels = {};
@@ -477,20 +492,21 @@
         for (var i = 0; i < n; i++) {
             var v = arr[i];
             var bh = (v / n) * (h - 4);
-            // hue mapped to value: small=blue, mid=purple, large=pink
-            var hue = 210 + (v / n) * 130;
+            // hue mapped to value: small=deep pink, mid=orange, large=gold.
+            // The compare/write highlight is warm white so it stays distinct from the ramp.
+            var hue = (350 + (v / n) * 60) % 360;
             var hl = panel.highlights.indexOf(i) !== -1;
             ctx.fillStyle = panel.done
                 ? 'hsl(' + hue + ', 70%, 55%)'
                 : hl
-                    ? '#facc15'
-                    : 'hsl(' + hue + ', 75%, 60%)';
+                    ? '#efe9df'
+                    : 'hsl(' + hue + ', 80%, 58%)';
             ctx.fillRect(i * bw + 0.5, h - bh - 1, Math.max(1, bw - 1), bh);
         }
     }
 
     /* --- Race orchestration --- */
-    var raf = 0, racing = false, finishedOrder = [];
+    var raf = 0, racing = false, paused = false, finishedOrder = [];
 
     /* Placement labels per finish position. Index = order they finished. */
     var PLACE_LABEL = ['🥇 1st', '🥈 2nd', '🥉 3rd', '4th'];
@@ -498,6 +514,7 @@
 
     function reset() {
         finishedOrder = [];
+        paused = false;
         leader.innerHTML = 'Press <strong>Race</strong> to start. Highlighted bars are the indices the algorithm is currently looking at.';
         var size = parseInt(sizeIn.value, 10);
         var seed = shuffle(size);
@@ -516,17 +533,25 @@
             fitCanvas(p.canvas);
             draw(p);
         });
+        setToggle('idle');
     }
 
     function startRace() {
         if (racing) return;
-        // If anyone has already finished a previous run, give a fresh shuffle.
-        var anyDone = Object.keys(panels).some(function (k) { return panels[k].done; });
-        if (anyDone) reset();
-
+        // A paused race resumes the iterators it already has. Anything else
+        // starts from the top, with a fresh shuffle if a previous run finished.
+        if (!paused) {
+            var anyDone = Object.keys(panels).some(function (k) { return panels[k].done; });
+            if (anyDone) reset();
+            Object.keys(panels).forEach(function (k) {
+                var p = panels[k];
+                p.iter = algoFns[k](p.arr);
+            });
+        }
+        paused = false;
         Object.keys(panels).forEach(function (k) {
             var p = panels[k];
-            p.iter = algoFns[k](p.arr);
+            if (p.done) return;
             p.el.classList.add('is-running');
             p.status.textContent = 'running';
         });
@@ -538,15 +563,17 @@
 
     function stopRace() {
         racing = false;
+        paused = true;
         cancelAnimationFrame(raf);
         Object.keys(panels).forEach(function (k) {
             var p = panels[k];
             if (!p.done) {
                 p.el.classList.remove('is-running');
-                p.status.textContent = 'stopped';
+                p.status.textContent = 'paused';
             }
         });
-        setToggle('idle');
+        setToggle('paused');
+        leader.innerHTML = 'Paused. <strong>Resume</strong> picks up where it left off, and Shuffle starts over.';
     }
 
     function loop() {
@@ -606,7 +633,7 @@
     spdIn.addEventListener('input', function () {
         spdOut.textContent = spdIn.value;
     });
-    root.querySelector('[data-action="shuffle"]').addEventListener('click', function () {
+    shuffleBtn.addEventListener('click', function () {
         if (!racing) reset();
     });
     toggle.addEventListener('click', function () {

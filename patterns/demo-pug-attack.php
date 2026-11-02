@@ -30,9 +30,12 @@ $assets = esc_url( get_stylesheet_directory_uri() . '/assets/games/pug-attack/' 
     <!-- /wp:paragraph -->
 
     <!-- wp:html -->
-    <div class="pa" data-assets-base="<?php echo $assets; ?>">
+    <div class="pa" data-assets-base="<?php echo $assets; ?>" tabindex="-1">
         <div class="pa-stage">
             <canvas class="pa-canvas" data-role="canvas" width="800" height="550" aria-label="Pug Attack game canvas"></canvas>
+        </div>
+        <div class="pa-bar">
+            <button type="button" class="pa-btn" data-role="menu" hidden>Menu</button>
         </div>
         <p class="pa-hint">Click to fire. Hit the cat.</p>
     </div>
@@ -65,6 +68,33 @@ $assets = esc_url( get_stylesheet_directory_uri() . '/assets/games/pug-attack/' 
     height: 100%;
     cursor: crosshair;
 }
+.demo-pug-attack .pa:focus {
+    outline: none;
+}
+.demo-pug-attack .pa-bar {
+    display: flex;
+    justify-content: center;
+    margin-top: 1rem;
+}
+.demo-pug-attack .pa-btn[hidden] {
+    display: none;
+}
+.demo-pug-attack .pa-btn {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0.5rem 1.25rem;
+    font: inherit;
+    font-family: var(--wp--preset--font-family--mono);
+    color: var(--wp--preset--color--foreground);
+    background: var(--wp--preset--color--surface);
+    border: 1px solid var(--wp--preset--color--subtle);
+    border-radius: 10px;
+    cursor: pointer;
+}
+.demo-pug-attack .pa-btn:focus-visible {
+    outline: 3px solid var(--wp--preset--color--primary);
+    outline-offset: 2px;
+}
 .demo-pug-attack .pa-hint {
     margin: 1rem 0 0;
     text-align: center;
@@ -86,6 +116,7 @@ $assets = esc_url( get_stylesheet_directory_uri() . '/assets/games/pug-attack/' 
     var canvas = root.querySelector('[data-role="canvas"]');
     var ctx    = canvas.getContext('2d');
     var assetsBase = root.dataset.assetsBase || '';
+    var menuBtn = root.querySelector('[data-role="menu"]');
 
     var W = 800, H = 550;
 
@@ -97,20 +128,26 @@ $assets = esc_url( get_stylesheet_directory_uri() . '/assets/games/pug-attack/' 
     var rot = 0;
     var score = 0;
 
+    /* The cannon sits at a fixed spot on the pug sprite; shots leave its tip. */
+    var CANNON_DX = 90, CANNON_DY = 160, CANNON_LEN = 40;
+    var BULLET_SPEED = 10;   // px per 60 Hz step
+
+    /* Bullet pool: spawn at the cannon tip, move, deactivate off screen. */
     var bullCount = 100;
     var bulls    = [];
-    var speedx   = [];
-    var speedy   = [];
     var fire     = true;
     var timer    = 0;
-    var currshot = 1;
-    var Pos      = { x: 250, y: 600 };
 
     for (var i = 0; i < bullCount; i++) {
-        bulls.push({ x: 0, y: 600 });
-        speedx.push(10 * Math.cos(rot));
-        speedy.push(10 * Math.sin(rot));
+        bulls.push({ x: 0, y: 0, vx: 0, vy: 0, active: false });
     }
+
+    /* One rect per canvas button, shared by drawing, hover and click. */
+    var BTN = {
+        play:  { x: 460, y: 320, w: 110, h: 40 },
+        instr: { x: 125, y: 420, w: 200, h: 40 },
+        back:  { x: 175, y: 525, w: 90,  h: 40 }
+    };
 
     /* --- Mouse tracking (canvas-coord aware, scales with displayed size) */
     var mouseX = 0, mouseY = 0;
@@ -121,6 +158,11 @@ $assets = esc_url( get_stylesheet_directory_uri() . '/assets/games/pug-attack/' 
         var sx = canvas.width  / rect.width;
         var sy = canvas.height / rect.height;
         return { x: (e.clientX - rect.left) * sx, y: (e.clientY - rect.top) * sy };
+    }
+
+    function inRect(r) {
+        if (mouseX > r.x) { if (mouseX < r.x + r.w) { if (mouseY > r.y) { if (mouseY < r.y + r.h) { return true; } } } }
+        return false;
     }
 
     canvas.addEventListener('mousemove', function (e) {
@@ -157,15 +199,28 @@ $assets = esc_url( get_stylesheet_directory_uri() . '/assets/games/pug-attack/' 
 
     function handleClick() {
         if (stage === 0) {
-            // Play button hitbox
-            if (mouseX > 470) { if (mouseX < 530) { if (mouseY > 320) { if (mouseY < 350) { stage = 2; } } } }
-            // Instructions button hitbox
-            if (mouseX > 125) { if (mouseX < 325) { if (mouseY > 420) { if (mouseY < 450) { stage = 1; } } } }
+            if (inRect(BTN.play))  { stage = 2; mouseDown = false; }   // the Play click is not a shot
+            else if (inRect(BTN.instr)) { stage = 1; }
         } else if (stage === 1) {
-            // Back button hitbox
-            if (mouseX > 175) { if (mouseX < 265) { if (mouseY > 490) { if (mouseY < 540) { stage = 0; } } } }
+            if (inRect(BTN.back)) { stage = 0; }
         }
     }
+
+    /* Back to the menu with a clean slate. */
+    function backToMenu() {
+        stage = 0;
+        score = 0;
+        pugX = 0;
+        direction = 0;
+        catX = 820;
+        fire = true;
+        timer = 0;
+        mouseDown = false;
+        for (var s = 0; s < bullCount; s++) { bulls[s].active = false; }
+        root.focus({ preventScroll: true });
+    }
+
+    menuBtn.addEventListener('click', backToMenu);
 
     /* --- Asset loading ------------------------------------------------- */
     var imgs = {};
@@ -190,11 +245,6 @@ $assets = esc_url( get_stylesheet_directory_uri() . '/assets/games/pug-attack/' 
     });
 
     /* --- Helpers ------------------------------------------------------- */
-    function dist(x1, y1, x2, y2) {
-        var dx = x2 - x1, dy = y2 - y1;
-        return Math.sqrt(dx * dx + dy * dy);
-    }
-
     function clearBg() {
         ctx.fillStyle = '#000';
         ctx.fillRect(0, 0, W, H);
@@ -207,17 +257,21 @@ $assets = esc_url( get_stylesheet_directory_uri() . '/assets/games/pug-attack/' 
         ctx.fillText(text, x, y);
     }
 
+    function drawButton(r, label, size, color) {
+        drawText(label, r.x, r.y, size, color);
+    }
+
     /* --- Stages -------------------------------------------------------- */
     function openScreen() {
         timer = 0;
         clearBg();
         if (imgs.start.complete) ctx.drawImage(imgs.start, 0, 0, W, H);
-        drawText('[Play]', 460, 320, 36, '#fff');
-        drawText('[Instructions]', 125, 420, 36, '#fff');
+        drawButton(BTN.play,  '[Play]', 36, '#fff');
+        drawButton(BTN.instr, '[Instructions]', 36, '#fff');
 
         var hover = false;
-        if (mouseX > 460) { if (mouseX < 570) { if (mouseY > 320) { if (mouseY < 360) { hover = true; } } } }
-        if (mouseX > 125) { if (mouseX < 325) { if (mouseY > 420) { if (mouseY < 460) { hover = true; } } } }
+        if (inRect(BTN.play))  hover = true;
+        if (inRect(BTN.instr)) hover = true;
         canvas.style.cursor = hover ? 'pointer' : 'default';
     }
 
@@ -228,34 +282,16 @@ $assets = esc_url( get_stylesheet_directory_uri() . '/assets/games/pug-attack/' 
         drawText('Move the mouse to aim the cannon at the cat.', 50, 165, 22, '#cbd5e1');
         drawText('Click and hold to fire shots from the pug.', 50, 200, 22, '#cbd5e1');
         drawText('Hit the cat scrolling across the bottom.', 50, 235, 22, '#cbd5e1');
-        drawText('[Back]', 175, 525, 36, '#fff');
+        drawButton(BTN.back, '[Back]', 36, '#fff');
 
-        var hover = false;
-        if (mouseX > 175) { if (mouseX < 265) { if (mouseY > 525) { if (mouseY < 560) { hover = true; } } } }
-        canvas.style.cursor = hover ? 'pointer' : 'default';
+        canvas.style.cursor = inRect(BTN.back) ? 'pointer' : 'default';
     }
 
     function playScreen() {
         if (imgs.castle.complete) ctx.drawImage(imgs.castle, 0, 0, W, H);
 
-        // Cannon angle from pug toward mouse
-        rot = Math.atan2(-(pugY - mouseY), -(pugX - mouseX));
-
-        // Fire cooldown
-        if (!fire) timer++;
-        else timer = 0;
-        if (timer >= 15) {
-            fire = true;
-            timer = 0;
-        }
-
-        // Bullets (draw + update + collide)
-        updateBullets();
-
-        // Pug + cannon
+        drawBullets();
         drawPug();
-
-        // Cat
         drawCat();
 
         // Score readout
@@ -271,78 +307,75 @@ $assets = esc_url( get_stylesheet_directory_uri() . '/assets/games/pug-attack/' 
         var img = (direction === 0) ? imgs.pugRight : imgs.pugLeft;
         if (img.complete) ctx.drawImage(img, pugX, pugY);
 
-        if (direction === 0) {
-            pugX += 1;
-            if (pugX > 600) direction = 1;
-        } else {
-            pugX -= 1;
-            if (pugX < 0) direction = 0;
-        }
-
         // Cannon: rectangle + ellipse, rotated to point at mouse
         ctx.save();
-        ctx.translate(pugX + 90, pugY + 160);
+        ctx.translate(pugX + CANNON_DX, pugY + CANNON_DY);
         ctx.rotate(rot + Math.PI / 2);
         ctx.fillStyle = '#fff';
-        ctx.fillRect(-10, -40, 20, 40);
+        ctx.fillRect(-10, -CANNON_LEN, 20, CANNON_LEN);
         ctx.beginPath();
         ctx.arc(0, 0, 10, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
     }
 
-    function updateBullets() {
-        // Spawn a new bullet on click + cooldown ready
-        if (mouseDown) {
-            if (fire) {
-                bulls[currshot].x += speedx[currshot] + pugX - 160;
-                bulls[currshot].y += speedy[currshot] - 450;
-                fire = false;
-                currshot += 1;
+    function drawBullets() {
+        ctx.fillStyle = '#fff';
+        for (var s = 0; s < bullCount; s++) {
+            if (bulls[s].active) {
+                ctx.beginPath();
+                ctx.arc(bulls[s].x, bulls[s].y, 10, 0, Math.PI * 2);
+                ctx.fill();
             }
         }
+    }
 
+    function drawCat() {
+        if (imgs.cat.complete) ctx.drawImage(imgs.cat, catX, catY);
+    }
+
+    /* --- Fixed 60 Hz update -------------------------------------------- */
+    /* Pug, cat, bullets and the fire cooldown all advance in fixed steps, so
+       the game plays the same on a 60 Hz and a 144 Hz screen. */
+    function spawnBullet() {
         for (var s = 0; s < bullCount; s++) {
-            if (currshot >= bullCount) currshot = 1;
-
-            var d = dist(bulls[s].x, bulls[s].y, Pos.x, Pos.y);
-            if (d === 0) {
-                speedx[s] = 10 * Math.cos(rot);
-                speedy[s] = 10 * Math.sin(rot);
+            if (!bulls[s].active) {
+                bulls[s].active = true;
+                bulls[s].x  = pugX + CANNON_DX + Math.cos(rot) * CANNON_LEN;
+                bulls[s].y  = pugY + CANNON_DY + Math.sin(rot) * CANNON_LEN;
+                bulls[s].vx = BULLET_SPEED * Math.cos(rot);
+                bulls[s].vy = BULLET_SPEED * Math.sin(rot);
+                return;
             }
-            if (d > 0) {
-                bulls[s].x += speedx[s];
-                bulls[s].y += speedy[s];
-            }
+        }
+    }
 
-            // Reset offscreen
+    function updateBullets() {
+        for (var s = 0; s < bullCount; s++) {
+            var b = bulls[s];
+            if (!b.active) continue;
+
+            b.x += b.vx;
+            b.y += b.vy;
+
+            // Deactivate offscreen
             var off = false;
-            if (bulls[s].x > 800)  off = true;
-            if (bulls[s].x < -800) off = true;
-            if (bulls[s].y < -550) off = true;
+            if (b.x > W + 10) off = true;
+            if (b.x < -10)    off = true;
+            if (b.y < -10)    off = true;
+            if (b.y > H + 10) off = true;
             if (off) {
-                bulls[s].x = 800;
-                bulls[s].y = -800;
-                speedx[s] = 0;
-                speedy[s] = 0;
+                b.active = false;
+                continue;
             }
-
-            // Draw
-            ctx.fillStyle = '#fff';
-            ctx.beginPath();
-            ctx.arc(bulls[s].x, bulls[s].y, 10, 0, Math.PI * 2);
-            ctx.fill();
 
             // Collide with cat (nested ifs avoid the WP wptexturize encoding hazard, see CLAUDE.md)
-            if (bulls[s].x > catX) {
-                if (bulls[s].x < catX + 100) {
-                    if (bulls[s].y > 475) {
-                        if (bulls[s].y < 550) {
+            if (b.x > catX) {
+                if (b.x < catX + 100) {
+                    if (b.y > 475) {
+                        if (b.y < 550) {
                             catX = 875;
-                            bulls[s].x = 800;
-                            bulls[s].y = -800;
-                            speedx[s] = 0;
-                            speedy[s] = 0;
+                            b.active = false;
                             score++;
                         }
                     }
@@ -351,17 +384,68 @@ $assets = esc_url( get_stylesheet_directory_uri() . '/assets/games/pug-attack/' 
         }
     }
 
-    function drawCat() {
-        if (imgs.cat.complete) ctx.drawImage(imgs.cat, catX, catY);
+    function step() {
+        // Cannon angle from the cannon pivot toward the mouse
+        rot = Math.atan2(mouseY - (pugY + CANNON_DY), mouseX - (pugX + CANNON_DX));
+
+        // Fire cooldown (15 steps)
+        if (!fire) timer++;
+        else timer = 0;
+        if (timer >= 15) {
+            fire = true;
+            timer = 0;
+        }
+
+        // Spawn a new bullet on click + cooldown ready
+        if (mouseDown) {
+            if (fire) {
+                spawnBullet();
+                fire = false;
+            }
+        }
+
+        updateBullets();
+
+        // Pug paces along the top
+        if (direction === 0) {
+            pugX += 1;
+            if (pugX > 600) direction = 1;
+        } else {
+            pugX -= 1;
+            if (pugX < 0) direction = 0;
+        }
+
+        // Cat scrolls across the bottom
         catX -= 2;
         if (catX < -100) catX = 850;
     }
 
     /* --- Main loop ----------------------------------------------------- */
-    function frame() {
+    var STEP_MS = 1000 / 60;
+    var lastTs = 0;
+    var acc = 0;
+    var lastStage = -1;
+
+    function frame(ts) {
+        if (lastTs) {
+            var dt = ts - lastTs;
+            if (dt > 250) dt = 250;   // tab was hidden, do not fast-forward
+            acc += dt;
+        }
+        lastTs = ts;
+        while (acc >= STEP_MS - 0.5) {
+            if (stage === 2) step();
+            acc -= STEP_MS;
+        }
+
         if (stage === 0) openScreen();
         else if (stage === 1) instructionsScreen();
         else if (stage === 2) playScreen();
+
+        if (stage !== lastStage) {
+            lastStage = stage;
+            menuBtn.hidden = (stage !== 2);
+        }
         requestAnimationFrame(frame);
     }
 })();
