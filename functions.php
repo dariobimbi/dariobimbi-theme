@@ -37,6 +37,14 @@ add_action( 'init', function () {
     ] );
 } );
 
+// wptexturize runs over every block template and doesn't skip <textarea>, so the
+// Live Editor's starting CSS had its `--custom-properties` turned into en dashes.
+// A textarea holds code or user input, never prose, so leave it alone.
+add_filter( 'no_texturize_tags', function ( $tags ) {
+    $tags[] = 'textarea';
+    return $tags;
+} );
+
 /**
  * Easter egg #1: a love letter to anyone who hits "View Source".
  * Printed early in <head> so it's the first thing they see.
