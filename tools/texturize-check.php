@@ -17,6 +17,10 @@
  * WordPress does, and prints any script line that comes out different.
  */
 
+if ( PHP_SAPI !== 'cli' ) {
+	exit( "Run from the command line.\n" );
+}
+
 $theme_slug = basename( dirname( __DIR__ ) );
 $force      = static function () use ( $theme_slug ) { return $theme_slug; };
 $GLOBALS['wp_filter'] = [

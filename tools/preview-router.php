@@ -18,6 +18,10 @@
  * Then browse http://127.0.0.1:8099/dariobimbi.com/
  */
 
+if ( PHP_SAPI !== 'cli-server' ) {
+	exit( "Run with PHP's built-in server (php -S).\n" );
+}
+
 $path = parse_url( $_SERVER['REQUEST_URI'], PHP_URL_PATH );
 $file = $_SERVER['DOCUMENT_ROOT'] . urldecode( $path );
 if ( is_file( $file ) ) {
