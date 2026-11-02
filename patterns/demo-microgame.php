@@ -34,7 +34,20 @@ $assets = esc_url( get_stylesheet_directory_uri() . '/assets/games/microgame/' )
         <div class="mg-stage">
             <canvas class="mg-canvas" data-role="canvas" width="450" height="600" aria-label="Microgame maze canvas"></canvas>
         </div>
-        <p class="mg-hint">Click the canvas first, then press <kbd>Play</kbd>, then <kbd>Enter</kbd>, then move with <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd>.</p>
+        <div class="mg-bar" data-role="bar">
+            <button type="button" class="mg-btn" data-act="play">Play</button>
+            <button type="button" class="mg-btn" data-act="instr">Instructions</button>
+            <button type="button" class="mg-btn" data-act="back" hidden>Back</button>
+            <button type="button" class="mg-btn" data-act="start" hidden>Start</button>
+            <button type="button" class="mg-btn" data-act="restart" hidden>Restart</button>
+        </div>
+        <div class="mg-pad" data-role="pad" role="group" aria-label="Movement pad">
+            <button type="button" class="mg-btn mg-pad-up" data-key="w" aria-label="Move up">&#9650;</button>
+            <button type="button" class="mg-btn mg-pad-left" data-key="a" aria-label="Move left">&#9664;</button>
+            <button type="button" class="mg-btn mg-pad-right" data-key="d" aria-label="Move right">&#9654;</button>
+            <button type="button" class="mg-btn mg-pad-down" data-key="s" aria-label="Move down">&#9660;</button>
+        </div>
+        <p class="mg-hint">Press <kbd>Play</kbd>, then <kbd>Start</kbd> or <kbd>Enter</kbd>, then move with <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd>. On a phone, use the arrow pad.</p>
     </div>
     <!-- /wp:html -->
 
@@ -68,6 +81,59 @@ $assets = esc_url( get_stylesheet_directory_uri() . '/assets/games/microgame/' )
     width: 100%;
     height: 100%;
 }
+.demo-microgame .mg-bar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+.demo-microgame .mg-bar[hidden],
+.demo-microgame .mg-btn[hidden] {
+    display: none;
+}
+.demo-microgame .mg-btn {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0.5rem 1.25rem;
+    font: inherit;
+    font-family: var(--wp--preset--font-family--mono);
+    color: var(--wp--preset--color--foreground);
+    background: var(--wp--preset--color--surface);
+    border: 1px solid var(--wp--preset--color--subtle);
+    border-radius: 10px;
+    cursor: pointer;
+}
+.demo-microgame .mg-btn:focus-visible {
+    outline: 3px solid var(--wp--preset--color--primary);
+    outline-offset: 2px;
+}
+/* D-pad: touch screens only. Held buttons must not scroll the page. */
+.demo-microgame .mg-pad {
+    display: none;
+    grid-template-columns: repeat(3, 56px);
+    grid-template-rows: repeat(3, 56px);
+    gap: 6px;
+    justify-content: center;
+    margin-top: 1rem;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+@media (pointer: coarse) {
+    .demo-microgame .mg-pad { display: grid; }
+}
+.demo-microgame .mg-pad .mg-btn {
+    padding: 0;
+    touch-action: none;
+    font-size: 1.25rem;
+    line-height: 1;
+}
+.demo-microgame .mg-pad-up    { grid-column: 2; grid-row: 1; }
+.demo-microgame .mg-pad-left  { grid-column: 1; grid-row: 2; }
+.demo-microgame .mg-pad-right { grid-column: 3; grid-row: 2; }
+.demo-microgame .mg-pad-down  { grid-column: 2; grid-row: 3; }
 .demo-microgame .mg-hint {
     margin: 1rem 0 0;
     text-align: center;
@@ -97,6 +163,9 @@ $assets = esc_url( get_stylesheet_directory_uri() . '/assets/games/microgame/' )
     var canvas = root.querySelector('[data-role="canvas"]');
     var ctx    = canvas.getContext('2d');
     var assetsBase = root.dataset.assetsBase || '';
+    var bar    = root.querySelector('[data-role="bar"]');
+    var pad    = root.querySelector('[data-role="pad"]');
+    var reduceMotionQuery = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
 
     var W = 450, H = 600;
 
@@ -104,11 +173,24 @@ $assets = esc_url( get_stylesheet_directory_uri() . '/assets/games/microgame/' )
     var menue = 0;     // 0 = open, 1 = play, 2 = instructions
     var win   = 0;     // 0 = playing, 1 = won, 2 = lost
     var start = 0;     // 0 = waiting for Enter, 1 = timer running
-    var timer = 0;
+    var ticks = 0;     // 60 Hz game steps since start, so ticks / 60 is real seconds
+    var TIME_LIMIT = 600;  // 10 seconds of ticks
     var x = 57, y = 70; // player top-left
 
     var mouseX = 0, mouseY = 0;
     var mouseDown = false;
+
+    /* Held movement keys (keyboard and the on-screen pad share this). */
+    var held = { w: false, a: false, s: false, d: false };
+    var repeatCd = 0;
+
+    /* One rect per canvas button, shared by drawing, hover and click. */
+    var BTN = {
+        play:    { x: 175, y: 320, w: 90,  h: 40 },
+        instr:   { x: 125, y: 420, w: 200, h: 40 },
+        back:    { x: 175, y: 525, w: 90,  h: 40 },
+        restart: { x: 3,   y: 565, w: 135, h: 32 }
+    };
 
     /* --- Asset loading ------------------------------------------------ */
     var imgs = {};
@@ -129,12 +211,42 @@ $assets = esc_url( get_stylesheet_directory_uri() . '/assets/games/microgame/' )
         imgs[k] = img;
     });
 
+    /* --- Actions (canvas buttons and HTML buttons both call these) ----- */
+    function doPlay()    { menue = 1; root.focus(); }
+    function doInstr()   { menue = 2; }
+    function doBack()    { menue = 0; }
+    function doStart() {
+        if (menue !== 1) return;
+        if (win !== 0) return;
+        start = 1;
+    }
+
+    function reset() {
+        menue = 0;
+        win = 0;
+        x = 57; y = 70;
+        start = 0;
+        ticks = 0;
+        releaseAll();
+    }
+
+    var actions = { play: doPlay, instr: doInstr, back: doBack, start: doStart, restart: reset };
+
     /* --- Input -------------------------------------------------------- */
     function getMousePos(e) {
         var rect = canvas.getBoundingClientRect();
         var sx = canvas.width  / rect.width;
         var sy = canvas.height / rect.height;
         return { x: (e.clientX - rect.left) * sx, y: (e.clientY - rect.top) * sy };
+    }
+
+    function inRect(r) {
+        if (mouseX > r.x) { if (mouseX < r.x + r.w) { if (mouseY > r.y) { if (mouseY < r.y + r.h) { return true; } } } }
+        return false;
+    }
+
+    function drawButton(r, label, size, color) {
+        drawText(label, r.x, r.y, size, color);
     }
 
     canvas.addEventListener('mousemove', function (e) {
@@ -147,44 +259,126 @@ $assets = esc_url( get_stylesheet_directory_uri() . '/assets/games/microgame/' )
     });
     canvas.addEventListener('mouseup', function () { mouseDown = false; });
 
+    function canMove() {
+        if (menue !== 1) return false;
+        if (start !== 1) return false;
+        if (win !== 0) return false;
+        return true;
+    }
+
+    function moveOnce(k) {
+        if (k === 'w') { if (y > 55)  { y -= 15; } }
+        if (k === 's') { if (y < 570) { y += 15; } }
+        if (k === 'a') { if (x > 0)   { x -= 15; } }
+        if (k === 'd') { if (x < 410) { x += 15; } }
+    }
+
+    function press(k) {
+        if (!canMove()) return;
+        moveOnce(k);
+        held[k] = true;
+        repeatCd = 8;   // short pause before a held key starts repeating
+    }
+
+    function release(k) { held[k] = false; }
+
+    function releaseAll() {
+        held.w = false; held.a = false; held.s = false; held.d = false;
+    }
+
     /* Keyboard listens on the wrapper (which is focusable via tabindex). */
     root.addEventListener('keydown', function (e) {
         if (e.key === 'Enter') {
-            start = 1;
+            /* On a focused HTML button, Enter should click that button. */
+            if (e.target.tagName === 'BUTTON') return;
+            doStart();
             e.preventDefault();
             return;
         }
-        if (menue !== 1) return;
-        if (start !== 1) return;
-        if (win !== 0) return;
         var k = (e.key || '').toLowerCase();
-        if (k === 'w') { if (y > 55)  { y -= 15; e.preventDefault(); } }
-        if (k === 's') { if (y < 570) { y += 15; e.preventDefault(); } }
-        if (k === 'a') { if (x > 0)   { x -= 15; e.preventDefault(); } }
-        if (k === 'd') { if (x < 410) { x += 15; e.preventDefault(); } }
+        if (['w', 'a', 's', 'd'].indexOf(k) === -1) return;
+        if (!canMove()) return;
+        e.preventDefault();
+        if (!e.repeat) press(k);
     });
+    root.addEventListener('keyup', function (e) {
+        release((e.key || '').toLowerCase());
+    });
+    window.addEventListener('blur', releaseAll);
 
     function handleClick() {
+        if (win !== 0) {
+            if (inRect(BTN.restart)) { reset(); }
+            return;
+        }
         if (menue === 0) {
-            // Play button: 175 < x < 265, 320 < y < 360
-            if (mouseX > 175) { if (mouseX < 265) { if (mouseY > 320) { if (mouseY < 360) { menue = 1; root.focus(); } } } }
-            // Instructions button: 125 < x < 325, 420 < y < 460
-            if (mouseX > 125) { if (mouseX < 325) { if (mouseY > 420) { if (mouseY < 460) { menue = 2; } } } }
+            if (inRect(BTN.play))  { doPlay(); }
+            if (inRect(BTN.instr)) { doInstr(); }
         } else if (menue === 2) {
-            // Back button: 175 < x < 265, 490 < y < 540
-            if (mouseX > 175) { if (mouseX < 265) { if (mouseY > 490) { if (mouseY < 540) { menue = 0; } } } }
-        } else if (win === 1 || win === 2) {
-            // Restart button: 3 < x < 135, 546 < y < 577
-            if (mouseX > 3) { if (mouseX < 135) { if (mouseY > 546) { if (mouseY < 577) { reset(); } } } }
+            if (inRect(BTN.back)) { doBack(); }
         }
     }
 
-    function reset() {
-        menue = 0;
-        win = 0;
-        x = 57; y = 70;
-        start = 0;
-        timer = 0;
+    /* HTML menu buttons (keyboard reachable). */
+    Array.prototype.forEach.call(bar.querySelectorAll('[data-act]'), function (b) {
+        b.addEventListener('click', function () {
+            var fn = actions[b.dataset.act];
+            if (fn) fn();
+            if (b.dataset.act === 'start') root.focus();
+        });
+    });
+
+    /* On-screen D-pad, shown on coarse pointers only (see the CSS). It feeds
+       the same held-key state as WASD. */
+    Array.prototype.forEach.call(pad.querySelectorAll('[data-key]'), function (b) {
+        var k = b.dataset.key;
+        b.addEventListener('pointerdown', function (e) {
+            e.preventDefault();
+            try { b.setPointerCapture(e.pointerId); } catch (err) { /* older browsers */ }
+            press(k);
+        });
+        b.addEventListener('pointerup', function () { release(k); });
+        b.addEventListener('pointercancel', function () { release(k); });
+        b.addEventListener('lostpointercapture', function () { release(k); });
+        b.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+    });
+
+    /* Show only the HTML buttons that make sense for the current screen. */
+    var ctlKey = '';
+    function syncControls() {
+        var key = menue + '|' + win + '|' + start;
+        if (key === ctlKey) return;
+        ctlKey = key;
+
+        var show = { play: false, instr: false, back: false, start: false, restart: false };
+        if (win !== 0) {
+            show.restart = true;
+        } else if (menue === 0) {
+            show.play = true; show.instr = true;
+        } else if (menue === 2) {
+            show.back = true;
+        } else if (start === 0) {
+            show.start = true;
+        }
+
+        var active = document.activeElement;
+        var focusWasInBar = bar.contains(active);
+        var firstVisible = null;
+        var any = false;
+        Array.prototype.forEach.call(bar.querySelectorAll('[data-act]'), function (b) {
+            var on = show[b.dataset.act];
+            b.hidden = !on;
+            if (on) { any = true; if (!firstVisible) firstVisible = b; }
+        });
+        bar.hidden = !any;
+
+        /* A button that just hid was holding keyboard focus: hand it on. */
+        if (focusWasInBar) {
+            if (active.hidden) {
+                if (firstVisible) firstVisible.focus();
+                else root.focus();
+            }
+        }
     }
 
     /* --- Helpers ------------------------------------------------------ */
@@ -200,29 +394,36 @@ $assets = esc_url( get_stylesheet_directory_uri() . '/assets/games/microgame/' )
         ctx.fillText(text, dx, dy);
     }
 
+    function prefersReducedMotion() {
+        if (!reduceMotionQuery) return false;
+        return reduceMotionQuery.matches;
+    }
+
     /* --- Stages ------------------------------------------------------- */
     function openScreen() {
-        timer = 0;
+        ticks = 0;
         clearBg();
         if (imgs.start.complete) ctx.drawImage(imgs.start, 0, 0, W, H);
-        drawText('[Play]', 175, 320, 36, '#fff');
-        drawText('[Instructions]', 125, 420, 36, '#fff');
+        drawButton(BTN.play,  '[Play]', 36, '#fff');
+        drawButton(BTN.instr, '[Instructions]', 36, '#fff');
 
         var hover = false;
-        if (mouseX > 175) { if (mouseX < 265) { if (mouseY > 320) { if (mouseY < 360) { hover = true; } } } }
-        if (mouseX > 125) { if (mouseX < 325) { if (mouseY > 420) { if (mouseY < 460) { hover = true; } } } }
+        if (inRect(BTN.play))  hover = true;
+        if (inRect(BTN.instr)) hover = true;
         canvas.style.cursor = hover ? 'pointer' : 'default';
     }
 
     function instructionsScreen() {
         clearBg();
         if (imgs.instructions.complete) ctx.drawImage(imgs.instructions, 0, 0, W, H);
-        drawText('[Back]', 175, 525, 36, '#fff');
+        drawButton(BTN.back, '[Back]', 36, '#fff');
 
-        var hover = false;
-        if (mouseX > 175) { if (mouseX < 265) { if (mouseY > 525) { if (mouseY < 565) { hover = true; } } } }
-        canvas.style.cursor = hover ? 'pointer' : 'default';
+        canvas.style.cursor = inRect(BTN.back) ? 'pointer' : 'default';
     }
+
+    var flickColor = 'rgb(200,0,0)';
+    var flickAt = 0;
+    var nowMs = 0;
 
     function gameplay() {
         // Floor and walls
@@ -251,9 +452,7 @@ $assets = esc_url( get_stylesheet_directory_uri() . '/assets/games/microgame/' )
         ctx.fillRect(x, y, 25, 25);
 
         // HUD
-        if (start === 1) {
-            if (timer < 10) timer += 0.013;
-        }
+        var timer = Math.min(ticks, TIME_LIMIT) / 60;
         ctx.fillStyle = '#fff';
         ctx.fillRect(0, 0, 600, 50);
         ctx.font = '25px sans-serif';
@@ -261,12 +460,17 @@ $assets = esc_url( get_stylesheet_directory_uri() . '/assets/games/microgame/' )
         if (win === 0) {
             if (timer < 6) {
                 ctx.fillStyle = '#000';
-                ctx.fillText('Timer : ' + timer.toFixed(2), 109, 18);
+            } else if (prefersReducedMotion()) {
+                ctx.fillStyle = '#c00000';
             } else {
-                var r = 100 + Math.floor(Math.random() * 156);
-                ctx.fillStyle = 'rgb(' + r + ',0,0)';
-                ctx.fillText('Timer : ' + timer.toFixed(2), 109, 18);
+                // Flicker about 6 times a second, not every frame.
+                if (nowMs - flickAt > 160) {
+                    flickColor = 'rgb(' + (100 + Math.floor(Math.random() * 156)) + ',0,0)';
+                    flickAt = nowMs;
+                }
+                ctx.fillStyle = flickColor;
             }
+            ctx.fillText('Timer : ' + timer.toFixed(2), 109, 18);
         }
 
         if (start === 0) {
@@ -274,9 +478,6 @@ $assets = esc_url( get_stylesheet_directory_uri() . '/assets/games/microgame/' )
             ctx.fillRect(0, 200, W, 200);
             drawText('Press Enter to start', 65, 280, 28, '#fff');
         }
-
-        // Collision
-        collide();
     }
 
     function collide() {
@@ -292,31 +493,65 @@ $assets = esc_url( get_stylesheet_directory_uri() . '/assets/games/microgame/' )
         // Goal (win)
         if (x > 311) { if (x < 420) { if (y > 519) { if (y < 580) { win = 1; } } } }
         // Time-out (lose)
-        if (timer > 10) win = 2;
+        if (ticks > TIME_LIMIT) win = 2;
     }
 
     function winScreen() {
         clearBg();
         if (imgs.winner.complete) ctx.drawImage(imgs.winner, 0, 0, W, H);
-        drawText('[Restart]', 0, 575, 28, '#000');
-
-        var hover = false;
-        if (mouseX > 3) { if (mouseX < 135) { if (mouseY > 546) { if (mouseY < 577) { hover = true; } } } }
-        canvas.style.cursor = hover ? 'pointer' : 'default';
+        drawButton(BTN.restart, '[Restart]', 28, '#000');
+        canvas.style.cursor = inRect(BTN.restart) ? 'pointer' : 'default';
     }
 
     function loseScreen() {
         clearBg();
         if (imgs.loser.complete) ctx.drawImage(imgs.loser, 0, 0, W, H);
-        drawText('[Restart]', 0, 575, 28, '#000');
+        drawButton(BTN.restart, '[Restart]', 28, '#000');
+        canvas.style.cursor = inRect(BTN.restart) ? 'pointer' : 'default';
+    }
 
-        var hover = false;
-        if (mouseX > 3) { if (mouseX < 135) { if (mouseY > 546) { if (mouseY < 577) { hover = true; } } } }
-        canvas.style.cursor = hover ? 'pointer' : 'default';
+    /* --- Fixed 60 Hz update ------------------------------------------- */
+    /* Timer and movement advance in fixed steps so the ten seconds are real
+       seconds on any refresh rate. */
+    function step() {
+        if (menue !== 1) return;
+        if (win !== 0) return;
+
+        if (start === 1) { ticks++; }
+
+        // A held key or pad button repeats every few steps.
+        if (held.w || held.a || held.s || held.d) {
+            repeatCd--;
+            if (repeatCd <= 0) {
+                if (held.w) moveOnce('w');
+                if (held.a) moveOnce('a');
+                if (held.s) moveOnce('s');
+                if (held.d) moveOnce('d');
+                repeatCd = 3;
+            }
+        }
+
+        collide();
     }
 
     /* --- Main loop ---------------------------------------------------- */
-    function frame() {
+    var STEP_MS = 1000 / 60;
+    var lastTs = 0;
+    var acc = 0;
+
+    function frame(ts) {
+        nowMs = ts;
+        if (lastTs) {
+            var dt = ts - lastTs;
+            if (dt > 250) dt = 250;   // tab was hidden, do not fast-forward
+            acc += dt;
+        }
+        lastTs = ts;
+        while (acc >= STEP_MS - 0.5) {
+            step();
+            acc -= STEP_MS;
+        }
+
         if (win === 1) {
             winScreen();
         } else if (win === 2) {
@@ -328,6 +563,7 @@ $assets = esc_url( get_stylesheet_directory_uri() . '/assets/games/microgame/' )
         } else if (menue === 2) {
             instructionsScreen();
         }
+        syncControls();
         requestAnimationFrame(frame);
     }
 })();
